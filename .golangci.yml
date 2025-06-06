@@ -1,0 +1,24 @@
+linters:
+  disable-all: true  # 禁用所有默认检查器
+  enable: # 推荐启用常用检查器
+    - revive
+    - gosec
+    - errcheck
+    - govet
+    - gofmt
+    - staticcheck
+
+govet:
+  disable-all: true  # 禁用所有 govet 检查
+  enable:
+    - atomic
+    - httpresponse
+    - printf
+    - structs
+run:
+  timeout: 5m  # 设置超时时间为5分钟
+  modules-download-mode: readonly  
+issues:
+  exclude-rules: false  # 不排除任何规则
+  max-same-issues: 0
+  max-issues-per-linter: 0
