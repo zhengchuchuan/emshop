@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"os"
 	"time"
+
+	"google.golang.org/grpc"
 )
 
 type options struct {
@@ -22,7 +24,7 @@ type options struct {
 	stopTimeout time.Duration
 
 	// restServer *restserver.Server
-	// rpcServer  *rpcserver.Server
+	rpcServer  *grpc.Server
 }
 
 

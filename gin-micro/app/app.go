@@ -55,12 +55,20 @@ func (a *App) Run() error {
 	if err != nil {
 		return err
 	}
+
 	// 可能被其他goroutine修改,需要保护此变量
 	a.lk.Lock()
 	a.instance = instance
 	a.lk.Unlock()
-	// 注册服务
 
+	if a.opts.rpcServer != nil {
+
+		// 启动RPC服务
+
+	}
+
+
+	// 注册服务
 	if a.opts.registrar != nil {
 		rctx, rcancel := context.WithTimeout(context.Background(), a.opts.registrarTimeout)
 		a.opts.registrar.Register(rctx, a.instance)
