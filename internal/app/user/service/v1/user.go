@@ -17,16 +17,24 @@ type UserDTOList struct {
 	Items      []*UserDTO `json:"data"`                 //数据
 }
 
+type UserSrv interface {
+	List(ctx context.Context, opts metav1.ListMeta) (*UserDTOList, error)
+}
 
 type userService struct {
 	userStrore dv1.UserStore
 }
+
+
 
 func NewUserService(us dv1.UserStore) *userService {
 	return &userService{
 		userStrore: us,
 	}
 }
+
+// 接口实现断言
+var _ UserSrv = &userService{}
 
 func  (u *userService)List(ctx context.Context, opts metav1.ListMeta) (*UserDTOList, error) {
 	
