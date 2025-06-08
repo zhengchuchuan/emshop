@@ -18,8 +18,8 @@ type options struct {
 	registrar registry.Registrar // 服务注册中心的注册器
 	registrarTimeout time.Duration
 
-	// //stop超时时间
-	// stopTimeout time.Duration
+	//stop超时时间
+	stopTimeout time.Duration
 
 	// restServer *restserver.Server
 	// rpcServer  *rpcserver.Server
@@ -44,14 +44,20 @@ func WithName(name string) Option {
 	}
 }
 
-func WithOptions(endpotints []url.URL) Option {
+func WithEndpoints(endpoints []url.URL) Option {
 	return func(o *options) {
-		o.endpoints = endpotints
+		o.endpoints = endpoints
 	}
 }
 
 func WithSigs(sigs []os.Signal) Option {
 	return func(o *options) {
 		o.sigs = sigs
+	}
+}
+
+func WithRegistrar(registrar registry.Registrar) Option {
+	return func(o *options) {
+		o.registrar = registrar
 	}
 }

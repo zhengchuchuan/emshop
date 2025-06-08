@@ -3,12 +3,16 @@ package app
 import (
 	"emshop-admin/gin-micro/registry"
 	"emshop-admin/pkg/log"
+	"syscall"
+	"time"
 
 	"os"
 	"os/signal"
 	"sync"
 
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type App struct {
@@ -19,7 +23,21 @@ type App struct {
 }
 
 func New(opts ...Option) *App {
-	o := options{}
+	// 通过函数选项模式设置默认值
+
+	// 默认选项
+	o := options{
+		sigs:             []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
+		registrarTimeout: 10 * time.Second,
+		stopTimeout:      10 * time.Second,
+	}
+
+	if id, err := uuid.NewUUID(); err == nil {
+		o.id = id.String()
+	} else {
+		log.Errorf("generate uuid error: %s", err)
+	}
+
 	for _, opt := range opts {
 		opt(&o)
 	}
@@ -67,6 +85,23 @@ func (a *App) Run() error {
 
 // 停止服务
 func (a *App) Stop() error {
+	a.lk.Lock()
+	instance := a.instance
+	a.lk.Unlock()
+
+	log.Info("start deregister service")
+
+	if a.opts.registrar != nil && instance != nil {
+		rctx, rcancel := context.WithTimeout(context.Background(), a.opts.registrarTimeout)
+		defer rcancel()
+		if err := a.opts.registrar.Deregister(rctx, instance); err != nil {
+			log.Errorf("deregister service error: %s", err)
+			return err
+		}
+	}
+
+
+
 	return nil
 }
 
