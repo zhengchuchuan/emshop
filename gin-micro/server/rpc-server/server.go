@@ -3,13 +3,16 @@ package rpcserver
 import (
 	"net"
 	"net/url"
+	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
 	apimd "emshop-admin/api/metadata"
+	srvintc "emshop-admin/gin-micro/server/rpc-server/server-interceptors"
 	"emshop-admin/pkg/host"
 )
 
@@ -21,6 +24,8 @@ type Server struct {
 	streamInts []grpc.StreamServerInterceptor	// Stream拦截器
 	grpcOpts   []grpc.ServerOption				// gRPC服务器选项
 	lis        net.Listener						// 监听器
+
+	timeout    time.Duration					// 超时时间, 用于设置请求的超时时间
 
 	health   	*health.Server					// 健康检查服务
 	metadata *apimd.Server						// 元数据服务
@@ -37,7 +42,7 @@ func NewServer(opts ...ServerOption) *Server {
 	srv := &Server{
 		address: ":0",
 		health:  health.NewServer(),
-		//timeout: 1 * time.Second,
+		timeout: 1 * time.Second,
 	}
 	// 根据传入函数设置参数
 	for _, o := range opts {
@@ -45,18 +50,18 @@ func NewServer(opts ...ServerOption) *Server {
 	}
 
 	//不设置拦截器的情况下，自动默认加上一些必须的拦截器，如 crash，tracing
-	// unaryInts := []grpc.UnaryServerInterceptor{
-	// 	srvintc.UnaryCrashInterceptor,
-	// 	otelgrpc.UnaryServerInterceptor(),
-	// }
-
+	unaryInts := []grpc.UnaryServerInterceptor{
+		srvintc.UnaryCrashInterceptor,
+		otelgrpc.UnaryServerInterceptor(),
+	}
+	// 如果用户传入了自定义的Unary拦截器，则添加到unaryInts中
 	// if srv.enableMetrics {
 	// 	unaryInts = append(unaryInts, srvintc.UnaryPrometheusInterceptor)
 	// }
 
-	// if srv.timeout > 0 {
-	// 	unaryInts = append(unaryInts, srvintc.UnaryTimeoutInterceptor(srv.timeout))
-	// }
+	if srv.timeout > 0 {
+		unaryInts = append(unaryInts, srvintc.UnaryTimeoutInterceptor(srv.timeout))
+	}
 
 	// if len(srv.unaryInts) > 0 {
 	// 	unaryInts = append(unaryInts, srv.unaryInts...)
@@ -130,11 +135,11 @@ func WithOptions(opts ...grpc.ServerOption) ServerOption {
 // 	}
 // }
 
-// func WithTimeout(timeout time.Duration) ServerOption {
-// 	return func(s *Server) {
-// 		s.timeout = timeout
-// 	}
-// }
+func WithTimeout(timeout time.Duration) ServerOption {
+	return func(s *Server) {
+		s.timeout = timeout
+	}
+}
 
 
 // 完成ip和端口的提取
