@@ -3,7 +3,7 @@ package mock
 import (
 	"context"
 
-	dv1 "emshop-admin/internal/app/user/data/v1"
+	dv1 "emshop-admin/internal/app/user/srv/data/v1"
 	metav1 "emshop-admin/pkg/common/meta/v1"
 )
 

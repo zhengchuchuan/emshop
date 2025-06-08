@@ -4,7 +4,7 @@ import (
 	"context"
 
 	upbv1 "emshop-admin/api/user/v1"
-	srvv1 "emshop-admin/internal/app/user/service/v1"
+	srvv1 "emshop-admin/internal/app/user/srv/service/v1"
 	metav1 "emshop-admin/pkg/common/meta/v1"
 )
 

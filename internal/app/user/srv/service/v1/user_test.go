@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"emshop-admin/internal/app/user/data/v1/mock"
+	"emshop-admin/internal/app/user/srv/data/v1/mock"
 	metav1 "emshop-admin/pkg/common/meta/v1"
 )
 
