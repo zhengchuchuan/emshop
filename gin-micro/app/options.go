@@ -1,8 +1,11 @@
 package app
 
 import (
+	// "emshop-admin/gin-micro/registry" // Replace with the actual path to the registry package
+	"emshop-admin/gin-micro/registry"
 	"net/url"
 	"os"
+	"time"
 )
 
 type options struct {
@@ -11,6 +14,15 @@ type options struct {
 	endpoints []url.URL // 服务的地址列表
 
 	sigs []os.Signal // 监听的信号
+
+	registrar registry.Registrar // 服务注册中心的注册器
+	registrarTimeout time.Duration
+
+	// //stop超时时间
+	// stopTimeout time.Duration
+
+	// restServer *restserver.Server
+	// rpcServer  *rpcserver.Server
 }
 
 
