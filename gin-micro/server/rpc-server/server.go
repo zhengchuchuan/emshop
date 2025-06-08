@@ -6,7 +6,10 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 
+	apimd "emshop-admin/api/metadata"
 	"emshop-admin/pkg/host"
 )
 
@@ -20,7 +23,10 @@ type Server struct {
 	lis        net.Listener						// 监听器
 
 	health   	*health.Server					// 健康检查服务
+	metadata *apimd.Server						// 元数据服务
 	endpoint 	*url.URL						// 服务地址
+
+	enableMetrics bool
 }
 
 // 函数选项模式
@@ -63,11 +69,24 @@ func NewServer(opts ...ServerOption) *Server {
 	//把用户自己传入的grpc.ServerOption放在一起
 	srv.Server = grpc.NewServer(grpcOpts...)
 
+	//注册metadata的Server
+	srv.metadata = apimd.NewServer(srv.Server)
+
 	//解析address
 	err := srv.listenAndEndpoint()
 	if err != nil {
 		panic(err)
 	}
+
+	// 注册健康检查服务
+	grpc_health_v1.RegisterHealthServer(srv.Server, srv.health)
+
+	// 直接使用kratos的metadata服务
+	// 这个服务会自动注册到grpc的Server中
+	// 可以支持用户直接通过grpc的一个接口查看当前支持的所有的rpc服务
+	apimd.RegisterMetadataServer(srv.Server, srv.metadata)
+	// 注册反射服务,允许客户端（如 grpcurl、Postman、grpcui 等工具）在不知道 proto 文件的情况下，动态查询服务支持的所有 RPC 方法和消息类型
+	reflection.Register(srv.Server)
 
 	return srv
 }
