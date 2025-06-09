@@ -107,6 +107,18 @@ func WithAddress(address string) ServerOption {
 	}
 }
 
+func WithMetrics(metric bool) ServerOption {
+	return func(s *Server) {
+		s.enableMetrics = metric
+	}
+}
+
+func WithTimeout(timeout time.Duration) ServerOption {
+	return func(s *Server) {
+		s.timeout = timeout
+	}
+}
+
 func WithLis(lis net.Listener) ServerOption {
 	return func(s *Server) {
 		s.lis = lis
@@ -131,19 +143,6 @@ func WithOptions(opts ...grpc.ServerOption) ServerOption {
 	}
 }
 
-// func WithMetrics(metric bool) ServerOption {
-// 	return func(s *Server) {
-// 		s.enableMetrics = metric
-// 	}
-// }
-
-func WithTimeout(timeout time.Duration) ServerOption {
-	return func(s *Server) {
-		s.timeout = timeout
-	}
-}
-
-
 // 完成ip和端口的提取
 func (s *Server) listenAndEndpoint() error {
 	if s.lis == nil {
@@ -153,7 +152,6 @@ func (s *Server) listenAndEndpoint() error {
 		}
 		s.lis = lis
 	}
-	// 完成ip和port的提取
 	addr, err := host.Extract(s.address, s.lis)
 	if err != nil {
 		_ = s.lis.Close()
@@ -162,6 +160,15 @@ func (s *Server) listenAndEndpoint() error {
 	s.endpoint = &url.URL{Scheme: "grpc", Host: addr}
 	return nil
 }
+
+func (s *Server) Endpoint() *url.URL {
+	return s.endpoint
+}
+
+func (s *Server) Address() string {
+	return s.address
+}
+
 
 // 启动grpc的服务
 func (s *Server) Start(ctx context.Context) error {

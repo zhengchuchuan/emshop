@@ -41,6 +41,7 @@ func NewUserApp(cfg *config.Config) (*gapp.App, error) {
 	return gapp.New(
 		gapp.WithRPCServer(rpcServer),
 		gapp.WithRegistrar(register),
+		gapp.WithName(cfg.Server.Name),
 		), nil
 }
 

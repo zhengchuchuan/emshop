@@ -3,6 +3,7 @@ package app
 import (
 	"emshop-admin/gin-micro/registry"
 	"emshop-admin/pkg/log"
+	"net/url"
 	"syscall"
 	"time"
 
@@ -68,13 +69,13 @@ func (a *App) Run() error {
 	// 		return err
 	// 	}
 	// }
-	go func() {
-		err := a.opts.rpcServer.Start(context.Background())
-		if err != nil {
-			log.Errorf("start rpc server error: %s", err)
-			panic(err)
-		}
-	}()
+	// go func() {
+	// 	err := a.opts.rpcServer.Start(context.Background())
+	// 	if err != nil {
+	// 		log.Errorf("start rpc server error: %s", err)
+	// 		panic(err)
+	// 	}
+	// }()
 
 
 	// 注册服务
@@ -134,6 +135,19 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 	endpoints := make([]string, 0)
 	for _, e := range a.opts.endpoints {
 		endpoints = append(endpoints, e.String())
+	}
+
+	//从rpcserver， restserver去主动获取这些信息
+	if a.opts.rpcServer != nil {
+		if a.opts.rpcServer.Endpoint() != nil {
+			endpoints = append(endpoints, a.opts.rpcServer.Endpoint().String())
+		} else {
+			u := &url.URL{
+				Scheme: "grpc",
+				Host:   a.opts.rpcServer.Address(),
+			}
+			endpoints = append(endpoints, u.String())
+		}
 	}
 	
 	return &registry.ServiceInstance{
