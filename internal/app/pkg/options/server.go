@@ -39,7 +39,7 @@ func NewServerOptions() *ServerOptions {
 		Host:              "127.0.0.1",
 		Port:              8078,
 		HttpPort:          8079,
-		Name:              "mxshop-user-srv",
+		Name:              "emshop-user-srv",
 	}
 }
 

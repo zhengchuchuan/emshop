@@ -1,6 +1,7 @@
 package rpcserver
 
 import (
+	"context"
 	"net"
 	"net/url"
 	"time"
@@ -14,6 +15,7 @@ import (
 	apimd "emshop-admin/api/metadata"
 	srvintc "emshop-admin/gin-micro/server/rpc-server/server-interceptors"
 	"emshop-admin/pkg/host"
+	"emshop-admin/pkg/log"
 )
 
 type Server struct {
@@ -158,5 +160,20 @@ func (s *Server) listenAndEndpoint() error {
 		return err
 	}
 	s.endpoint = &url.URL{Scheme: "grpc", Host: addr}
+	return nil
+}
+
+// 启动grpc的服务
+func (s *Server) Start(ctx context.Context) error {
+	log.Infof("[grpc] server listening on: %s", s.lis.Addr().String())
+	s.health.Resume()
+	return s.Serve(s.lis)
+}
+
+func (s *Server) Stop(ctx context.Context) error {
+	//设置服务的状态为not_serving，防止接收新的请求过来
+	s.health.Shutdown()
+	s.GracefulStop()
+	log.Infof("[grpc] server stopped")
 	return nil
 }

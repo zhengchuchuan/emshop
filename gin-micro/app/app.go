@@ -60,12 +60,21 @@ func (a *App) Run() error {
 	a.lk.Lock()
 	a.instance = instance
 	a.lk.Unlock()
-
-	if a.opts.rpcServer != nil {
-
-		// 启动RPC服务
-
-	}
+	// 启动RPC服务
+	// if a.opts.rpcServer != nil {
+	// 	err := a.opts.rpcServer.Start(context.Background())
+	// 	if err != nil {
+	// 		log.Errorf("start rpc server error: %s", err)
+	// 		return err
+	// 	}
+	// }
+	go func() {
+		err := a.opts.rpcServer.Start(context.Background())
+		if err != nil {
+			log.Errorf("start rpc server error: %s", err)
+			panic(err)
+		}
+	}()
 
 
 	// 注册服务

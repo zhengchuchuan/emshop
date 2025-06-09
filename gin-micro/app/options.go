@@ -3,11 +3,10 @@ package app
 import (
 	// "emshop-admin/gin-micro/registry" // Replace with the actual path to the registry package
 	"emshop-admin/gin-micro/registry"
+	rpcserver "emshop-admin/gin-micro/server/rpc-server"
 	"net/url"
 	"os"
 	"time"
-
-	"google.golang.org/grpc"
 )
 
 type options struct {
@@ -24,7 +23,7 @@ type options struct {
 	stopTimeout time.Duration
 
 	// restServer *restserver.Server
-	rpcServer  *grpc.Server
+	rpcServer  *rpcserver.Server
 }
 
 
@@ -63,3 +62,15 @@ func WithRegistrar(registrar registry.Registrar) Option {
 		o.registrar = registrar
 	}
 }
+
+func WithRPCServer(server *rpcserver.Server) Option {
+	return func(o *options) {
+		o.rpcServer = server
+	}
+}
+
+// func WithRestServer(server *restserver.Server) Option {
+// 	return func(o *options) {
+// 		o.restServer = server
+// 	}
+// }

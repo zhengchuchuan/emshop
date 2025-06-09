@@ -1,12 +1,15 @@
 package srv
 
 import (
-	"fmt"
-
 	gapp "emshop-admin/gin-micro/app"
+	"emshop-admin/gin-micro/registry"
+	"emshop-admin/gin-micro/registry/consul"
+	"emshop-admin/internal/app/pkg/options"
 	"emshop-admin/internal/app/user/srv/config"
 	"emshop-admin/pkg/app"
 	"emshop-admin/pkg/log"
+
+	"github.com/hashicorp/consul/api"
 )
 
 func NewApp(basename string) *app.App {
@@ -20,20 +23,52 @@ func NewApp(basename string) *app.App {
 	return appl
 }
 
+
 func NewUserApp(cfg *config.Config) (*gapp.App, error) {
 	// 初始化log
 	log.Init(cfg.Log)
 	defer log.Flush()
 
 	// 服务注册
+	register := NewRegistrar(cfg.Registry)
+	// 生成rpc服务
 	rpcServer, err := NewUserRPCServer(cfg)
+	if err != nil {
+		log.Errorf("failed to create user rpc server: %v", err)
+		return nil, err
+	}
 
-	return nil, nil
+	return gapp.New(
+		gapp.WithRPCServer(rpcServer),
+		gapp.WithRegistrar(register),
+		), nil
+}
+
+func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
+	// 创建Consul客户端
+	c := api.DefaultConfig()
+	c.Address = registry.Address
+	c.Scheme = registry.Scheme
+	cli, err := api.NewClient(c)
+	if err != nil {
+		panic(err)
+	}
+	// 
+	r := consul.New(cli, consul.WithHealthCheck(true))
+	return r
 }
 
 func run(cfg *config.Config) app.RunFunc {
 	return func(baseName string) error {
-		fmt.Println(cfg.Log.Level)
+		userApp, err := NewUserApp(cfg)
+		if err != nil {
+			log.Errorf("failed to create user app: %v", err)
+			return err
+		}
+		if err := userApp.Run(); err != nil {
+			log.Errorf("failed to run user app: %v", err)
+			return err
+		}
 		return nil
 	}
 }
