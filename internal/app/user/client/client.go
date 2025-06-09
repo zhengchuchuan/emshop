@@ -6,6 +6,8 @@ import (
 	"emshop-admin/gin-micro/registry/consul"
 	rpc "emshop-admin/gin-micro/server/rpc-server"
 	_ "emshop-admin/gin-micro/server/rpc-server/resolver/direct"
+	"emshop-admin/gin-micro/server/rpc-server/selector"
+	"emshop-admin/gin-micro/server/rpc-server/selector/random"
 	"fmt"
 	"time"
 
@@ -14,8 +16,8 @@ import (
 
 func main() {
 	//设置全局的负载均衡策略
-	// selector.SetGlobalSelector(random.NewBuilder())
-	// rpc.InitBuilder()
+	selector.SetGlobalSelector(random.NewBuilder())
+	rpc.InitBuilder()
 
 	// 注册consul的服务发现配置
 	conf := api.DefaultConfig()
@@ -28,7 +30,7 @@ func main() {
 	r := consul.New(cli, consul.WithHealthCheck(true))
 
 	conn, err := rpc.DialInsecure(context.Background(),
-		// rpc.WithBalancerName("selector"),
+		rpc.WithBalancerName("selector"),
 		rpc.WithDiscovery(r),
 		rpc.WithClientTimeout(time.Second*5000),
 		rpc.WithEndpoint("discovery:///emshop-user-srv"),
