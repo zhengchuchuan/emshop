@@ -10,7 +10,8 @@ import (
 	grpcinsecure "google.golang.org/grpc/credentials/insecure"
 
 	"emshop-admin/gin-micro/registry"
-	"emshop-admin/gin-micro/server/rpc-server/client-interceptors"
+	clientinterceptors "emshop-admin/gin-micro/server/rpc-server/client-interceptors"
+	"emshop-admin/gin-micro/server/rpc-server/resolver/discovery"
 	"emshop-admin/pkg/log"
 )
 
@@ -133,15 +134,15 @@ func dial(ctx context.Context, insecure bool, opts ...ClientOption) (*grpc.Clien
 		grpc.WithChainStreamInterceptor(streamInts...),
 	}
 
-	//TODO 服务发现的选项
-	// if options.discovery != nil {
-	// 	grpcOpts = append(grpcOpts, grpc.WithResolvers(
-	// 		discovery.NewBuilder(
-	// 			options.discovery,
-	// 			discovery.WithInsecure(insecure),
-	// 		),
-	// 	))
-	// }
+	// 服务发现的选项
+	if options.discovery != nil {
+		grpcOpts = append(grpcOpts, grpc.WithResolvers(
+			discovery.NewBuilder(
+				options.discovery,
+				discovery.WithInsecure(insecure),
+			),
+		))
+	}
 
 	if insecure {
 		grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(grpcinsecure.NewCredentials()))

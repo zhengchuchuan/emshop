@@ -100,7 +100,6 @@ func (a *App) Run() error {
 	return nil
 }
 
-
 // 停止服务
 func (a *App) Stop() error {
 	a.lk.Lock()
@@ -117,9 +116,6 @@ func (a *App) Stop() error {
 			return err
 		}
 	}
-
-
-
 	return nil
 }
 
