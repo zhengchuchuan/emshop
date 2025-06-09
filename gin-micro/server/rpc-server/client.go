@@ -5,13 +5,13 @@ import (
 
 	"time"
 
-	"github.com/go-kratos/kratos/v2/transport/grpc/resolver/discovery"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	grpcinsecure "google.golang.org/grpc/credentials/insecure"
 
 	"emshop-admin/gin-micro/registry"
+	"emshop-admin/gin-micro/server/rpc-server/client-interceptors"
 	"emshop-admin/pkg/log"
-	"emshop-admin/gin-micro/server/rpc-server/clientinterceptors"
 )
 
 
@@ -113,10 +113,10 @@ func dial(ctx context.Context, insecure bool, opts ...ClientOption) (*grpc.Clien
 	if options.enableTracing {
 		ints = append(ints, otelgrpc.UnaryClientInterceptor())
 	}
-
-	if options.enableMetrics {
-		ints = append(ints, clientinterceptors.PrometheusInterceptor())
-	}
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// if options.enableMetrics {
+	// 	ints = append(ints, clientinterceptors.PrometheusInterceptor())
+	// }
 
 	streamInts := []grpc.StreamClientInterceptor{}
 
@@ -147,6 +147,7 @@ func dial(ctx context.Context, insecure bool, opts ...ClientOption) (*grpc.Clien
 		grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(grpcinsecure.NewCredentials()))
 	}
 
+	// 用户自定义的gRPC选项
 	if len(options.rpcOpts) > 0 {
 		grpcOpts = append(grpcOpts, options.rpcOpts...)
 	}
