@@ -1,7 +1,7 @@
 package app
 
 import (
-	cliflag "emshop-admin/pkg/common/cli/flag"
+	cliflag "emshop/pkg/common/cli/flag"
 )
 
 // CliOptions abstracts configuration options for reading parameters from the

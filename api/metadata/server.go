@@ -17,7 +17,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	dpb "google.golang.org/protobuf/types/descriptorpb"
-	"emshop-admin/pkg/log"
+	"emshop/pkg/log"
 )
 
 //nolint:lll

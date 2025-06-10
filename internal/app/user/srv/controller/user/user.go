@@ -1,7 +1,7 @@
 package user
 
 import (
-	srv1 "emshop-admin/internal/app/user/srv/service/v1"
+	srv1 "emshop/internal/app/user/srv/service/v1"
 )
 
 type userServer struct {

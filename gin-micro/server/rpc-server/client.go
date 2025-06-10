@@ -9,10 +9,10 @@ import (
 	"google.golang.org/grpc"
 	grpcinsecure "google.golang.org/grpc/credentials/insecure"
 
-	"emshop-admin/gin-micro/registry"
-	clientinterceptors "emshop-admin/gin-micro/server/rpc-server/client-interceptors"
-	"emshop-admin/gin-micro/server/rpc-server/resolver/discovery"
-	"emshop-admin/pkg/log"
+	"emshop/gin-micro/registry"
+	clientinterceptors "emshop/gin-micro/server/rpc-server/client-interceptors"
+	"emshop/gin-micro/server/rpc-server/resolver/discovery"
+	"emshop/pkg/log"
 )
 
 

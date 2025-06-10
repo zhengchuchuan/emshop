@@ -9,11 +9,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	ut "github.com/go-playground/universal-translator"
-	mws "emshop-admin/gin-micro/server/rest-server/middlewares"
-	"emshop-admin/gin-micro/server/rest-server/pprof"
-	"emshop-admin/gin-micro/server/rest-server/validation"
-	"emshop-admin/pkg/errors"
-	"emshop-admin/pkg/log"
+	mws "emshop/gin-micro/server/rest-server/middlewares"
+	"emshop/gin-micro/server/rest-server/pprof"
+	"emshop/gin-micro/server/rest-server/validation"
+	"emshop/pkg/errors"
+	"emshop/pkg/log"
 )
 
 type JwtInfo struct {

@@ -1,0 +1,41 @@
+2025-06-10 14:56:08.371	[34mINFO[0m	rest-server/server.go:99	intall middleware: recovery
+2025-06-10 14:56:08.371	[33mWARN[0m	rest-server/server.go:92	can not find middleware: cors
+2025-06-10 14:56:08.371	[33mWARN[0m	rest-server/server.go:92	can not find middleware: context
+2025-06-10 14:56:08.378	[34mINFO[0m	app/app.go:112	start rest server
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/ --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func1(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/cmdline --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func2(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/profile --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func3(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	POST   /debug/pprof/symbol --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func4(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/symbol --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func5(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/trace --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func6(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/allocs --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func7(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/block --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func8(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/goroutine --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func9(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/heap --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func10(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/mutex --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func11(4 handlers)
+2025-06-10 14:56:08.378	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/threadcreate --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func12(4 handlers)
+2025-06-10 14:56:08.380	[34mINFO[0m	rest-server/server.go:120	GET    /metrics --> github.com/penglongli/gin-metrics/ginmetrics.(*Monitor).Use.func1(5 handlers)
+2025-06-10 14:56:08.380	[34mINFO[0m	rest-server/server.go:151	rest server is running on port: 8050
+2025-06-10 14:56:15.031	[34mINFO[0m	app/app.go:161	start deregister service
+2025-06-10 14:56:15.031	[31mERROR[0m	app/app.go:167	deregister service error: Put "http://127.0.0.1:8500/v1/agent/service/deregister/fc642118-45c7-11f0-894e-d843ae1604b9": dial tcp 127.0.0.1:8500: connectex: No connection could be made because the target machine actively refused it.
+2025-06-10 14:56:15.031	[34mINFO[0m	rest-server/server.go:166	rest server is stopping
+2025-06-10 14:56:15.031	[34mINFO[0m	rest-server/server.go:171	rest server stopped
+2025-06-10 14:56:15.031	[31mERROR[0m	admin/app.go:67	run user app error: Put "http://127.0.0.1:8500/v1/agent/service/deregister/fc642118-45c7-11f0-894e-d843ae1604b9": dial tcp 127.0.0.1:8500: connectex: No connection could be made because the target machine actively refused it.
+2025-06-10 14:56:17.659	[34mINFO[0m	rest-server/server.go:99	intall middleware: recovery
+2025-06-10 14:56:17.659	[33mWARN[0m	rest-server/server.go:92	can not find middleware: cors
+2025-06-10 14:56:17.659	[33mWARN[0m	rest-server/server.go:92	can not find middleware: context
+2025-06-10 14:56:17.675	[34mINFO[0m	app/app.go:112	start rest server
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/ --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func1(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/cmdline --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func2(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/profile --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func3(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	POST   /debug/pprof/symbol --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func4(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/symbol --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func5(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/trace --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapF.func6(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/allocs --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func7(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/block --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func8(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/goroutine --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func9(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/heap --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func10(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/mutex --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func11(4 handlers)
+2025-06-10 14:56:17.675	[34mINFO[0m	rest-server/server.go:120	GET    /debug/pprof/threadcreate --> emshop/gin-micro/server/rest-server/pprof.RouteRegister.WrapH.func12(4 handlers)
+2025-06-10 14:56:17.677	[34mINFO[0m	rest-server/server.go:120	GET    /metrics --> github.com/penglongli/gin-metrics/ginmetrics.(*Monitor).Use.func1(5 handlers)
+2025-06-10 14:56:17.677	[34mINFO[0m	rest-server/server.go:151	rest server is running on port: 8050

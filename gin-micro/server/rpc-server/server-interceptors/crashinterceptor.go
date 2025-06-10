@@ -5,7 +5,7 @@ import (
 	"google.golang.org/grpc"
 	"runtime/debug"
 
-	"emshop-admin/pkg/log"
+	"emshop/pkg/log"
 )
 
 func StreamCrashInterceptor(svr interface{}, stream grpc.ServerStream, _ *grpc.StreamServerInfo,

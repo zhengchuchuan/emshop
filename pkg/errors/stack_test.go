@@ -32,8 +32,8 @@ func TestFrameFormat(t *testing.T) {
 	}, {
 		initpc,
 		"%+s",
-		"imooc/emshop-admin/pkg/errors.init\n" +
-			"\t.+/imooc/emshop-admin/pkg/errors/stack_test.go",
+		"imooc/emshop/pkg/errors.init\n" +
+			"\t.+/imooc/emshop/pkg/errors/stack_test.go",
 	}, {
 		0,
 		"%s",
@@ -79,8 +79,8 @@ func TestFrameFormat(t *testing.T) {
 	}, {
 		initpc,
 		"%+v",
-		"imooc/emshop-admin/pkg/errors.init\n" +
-			"\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:9",
+		"imooc/emshop/pkg/errors.init\n" +
+			"\t.+/imooc/emshop/pkg/errors/stack_test.go:9",
 	}, {
 		0,
 		"%v",
@@ -98,7 +98,7 @@ func TestFuncname(t *testing.T) {
 	}{
 		{"", ""},
 		{"runtime.main", "main"},
-		{"imooc/emshop-admin/pkg/errors.funcname", "funcname"},
+		{"imooc/emshop/pkg/errors.funcname", "funcname"},
 		{"funcname", "funcname"},
 		{"io.copyBuffer", "copyBuffer"},
 		{"main.(*R).Write", "(*R).Write"},
@@ -119,25 +119,25 @@ func TestStackTrace(t *testing.T) {
 		want []string
 	}{{
 		New("ooh"), []string{
-			"imooc/emshop-admin/pkg/errors.TestStackTrace\n" +
-				"\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:121",
+			"imooc/emshop/pkg/errors.TestStackTrace\n" +
+				"\t.+/imooc/emshop/pkg/errors/stack_test.go:121",
 		},
 	}, {
 		Wrap(New("ooh"), "ahh"), []string{
-			"imooc/emshop-admin/pkg/errors.TestStackTrace\n" +
-				"\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:126", // this is the stack of Wrap, not New
+			"imooc/emshop/pkg/errors.TestStackTrace\n" +
+				"\t.+/imooc/emshop/pkg/errors/stack_test.go:126", // this is the stack of Wrap, not New
 		},
 	}, {
 		Cause(Wrap(New("ooh"), "ahh")), []string{
-			"imooc/emshop-admin/pkg/errors.TestStackTrace\n" +
-				"\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:131", // this is the stack of New
+			"imooc/emshop/pkg/errors.TestStackTrace\n" +
+				"\t.+/imooc/emshop/pkg/errors/stack_test.go:131", // this is the stack of New
 		},
 	}, {
 		func() error { return New("ooh") }(), []string{
-			`imooc/emshop-admin/pkg/errors.TestStackTrace.func1` +
-				"\n\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:136", // this is the stack of New
-			"imooc/emshop-admin/pkg/errors.TestStackTrace\n" +
-				"\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:136", // this is the stack of New's caller
+			`imooc/emshop/pkg/errors.TestStackTrace.func1` +
+				"\n\t.+/imooc/emshop/pkg/errors/stack_test.go:136", // this is the stack of New
+			"imooc/emshop/pkg/errors.TestStackTrace\n" +
+				"\t.+/imooc/emshop/pkg/errors/stack_test.go:136", // this is the stack of New's caller
 		},
 	}, {
 		Cause(func() error {
@@ -145,12 +145,12 @@ func TestStackTrace(t *testing.T) {
 				return Errorf("hello %s", fmt.Sprintf("world: %s", "ooh"))
 			}()
 		}()), []string{
-			`imooc/emshop-admin/pkg/errors.TestStackTrace.func2.1` +
-				"\n\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:145", // this is the stack of Errorf
-			`imooc/emshop-admin/pkg/errors.TestStackTrace.func2` +
-				"\n\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:146", // this is the stack of Errorf's caller
-			"imooc/emshop-admin/pkg/errors.TestStackTrace\n" +
-				"\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:147", // this is the stack of Errorf's caller's caller
+			`imooc/emshop/pkg/errors.TestStackTrace.func2.1` +
+				"\n\t.+/imooc/emshop/pkg/errors/stack_test.go:145", // this is the stack of Errorf
+			`imooc/emshop/pkg/errors.TestStackTrace.func2` +
+				"\n\t.+/imooc/emshop/pkg/errors/stack_test.go:146", // this is the stack of Errorf's caller
+			"imooc/emshop/pkg/errors.TestStackTrace\n" +
+				"\t.+/imooc/emshop/pkg/errors/stack_test.go:147", // this is the stack of Errorf's caller's caller
 		},
 	}}
 	for i, tt := range tests {
@@ -225,10 +225,10 @@ func TestStackTraceFormat(t *testing.T) {
 		stackTrace()[:2],
 		"%+v",
 		"\n" +
-			"imooc/emshop-admin/pkg/errors.stackTrace\n" +
-			"\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:174\n" +
-			"imooc/emshop-admin/pkg/errors.TestStackTraceFormat\n" +
-			"\t.+/imooc/emshop-admin/pkg/errors/stack_test.go:225",
+			"imooc/emshop/pkg/errors.stackTrace\n" +
+			"\t.+/imooc/emshop/pkg/errors/stack_test.go:174\n" +
+			"imooc/emshop/pkg/errors.TestStackTraceFormat\n" +
+			"\t.+/imooc/emshop/pkg/errors/stack_test.go:225",
 	}, {
 		stackTrace()[:2],
 		"%#v",

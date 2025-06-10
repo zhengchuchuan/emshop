@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	cliflag "emshop-admin/pkg/common/cli/flag"
+	cliflag "emshop/pkg/common/cli/flag"
 )
 
 func TestAddGlobalFlags(t *testing.T) {

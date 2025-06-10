@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"emshop-admin/gin-micro/registry"
+	"emshop/gin-micro/registry"
 )
 
 func tcpServer(t *testing.T, lis net.Listener) {

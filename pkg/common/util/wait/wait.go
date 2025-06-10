@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"emshop-admin/pkg/common/util/clock"
-	"emshop-admin/pkg/common/util/runtime"
+	"emshop/pkg/common/util/clock"
+	"emshop/pkg/common/util/runtime"
 )
 
 // For any test of the style:

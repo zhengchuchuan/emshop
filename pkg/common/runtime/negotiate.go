@@ -3,7 +3,7 @@ package runtime
 import (
 	"fmt"
 
-	"emshop-admin/pkg/common/json"
+	"emshop/pkg/common/json"
 )
 
 // NegotiateError is returned when a ClientNegotiator is unable to locate

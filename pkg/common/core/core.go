@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"emshop-admin/pkg/errors"
+	"emshop/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 )

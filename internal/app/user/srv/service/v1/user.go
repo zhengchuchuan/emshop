@@ -2,8 +2,8 @@ package v1
 
 import (
 	"context"
-	dv1 "emshop-admin/internal/app/user/srv/data/v1"
-	metav1 "emshop-admin/pkg/common/meta/v1"
+	dv1 "emshop/internal/app/user/srv/data/v1"
+	metav1 "emshop/pkg/common/meta/v1"
 )
 
 type UserDTO struct {

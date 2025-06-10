@@ -1,12 +1,12 @@
 package rpcserver
 
 import (
-	"emshop-admin/gin-micro/registry"
+	"emshop/gin-micro/registry"
 
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/metadata"
-	"emshop-admin/gin-micro/server/rpc-server/selector"
+	"emshop/gin-micro/server/rpc-server/selector"
 )
 
 const (

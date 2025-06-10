@@ -8,7 +8,7 @@ import (
 
 	"github.com/gosuri/uitable"
 
-	"emshop-admin/pkg/common/json"
+	"emshop/pkg/common/json"
 )
 
 var (

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc/resolver"
-	"emshop-admin/gin-micro/registry"
+	"emshop/gin-micro/registry"
 )
 
 const name = "discovery"

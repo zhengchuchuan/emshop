@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	utilerrors "emshop-admin/pkg/errors"
+	utilerrors "emshop/pkg/errors"
 
-	"emshop-admin/pkg/common/util/sets"
+	"emshop/pkg/common/util/sets"
 )
 
 // Error is an implementation of the 'error' interface, which represents a

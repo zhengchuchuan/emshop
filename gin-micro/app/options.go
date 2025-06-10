@@ -1,10 +1,10 @@
 package app
 
 import (
-	// "emshop-admin/gin-micro/registry" // Replace with the actual path to the registry package
-	"emshop-admin/gin-micro/registry"
-	restserver "emshop-admin/gin-micro/server/rest-server"
-	rpcserver "emshop-admin/gin-micro/server/rpc-server"
+	// "emshop/gin-micro/registry" // Replace with the actual path to the registry package
+	"emshop/gin-micro/registry"
+	restserver "emshop/gin-micro/server/rest-server"
+	rpcserver "emshop/gin-micro/server/rpc-server"
 	"net/url"
 	"os"
 	"time"
@@ -70,8 +70,8 @@ func WithRPCServer(server *rpcserver.Server) Option {
 	}
 }
 
-// func WithRestServer(server *restserver.Server) Option {
-// 	return func(o *options) {
-// 		o.restServer = server
-// 	}
-// }
+func WithRestServer(server *restserver.Server) Option {
+	return func(o *options) {
+		o.restServer = server
+	}
+}

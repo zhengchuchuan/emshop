@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"emshop-admin/gin-micro/registry"
+	"emshop/gin-micro/registry"
 
 	"github.com/hashicorp/consul/api"
 )

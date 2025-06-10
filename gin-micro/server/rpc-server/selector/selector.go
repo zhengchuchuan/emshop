@@ -3,7 +3,7 @@ package selector
 import (
 	"context"
 
-	"emshop-admin/pkg/errors"
+	"emshop/pkg/errors"
 )
 
 // ErrNoAvailable is no available node.

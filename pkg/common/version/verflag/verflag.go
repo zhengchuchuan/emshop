@@ -9,7 +9,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"emshop-admin/pkg/common/version"
+	"emshop/pkg/common/version"
 )
 
 type versionValue int

@@ -1,9 +1,9 @@
 package app
 
 import (
-	"emshop-admin/gin-micro/registry"
-	gs "emshop-admin/gin-micro/server"
-	"emshop-admin/pkg/log"
+	"emshop/gin-micro/registry"
+	gs "emshop/gin-micro/server"
+	"emshop/pkg/log"
 	"net/url"
 	"syscall"
 	"time"

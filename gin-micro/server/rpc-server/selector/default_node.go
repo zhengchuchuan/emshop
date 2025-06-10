@@ -3,7 +3,7 @@ package selector
 import (
 	"strconv"
 
-	"emshop-admin/gin-micro/registry"
+	"emshop/gin-micro/registry"
 )
 
 // DefaultNode is selector node

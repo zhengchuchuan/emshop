@@ -1,13 +1,13 @@
 package srv
 
 import (
-	gapp "emshop-admin/gin-micro/app"
-	"emshop-admin/gin-micro/registry"
-	"emshop-admin/gin-micro/registry/consul"
-	"emshop-admin/internal/app/pkg/options"
-	"emshop-admin/internal/app/user/srv/config"
-	"emshop-admin/pkg/app"
-	"emshop-admin/pkg/log"
+	gapp "emshop/gin-micro/app"
+	"emshop/gin-micro/registry"
+	"emshop/gin-micro/registry/consul"
+	"emshop/internal/app/pkg/options"
+	"emshop/internal/app/user/srv/config"
+	"emshop/pkg/app"
+	"emshop/pkg/log"
 
 	"github.com/hashicorp/consul/api"
 )
@@ -15,7 +15,7 @@ import (
 func NewApp(basename string) *app.App {
 	cfg := config.New()
 	appl := app.NewApp("user",
-		"emshop-admin",
+		"emshop",
 		app.WithOptions(cfg),
 		app.WithRunFunc(run(cfg)),
 		//app.WithNoConfig(), //设置不读取配置文件

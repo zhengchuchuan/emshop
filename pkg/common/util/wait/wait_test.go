@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"emshop-admin/pkg/common/util/clock"
-	"emshop-admin/pkg/common/util/runtime"
+	"emshop/pkg/common/util/clock"
+	"emshop/pkg/common/util/runtime"
 )
 
 func TestUntil(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	selector2 "emshop-admin/gin-micro/server/rpc-server/selector"
+	selector2 "emshop/gin-micro/server/rpc-server/selector"
 )
 
 const (

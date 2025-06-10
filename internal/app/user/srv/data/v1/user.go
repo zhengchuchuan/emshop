@@ -2,7 +2,7 @@ package v1
 
 import (
 	"context"
-	metav1 "emshop-admin/pkg/common/meta/v1"
+	metav1 "emshop/pkg/common/meta/v1"
 )
 
 type UserDO struct {

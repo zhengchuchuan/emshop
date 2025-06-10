@@ -1,9 +1,9 @@
 package config
 
 import (
-	"emshop-admin/internal/app/pkg/options"
-	cliflag "emshop-admin/pkg/common/cli/flag"
-	"emshop-admin/pkg/log"
+	"emshop/internal/app/pkg/options"
+	cliflag "emshop/pkg/common/cli/flag"
+	"emshop/pkg/log"
 )
 
 type Config struct {

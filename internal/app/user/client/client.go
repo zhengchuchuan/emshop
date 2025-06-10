@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	v1 "emshop-admin/api/user/v1"
-	"emshop-admin/gin-micro/registry/consul"
-	rpc "emshop-admin/gin-micro/server/rpc-server"
-	_ "emshop-admin/gin-micro/server/rpc-server/resolver/direct"
-	"emshop-admin/gin-micro/server/rpc-server/selector"
-	"emshop-admin/gin-micro/server/rpc-server/selector/random"
+	v1 "emshop/api/user/v1"
+	"emshop/gin-micro/registry/consul"
+	rpc "emshop/gin-micro/server/rpc-server"
+	_ "emshop/gin-micro/server/rpc-server/resolver/direct"
+	"emshop/gin-micro/server/rpc-server/selector"
+	"emshop/gin-micro/server/rpc-server/selector/random"
 	"fmt"
 	"time"
 

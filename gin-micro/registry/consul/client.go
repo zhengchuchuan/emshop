@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"emshop-admin/gin-micro/registry"
-	"emshop-admin/pkg/log"
+	"emshop/gin-micro/registry"
+	"emshop/pkg/log"
 
 	"github.com/hashicorp/consul/api"
 )

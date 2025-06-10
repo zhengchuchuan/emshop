@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode"
 
-	"emshop-admin/pkg/common/validation/field"
+	"emshop/pkg/common/validation/field"
 )
 
 const (

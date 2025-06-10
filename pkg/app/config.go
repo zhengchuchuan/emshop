@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"emshop-admin/pkg/common/util/homedir"
+	"emshop/pkg/common/util/homedir"
 
 	"github.com/gosuri/uitable"
 	"github.com/spf13/cobra"

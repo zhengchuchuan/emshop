@@ -4,7 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"emshop-admin/gin-micro/registry"
+	"emshop/gin-micro/registry"
 )
 
 type serviceSet struct {

@@ -1,7 +1,7 @@
 package options
 
 import (
-	"emshop-admin/pkg/errors"
+	"emshop/pkg/errors"
 
 	"github.com/spf13/pflag"
 )

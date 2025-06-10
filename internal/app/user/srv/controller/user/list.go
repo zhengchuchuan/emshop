@@ -3,9 +3,9 @@ package user
 import (
 	"context"
 
-	upbv1 "emshop-admin/api/user/v1"
-	srvv1 "emshop-admin/internal/app/user/srv/service/v1"
-	metav1 "emshop-admin/pkg/common/meta/v1"
+	upbv1 "emshop/api/user/v1"
+	srvv1 "emshop/internal/app/user/srv/service/v1"
+	metav1 "emshop/pkg/common/meta/v1"
 )
 
 func DTOToResponse(userdto srvv1.UserDTO) *upbv1.UserInfoResponse {

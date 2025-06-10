@@ -4,7 +4,7 @@ import (
 	goflag "flag"
 	"strings"
 
-	"emshop-admin/pkg/log"
+	"emshop/pkg/log"
 
 	"github.com/spf13/pflag"
 )

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"emshop/internal/app/user/srv"
 	"math/rand"
+	"emshop/internal/app/emshop/admin"
 	"os"
 	"runtime"
 	"time"
@@ -13,5 +13,5 @@ func main() {
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
-	srv.NewApp("user-server").Run()
+	admin.NewApp("admin-server").Run()
 }

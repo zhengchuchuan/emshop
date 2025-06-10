@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"emshop-admin/pkg/common/util/sets"
+	"emshop/pkg/common/util/sets"
 )
 
 // ciphers maps strings into tls package cipher constants in

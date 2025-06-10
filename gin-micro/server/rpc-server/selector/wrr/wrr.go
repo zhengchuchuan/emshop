@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	selector2 "emshop-admin/gin-micro/server/rpc-server/selector"
-	"emshop-admin/gin-micro/server/rpc-server/selector/node/direct"
+	selector2 "emshop/gin-micro/server/rpc-server/selector"
+	"emshop/gin-micro/server/rpc-server/selector/node/direct"
 )
 
 const (

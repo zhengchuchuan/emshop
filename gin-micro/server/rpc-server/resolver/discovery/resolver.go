@@ -10,8 +10,8 @@ import (
 
 	"google.golang.org/grpc/attributes"
 	"google.golang.org/grpc/resolver"
-	"emshop-admin/gin-micro/registry"
-	"emshop-admin/pkg/log"
+	"emshop/gin-micro/registry"
+	"emshop/pkg/log"
 )
 
 type discoveryResolver struct {

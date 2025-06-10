@@ -3,7 +3,7 @@ package consul
 import (
 	"context"
 
-	"emshop-admin/gin-micro/registry"
+	"emshop/gin-micro/registry"
 )
 
 type watcher struct {

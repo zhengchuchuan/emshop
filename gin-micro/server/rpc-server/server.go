@@ -12,10 +12,10 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
-	apimd "emshop-admin/api/metadata"
-	srvintc "emshop-admin/gin-micro/server/rpc-server/server-interceptors"
-	"emshop-admin/pkg/host"
-	"emshop-admin/pkg/log"
+	apimd "emshop/api/metadata"
+	srvintc "emshop/gin-micro/server/rpc-server/server-interceptors"
+	"emshop/pkg/host"
+	"emshop/pkg/log"
 )
 
 type Server struct {

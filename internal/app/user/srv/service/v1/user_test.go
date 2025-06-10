@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"emshop-admin/internal/app/user/srv/data/v1/mock"
-	metav1 "emshop-admin/pkg/common/meta/v1"
+	"emshop/internal/app/user/srv/data/v1/mock"
+	metav1 "emshop/pkg/common/meta/v1"
 )
 
 func TestUserList(t *testing.T) {

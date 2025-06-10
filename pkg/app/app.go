@@ -5,18 +5,18 @@ import (
 	"os"
 
 	//controller(参数校验) ->service(具体的业务逻辑) -> data(数据库的接口)
-	cliflag "emshop-admin/pkg/common/cli/flag"
-	"emshop-admin/pkg/common/cli/globalflag"
-	"emshop-admin/pkg/common/term"
-	"emshop-admin/pkg/common/version"
-	"emshop-admin/pkg/common/version/verflag"
-	"emshop-admin/pkg/errors"
+	cliflag "emshop/pkg/common/cli/flag"
+	"emshop/pkg/common/cli/globalflag"
+	"emshop/pkg/common/term"
+	"emshop/pkg/common/version"
+	"emshop/pkg/common/version/verflag"
+	"emshop/pkg/errors"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"emshop-admin/pkg/log"
+	"emshop/pkg/log"
 )
 
 var (

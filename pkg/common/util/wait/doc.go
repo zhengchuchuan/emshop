@@ -16,4 +16,4 @@ limitations under the License.
 
 // Package wait provides tools for polling or listening for changes
 // to a condition.
-package wait // import "emshop-admin/pkg/common/util/wait"
+package wait // import "emshop/pkg/common/util/wait"

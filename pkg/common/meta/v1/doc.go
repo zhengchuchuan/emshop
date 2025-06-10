@@ -8,4 +8,4 @@
 //
 // In the future, we will probably move these categories of objects into
 // separate packages.
-package v1 // import "emshop-admin/pkg/common/meta/v1"
+package v1 // import "emshop/pkg/common/meta/v1"
