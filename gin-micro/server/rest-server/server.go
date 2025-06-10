@@ -106,65 +106,66 @@ func NewServer(opts ...ServerOption) *Server {
 // 	return s.trans
 // }
 
-// // start rest server
-// func (s *Server) Start(ctx context.Context) error {
-// 	//设置开发模式，打印路由信息
-// 	if s.mode != gin.DebugMode && s.mode != gin.ReleaseMode && s.mode != gin.TestMode {
-// 		return errors.New("mode must be one of debug/release/test")
-// 	}
+// start rest server
+func (s *Server) Start(ctx context.Context) error {
+	//设置开发模式，打印路由信息
+	if s.mode != gin.DebugMode && s.mode != gin.ReleaseMode && s.mode != gin.TestMode {
+		return errors.New("mode must be one of debug/release/test")
+	}
 
-// 	//设置开发模式，打印路由信息
-// 	gin.SetMode(s.mode)
-// 	gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {
-// 		log.Infof("%-6s %-s --> %s(%d handlers)", httpMethod, absolutePath, handlerName, nuHandlers)
-// 	}
+	//设置开发模式，打印路由信息
+	gin.SetMode(s.mode)
+	gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {
+		log.Infof("%-6s %-s --> %s(%d handlers)", httpMethod, absolutePath, handlerName, nuHandlers)
+	}
 
-// 	//TODO 初始化翻译器
-// 	err := s.initTrans(s.transName)
-// 	if err != nil {
-// 		log.Errorf("initTrans error %s", err.Error())
-// 		return err
-// 	}
+	//TODO 初始化翻译器
+	// err := s.initTrans(s.transName)
+	// if err != nil {
+	// 	log.Errorf("initTrans error %s", err.Error())
+	// 	return err
+	// }
+	
 
-// 	//注册mobile验证码
-// 	validation.RegisterMobile(s.trans)
+	//注册mobile验证码
+	validation.RegisterMobile(s.trans)
 
-// 	//根据配置初始化pprof路由
-// 	if s.enableProfiling {
-// 		pprof.Register(s.Engine)
-// 	}
+	//根据配置初始化pprof路由
+	if s.enableProfiling {
+		pprof.Register(s.Engine)
+	}
 
-// 	if s.enableMetrics {
-// 		// get global Monitor object
-// 		m := ginmetrics.GetMonitor()
-// 		// +optional set metric path, default /debug/metrics
-// 		m.SetMetricPath("/metrics")
-// 		// +optional set slow time, default 5s
-// 		// +optional set request duration, default {0.1, 0.3, 1.2, 5, 10}
-// 		// used to p95, p99
-// 		m.SetDuration([]float64{0.1, 0.3, 1.2, 5, 10})
-// 		m.Use(s)
-// 	}
+	if s.enableMetrics {
+		// get global Monitor object
+		m := ginmetrics.GetMonitor()
+		// +optional set metric path, default /debug/metrics
+		m.SetMetricPath("/metrics")
+		// +optional set slow time, default 5s
+		// +optional set request duration, default {0.1, 0.3, 1.2, 5, 10}
+		// used to p95, p99
+		m.SetDuration([]float64{0.1, 0.3, 1.2, 5, 10})
+		m.Use(s)
+	}
 
-// 	log.Infof("rest server is running on port: %d", s.port)
-// 	address := fmt.Sprintf(":%d", s.port)
-// 	s.server = &http.Server{
-// 		Addr:    address,
-// 		Handler: s.Engine,
-// 	}
-// 	_ = s.SetTrustedProxies(nil)
-// 	if err = s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-// 		return err
-// 	}
-// 	return nil
-// }
+	log.Infof("rest server is running on port: %d", s.port)
+	address := fmt.Sprintf(":%d", s.port)
+	s.server = &http.Server{
+		Addr:    address,
+		Handler: s.Engine,
+	}
+	// _ = s.SetTrustedProxies(nil)
+	// if err = s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	// 	return err
+	// }
+	return nil
+}
 
-// func (s *Server) Stop(ctx context.Context) error {
-// 	log.Infof("rest server is stopping")
-// 	if err := s.server.Shutdown(ctx); err != nil {
-// 		log.Errorf("rest server shutdown error: %s", err.Error())
-// 		return err
-// 	}
-// 	log.Info("rest server stopped")
-// 	return nil
-// }
+func (s *Server) Stop(ctx context.Context) error {
+	log.Infof("rest server is stopping")
+	if err := s.server.Shutdown(ctx); err != nil {
+		log.Errorf("rest server shutdown error: %s", err.Error())
+		return err
+	}
+	log.Info("rest server stopped")
+	return nil
+}
