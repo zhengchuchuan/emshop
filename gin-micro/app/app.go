@@ -91,7 +91,7 @@ func (a *App) Run() error {
 		servers = append(servers, a.opts.rpcServer)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	a.cancel = cancel
+	a.cancel = cancel	// 保存取消函数,后续的 Stop() 方法可以调用它来取消所有的操作
 	eg, ctx := errgroup.WithContext(ctx)
 	wg := sync.WaitGroup{}
 	for _, srv := range servers {
@@ -134,6 +134,7 @@ func (a *App) Run() error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, a.opts.sigs...)
 	eg.Go(func() error {
+		// 等待上下文取消或接收到退出信号
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

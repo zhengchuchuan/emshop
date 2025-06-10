@@ -1,0 +1,2 @@
+参考stringer
+编译生成exe文件,用于对code进行文件生成
