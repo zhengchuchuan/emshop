@@ -2,6 +2,7 @@ package app
 
 import (
 	"emshop-admin/gin-micro/registry"
+	gs "emshop-admin/gin-micro/server"
 	"emshop-admin/pkg/log"
 	"net/url"
 	"syscall"
@@ -14,6 +15,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 )
 
 type App struct {
@@ -21,6 +23,8 @@ type App struct {
 
 	lk	sync.Mutex // 锁, 用于保护instance的并发访问
 	instance *registry.ServiceInstance // 服务注册的实例
+
+	cancel func()
 }
 
 func New(opts ...Option) *App {
@@ -61,11 +65,7 @@ func (a *App) Run() error {
 	a.lk.Lock()
 	a.instance = instance
 	a.lk.Unlock()
-	// 启动RPC服务
-	//if a.opts.rpcServer != nil {
-	//	// 启动rpc服务， 如果我想要给这个rpc服务设置port 我们想要给这个rpc服务register我们自定义的interceptor
-	//	a.opts.rpcServer.Serve()
-	//}
+
 
 	//现在启动了两个server，一个是restserver，一个是rpcserver
 	/*
@@ -82,25 +82,43 @@ func (a *App) Run() error {
 		如果我们的服务启动了然后这个时候用户立马进行了访问
 	*/
 
-	// 启动RPC服务
-	// 写的很简单， http服务要启动
-	if a.opts.rpcServer != nil {
-		go func(){
-			err := a.opts.rpcServer.Start(context.Background())
-			if err != nil {
-				panic(err) 
-			}
-		}()
+	// servers 可以添加种server
+	var servers []gs.Server
+	if a.opts.restServer != nil {
+		servers = append(servers, a.opts.restServer)
 	}
-	// 启动REST服务
 	if a.opts.rpcServer != nil {
-		go func(){
-			err := a.opts.restServer.Start(context.Background())
-			if err != nil {
-				panic(err)
-			}
-		}()
+		servers = append(servers, a.opts.rpcServer)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	a.cancel = cancel
+	eg, ctx := errgroup.WithContext(ctx)
+	wg := sync.WaitGroup{}
+	for _, srv := range servers {
+		//启动server
+		//在启动一个goroutine 去监听是否有err产生
+		srv := srv
+		eg.Go(func() error {
+			<-ctx.Done() //wait for stop signal
+			//不可能无休止的等待stop
+			sctx, cancel := context.WithTimeout(context.Background(), a.opts.stopTimeout)
+			defer cancel()
+			return srv.Stop(sctx)
+		})
+
+		wg.Add(1)
+		eg.Go(func() error {
+			wg.Done()
+			log.Info("start rest server")
+			return srv.Start(ctx)
+		})
+	}
+
+	wg.Wait()
+
+
+
+
 
 
 	// 注册服务
@@ -117,11 +135,20 @@ func (a *App) Run() error {
 	}
 
 
-	// 监听退出信号
+	//监听退出信息
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, a.opts.sigs...)
-	<-c
-
+	eg.Go(func() error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-c:
+			return a.Stop()
+		}
+	})
+	if err := eg.Wait(); err != nil {
+		return err
+	}
 	return nil
 }
 
