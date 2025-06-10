@@ -116,11 +116,6 @@ func (a *App) Run() error {
 
 	wg.Wait()
 
-
-
-
-
-
 	// 注册服务
 	if a.opts.registrar != nil {
 		rctx, rcancel := context.WithTimeout(context.Background(), a.opts.registrarTimeout)
