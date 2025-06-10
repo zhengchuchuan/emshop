@@ -1,5 +1,5 @@
-// module github.com/zhengchuchuan/emshop-admin
-module emshop-admin
+// module github.com/zhengchuchuan/emshop
+module emshop
 
 go 1.24.3
 
