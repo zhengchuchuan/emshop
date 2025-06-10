@@ -61,42 +61,46 @@ type Server struct {
 	serviceName string
 }
 
-// func NewServer(opts ...ServerOption) *Server {
-// 	srv := &Server{
-// 		port:            8080,
-// 		mode:            "debug",
-// 		healthz:         true,
-// 		enableProfiling: true,
-// 		jwt: &JwtInfo{
-// 			"JWT",
-// 			"mwGDMGtSpdwXaiihF5WnEgRajSFpdZj8",
-// 			7 * 24 * time.Hour,
-// 			7 * 24 * time.Hour,
-// 		},
-// 		Engine:      gin.Default(),
-// 		transName:   "zh",
-// 		serviceName: "gmicro",
-// 	}
+func NewServer(opts ...ServerOption) *Server {
+	srv := &Server{
+		port:            8080,
+		mode:            "debug",
+		healthz:         true,
+		enableProfiling: true,
+		jwt: &JwtInfo{
+			"JWT",
+			"mwGDMGtSpdwXaiihF5WnEgRajSFpdZj8",
+			7 * 24 * time.Hour,
+			7 * 24 * time.Hour,
+		},
+		Engine:      gin.Default(),
+		transName:   "zh",
+		serviceName: "gin-micro",
+	}
 
-// 	for _, o := range opts {
-// 		o(srv)
-// 	}
+	for _, o := range opts {
+		o(srv)
+	}
 
-// 	srv.Use(mws.TracingHandler(srv.serviceName))
-// 	for _, m := range srv.middlewares {
-// 		mw, ok := mws.Middlewares[m]
-// 		if !ok {
-// 			log.Warnf("can not find middleware: %s", m)
-// 			continue
-// 			//panic(errors.Errorf("can not find middleware: %s", m))
-// 		}
+	// srv.Use(mws.TracingHandler(srv.serviceName))
 
-// 		log.Infof("intall middleware: %s", m)
-// 		srv.Use(mw)
-// 	}
 
-// 	return srv
-// }
+	for _, m := range srv.middlewares {
+		mw, ok := mws.Middlewares[m]
+		if !ok {
+			log.Warnf("can not find middleware: %s", m)
+			// 没有找到中间件，跳过
+			continue
+			// 如果需要严格检查，可以取消注释下面这行代码
+			//panic(errors.Errorf("can not find middleware: %s", m))
+		}
+
+		log.Infof("intall middleware: %s", m)
+		srv.Use(mw)
+	}
+
+	return srv
+}
 
 // func (s *Server) Translator() ut.Translator {
 // 	return s.trans
