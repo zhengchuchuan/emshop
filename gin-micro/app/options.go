@@ -3,6 +3,7 @@ package app
 import (
 	// "emshop-admin/gin-micro/registry" // Replace with the actual path to the registry package
 	"emshop-admin/gin-micro/registry"
+	restserver "emshop-admin/gin-micro/server/rest-server"
 	rpcserver "emshop-admin/gin-micro/server/rpc-server"
 	"net/url"
 	"os"
@@ -22,7 +23,7 @@ type options struct {
 	//stop超时时间
 	stopTimeout time.Duration
 
-	// restServer *restserver.Server
+	restServer *restserver.Server
 	rpcServer  *rpcserver.Server
 }
 

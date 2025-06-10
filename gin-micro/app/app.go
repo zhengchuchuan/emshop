@@ -62,20 +62,41 @@ func (a *App) Run() error {
 	a.instance = instance
 	a.lk.Unlock()
 	// 启动RPC服务
-	// if a.opts.rpcServer != nil {
-	// 	err := a.opts.rpcServer.Start(context.Background())
-	// 	if err != nil {
-	// 		log.Errorf("start rpc server error: %s", err)
-	// 		return err
-	// 	}
-	// }
-	// go func() {
-	// 	err := a.opts.rpcServer.Start(context.Background())
-	// 	if err != nil {
-	// 		log.Errorf("start rpc server error: %s", err)
-	// 		panic(err)
-	// 	}
-	// }()
+	//if a.opts.rpcServer != nil {
+	//	// 启动rpc服务， 如果我想要给这个rpc服务设置port 我们想要给这个rpc服务register我们自定义的interceptor
+	//	a.opts.rpcServer.Serve()
+	//}
+
+	//现在启动了两个server，一个是restserver，一个是rpcserver
+	/*
+		这两个server是否必须同时启动成功？
+		如果有一个启动失败，那么我们就要停止另外一个server
+		如果启动了多个， 如果其中一个启动失败，其他的应该被取消
+			如果剩余的server的状态：
+				1. 还没有开始调用start
+					stop
+				2. start进行中
+					调用进行中的cancel
+				3. start已经完成
+					调用stop
+		如果我们的服务启动了然后这个时候用户立马进行了访问
+	*/
+	
+	// 启动RPC服务
+	// 写的很简单， http服务要启动
+	if a.opts.rpcServer != nil {
+		err := a.opts.rpcServer.Start(context.Background())
+		if err != nil {
+			return err
+		}
+	}
+	// 启动REST服务
+	if a.opts.rpcServer != nil {
+		err := a.opts.restServer.Start(context.Background())
+		if err != nil {
+			return err
+		}
+	}
 
 
 	// 注册服务

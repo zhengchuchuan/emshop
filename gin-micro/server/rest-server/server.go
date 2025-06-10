@@ -54,6 +54,7 @@ type Server struct {
 
 	//翻译器, 默认值 zh
 	transName string
+	// 存储在Server中
 	trans     ut.Translator
 
 	server *http.Server
@@ -102,9 +103,9 @@ func NewServer(opts ...ServerOption) *Server {
 	return srv
 }
 
-// func (s *Server) Translator() ut.Translator {
-// 	return s.trans
-// }
+func (s *Server) Translator() ut.Translator {
+	return s.trans
+}
 
 // start rest server
 func (s *Server) Start(ctx context.Context) error {
@@ -120,11 +121,11 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	//TODO 初始化翻译器
-	// err := s.initTrans(s.transName)
-	// if err != nil {
-	// 	log.Errorf("initTrans error %s", err.Error())
-	// 	return err
-	// }
+	err := s.initTrans(s.transName)
+	if err != nil {
+		log.Errorf("initTrans error %s", err.Error())
+		return err
+	}
 	
 
 	//注册mobile验证码
@@ -149,14 +150,15 @@ func (s *Server) Start(ctx context.Context) error {
 
 	log.Infof("rest server is running on port: %d", s.port)
 	address := fmt.Sprintf(":%d", s.port)
+	// 使用http的server 优雅退出, 自己维护
 	s.server = &http.Server{
 		Addr:    address,
 		Handler: s.Engine,
 	}
-	// _ = s.SetTrustedProxies(nil)
-	// if err = s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-	// 	return err
-	// }
+	_ = s.SetTrustedProxies(nil)
+	if err = s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
+	}
 	return nil
 }
 
