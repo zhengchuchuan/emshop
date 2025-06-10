@@ -81,21 +81,25 @@ func (a *App) Run() error {
 					调用stop
 		如果我们的服务启动了然后这个时候用户立马进行了访问
 	*/
-	
+
 	// 启动RPC服务
 	// 写的很简单， http服务要启动
 	if a.opts.rpcServer != nil {
-		err := a.opts.rpcServer.Start(context.Background())
-		if err != nil {
-			return err
-		}
+		go func(){
+			err := a.opts.rpcServer.Start(context.Background())
+			if err != nil {
+				panic(err) 
+			}
+		}()
 	}
 	// 启动REST服务
 	if a.opts.rpcServer != nil {
-		err := a.opts.restServer.Start(context.Background())
-		if err != nil {
-			return err
-		}
+		go func(){
+			err := a.opts.restServer.Start(context.Background())
+			if err != nil {
+				panic(err)
+			}
+		}()
 	}
 
 
