@@ -26,8 +26,8 @@ type clientOptions struct {
 	rpcOpts       []grpc.DialOption	// gRPC客户端选项
 	balancerName  string
 	log           log.LogHelper
-	enableTracing bool
-	enableMetrics bool
+	enableTracing bool		// 是否启用Tracing
+	enableMetrics bool		// 是否启用Metrics
 }
 
 type ClientOption func(o *clientOptions)
