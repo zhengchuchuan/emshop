@@ -15,10 +15,10 @@ import (
 func NewUserRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 	//初始化open-telemetry的exporter
 	trace.InitAgent(trace.Options{
-		cfg.Name,
-		cfg.Endpoint,
-		cfg.Sampler,
-		cfg.Batcher,
+		cfg.Telemetry.Name,
+		cfg.Telemetry.Endpoint,
+		cfg.Telemetry.Sampler,
+		cfg.Telemetry.Batcher,
 	})
 
 	data := mock.NewUsers()

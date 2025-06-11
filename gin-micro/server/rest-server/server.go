@@ -63,6 +63,7 @@ type Server struct {
 }
 
 func NewServer(opts ...ServerOption) *Server {
+	// 默认的配置
 	srv := &Server{
 		port:            8080,
 		mode:            "debug",
@@ -83,7 +84,8 @@ func NewServer(opts ...ServerOption) *Server {
 		o(srv)
 	}
 
-	// srv.Use(mws.TracingHandler(srv.serviceName))
+	// gin集成链路追踪
+	srv.Use(mws.TracingHandler(srv.serviceName))
 
 
 	for _, m := range srv.middlewares {
