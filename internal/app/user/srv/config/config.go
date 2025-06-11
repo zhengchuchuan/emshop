@@ -14,7 +14,7 @@ type Config struct {
 	Registry     *options.RegistryOptions  `json:"registry" mapstructure:"registry"`
 
 // 	Nacos        *options.NacosOptions     `json:"nacos" mapstructure:"nacos"`
-// 	Telemetry    *options.TelemetryOptions `json:"telemetry" mapstructure:"telemetry"`
+	Telemetry    *options.TelemetryOptions `json:"telemetry" mapstructure:"telemetry"`
 // 	MySQLOptions *options.MySQLOptions     `json:"mysql" mapstructure:"mysql"`
 }
 
@@ -24,7 +24,7 @@ func (c *Config) Validate() []error {
 	errors = append(errors, c.Server.Validate()...)
 	errors = append(errors, c.Registry.Validate()...)
 
-	// errors = append(errors, c.Telemetry.Validate()...)
+	errors = append(errors, c.Telemetry.Validate()...)
 	// errors = append(errors, c.MySQLOptions.Validate()...)
 	// errors = append(errors, c.Nacos.Validate()...)
 	return errors
@@ -34,7 +34,7 @@ func (c *Config) Flags() (fss cliflag.NamedFlagSets) {
 	c.Log.AddFlags(fss.FlagSet("logs"))
 	c.Server.AddFlags(fss.FlagSet("server"))
 	c.Registry.AddFlags(fss.FlagSet("registry"))
-	// c.Telemetry.AddFlags(fss.FlagSet("telemetry"))
+	c.Telemetry.AddFlags(fss.FlagSet("telemetry"))
 	// c.MySQLOptions.AddFlags(fss.FlagSet("mysql"))
 	// c.Nacos.AddFlags(fss.FlagSet("nacos"))
 	return fss
@@ -47,7 +47,7 @@ func New() *Config {
 		Server:       options.NewServerOptions(),
 		Registry:     options.NewRegistryOptions(),
 		
-		// Telemetry:    options.NewTelemetryOptions(),
+		Telemetry:    options.NewTelemetryOptions(),
 		// MySQLOptions: options.NewMySQLOptions(),
 		// Nacos:        options.NewNacosOptions(),
 	}
