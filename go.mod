@@ -24,6 +24,7 @@ require (
 	github.com/novalagung/gubrak v1.0.0
 	github.com/penglongli/gin-metrics v0.1.13
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.12.0
 	github.com/sony/sonyflake v1.2.1
 	github.com/speps/go-hashids v2.0.0+incompatible
 	github.com/spf13/cobra v1.9.1
@@ -95,7 +96,6 @@ require (
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_golang v1.12.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect

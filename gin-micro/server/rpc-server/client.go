@@ -39,6 +39,12 @@ func WithEnableTracing(enable bool) ClientOption {
 	}
 }
 
+func WithClientMetrics(metric bool) ServerOption {
+	return func(s *Server) {
+		s.enableMetrics = metric
+	}
+}
+
 // 设置地址
 func WithEndpoint(endpoint string) ClientOption {
 	return func(o *clientOptions) {
@@ -115,9 +121,9 @@ func dial(ctx context.Context, insecure bool, opts ...ClientOption) (*grpc.Clien
 		ints = append(ints, otelgrpc.UnaryClientInterceptor())
 	}
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	// if options.enableMetrics {
-	// 	ints = append(ints, clientinterceptors.PrometheusInterceptor())
-	// }
+	if options.enableMetrics {
+		ints = append(ints, clientinterceptors.PrometheusInterceptor())
+	}
 
 	streamInts := []grpc.StreamClientInterceptor{}
 

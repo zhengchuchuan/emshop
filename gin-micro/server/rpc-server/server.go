@@ -33,7 +33,7 @@ type Server struct {
 	metadata *apimd.Server						// 元数据服务
 	endpoint 	*url.URL						// 服务地址
 
-	enableMetrics bool
+	enableMetrics bool							// 是否开启prometheus 
 }
 
 // 函数选项模式
@@ -57,17 +57,19 @@ func NewServer(opts ...ServerOption) *Server {
 		otelgrpc.UnaryServerInterceptor(),
 	}
 	// 如果用户传入了自定义的Unary拦截器，则添加到unaryInts中
-	// if srv.enableMetrics {
-	// 	unaryInts = append(unaryInts, srvintc.UnaryPrometheusInterceptor)
-	// }
+
+	// prometheus拦截器
+	if srv.enableMetrics {
+		unaryInts = append(unaryInts, srvintc.UnaryPrometheusInterceptor)
+	}
 
 	if srv.timeout > 0 {
 		unaryInts = append(unaryInts, srvintc.UnaryTimeoutInterceptor(srv.timeout))
 	}
 
-	// if len(srv.unaryInts) > 0 {
-	// 	unaryInts = append(unaryInts, srv.unaryInts...)
-	// }
+	if len(srv.unaryInts) > 0 {
+		unaryInts = append(unaryInts, srv.unaryInts...)
+	}
 
 	//把传入的拦截器转换成grpc的ServerOption
 	grpcOpts := []grpc.ServerOption{grpc.ChainUnaryInterceptor(srv.unaryInts...)}
