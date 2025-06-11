@@ -138,6 +138,7 @@ func (s *Server) Start(ctx context.Context) error {
 		pprof.Register(s.Engine)
 	}
 
+	// 注册prometheus监控
 	if s.enableMetrics {
 		// get global Monitor object
 		m := ginmetrics.GetMonitor()

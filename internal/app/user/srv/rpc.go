@@ -1,15 +1,9 @@
 package srv
 
 import (
-	
-	"fmt"
-
+	"emshop/gin-micro/core/trace"
 	rpcserver "emshop/gin-micro/server/rpc-server"
 	"emshop/internal/app/user/srv/config"
-	"emshop/internal/app/user/srv/controller/user"
-	"emshop/internal/app/user/srv/data/v1/mock"
-	"emshop/gin-micro/core/trace"
-	upb "emshop/api/user/v1"
 )
 
 func NewUserRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
@@ -21,14 +15,14 @@ func NewUserRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 		cfg.Telemetry.Batcher,
 	})
 
-	data := mock.NewUsers()
-	srv := srv1.NewUserService(data)
-	userver := user.NewUserServer(srv)
+	// data := mock.NewUsers()
+	// srv := srv1.NewUserService(data)
+	// userver := user.NewUserServer(srv)
 
-	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	urpcServer := rpcserver.NewServer(
-		rpcserver.WithAddress(rpcAddr))
-	upb.RegisterUserServer(urpcServer.Server, userver)
+	// rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	// urpcServer := rpcserver.NewServer(
+	// 	rpcserver.WithAddress(rpcAddr))
+	// upb.RegisterUserServer(urpcServer.Server, userver)
 	rpcserver.NewServer()
-	return urpcServer, nil
+	return nil, nil
 }
