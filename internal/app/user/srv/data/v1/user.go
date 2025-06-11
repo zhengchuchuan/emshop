@@ -56,7 +56,7 @@ type UserStore interface {
 		参数中最好有ctx
 	*/
 	//用户列表
-	List(ctx context.Context, opts metav1.ListMeta) (*UserDOList, error)
+	List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*UserDOList, error)
 
 	//通过手机号码查询用户
 	GetByMobile(ctx context.Context, mobile string) (*UserDO, error)
@@ -69,4 +69,5 @@ type UserStore interface {
 
 	//更新用户
 	Update(ctx context.Context, user *UserDO) error
+
 }
