@@ -12,13 +12,15 @@ import (
 )
 
 var (
-	dbFactory *gorm.DB
+	dbFactory *gorm.DB	// dbFactory是全局的gorm连接池
 	once      sync.Once	// 用于确保数据库连接只被初始化一次
 )
 
 // 这个方法会返回gorm连接
 // 这个方法应该返回的是全局的一个变量，如果一开始的时候没有初始化好，那么就初始化一次，后续直接拿到这个变量
 func GetDBFactoryOr(mysqlOpts *options.MySQLOptions) (*gorm.DB, error) {
+
+	// 如果mysqlOpts和dbFactory都为nil，说明没有初始化过,且没有传入mysqlOpts不能够获取到mysql连接信息,直接初始化失败
 	if mysqlOpts == nil && dbFactory == nil {
 		return nil, fmt.Errorf("failed to get mysql store fatory")
 	}
