@@ -4,6 +4,8 @@ import (
 	restserver "emshop/gin-micro/server/rest-server"
 	"emshop/internal/app/emshop/api/config"
 	"emshop/internal/app/emshop/api/controller/user/v1"
+	"emshop/internal/app/emshop/api/data/rpc"
+	v12 "emshop/internal/app/emshop/api/controller/sms/v1"
 )
 
 func initRouter(g *restserver.Server, cfg *config.Config) {
@@ -28,12 +30,12 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	// 	ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.GetUserDetail)
 	// }
 
-	// baseRouter := v1.Group("base")
-	// {
-	// 	smsCtl := v12.NewSmsController(serviceFactory, g.Translator())
-	// 	baseRouter.POST("send_sms", smsCtl.SendSms)
-	// 	baseRouter.GET("captcha", user.GetCaptcha)
-	// }
+	baseRouter := v1.Group("base")
+	{
+		smsCtl := v12.NewSmsController(serviceFactory, g.Translator())
+		baseRouter.POST("send_sms", smsCtl.SendSms)
+		baseRouter.GET("captcha", user.GetCaptcha)
+	}
 
 	// //商品相关的api
 	// goodsRouter := v1.Group("goods")

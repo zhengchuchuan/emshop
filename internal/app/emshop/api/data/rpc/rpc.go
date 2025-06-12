@@ -3,7 +3,7 @@ package rpc
 import (
 	"fmt"
 	cosulAPI "github.com/hashicorp/consul/api"
-	// gpb "emshop/api/goods/v1"
+	gpb "emshop/api/goods/v1"
 	upb "emshop/api/user/v1"
 	"emshop/internal/app/emshop/api/data"
 	"emshop/internal/app/pkg/code"
@@ -56,9 +56,9 @@ func GetDataFactoryOr(options *options.RegistryOptions) (data.DataFactory, error
 	once.Do(func() {
 		discovery := NewDiscovery(options)
 		userClient := NewUserServiceClient(discovery)
-		// goodsClient := NewGoodsServiceClient(discovery)
+		goodsClient := NewGoodsServiceClient(discovery)
 		dbFactory = &grpcData{
-			// gc: goodsClient,
+			gc: goodsClient,
 			uc: userClient,
 		}
 	})

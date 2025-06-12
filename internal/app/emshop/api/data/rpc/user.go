@@ -28,8 +28,8 @@ func NewUserServiceClient(r registry.Discovery) upbv1.UserClient {
 	conn, err := rpcserver.DialInsecure(
 		context.Background(),
 		rpcserver.WithEndpoint(serviceName),
-		rpcserver.WithDiscovery(r),
-		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+		rpcserver.WithDiscovery(r),	// 使用服务发现
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor), // 添加链路追踪拦截器
 	)
 	if err != nil {
 		panic(err)
