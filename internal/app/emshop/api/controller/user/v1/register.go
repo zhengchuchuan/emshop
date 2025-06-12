@@ -2,7 +2,7 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
-	// gin2 "emshop/internal/app/pkg/translator/gin"
+	gin2 "emshop/internal/app/pkg/translator/gin"
 	"emshop/pkg/common/core"
 )
 
@@ -14,10 +14,11 @@ type RegisterForm struct {
 
 func (us *userServer) Register(ctx *gin.Context) {
 	regForm := RegisterForm{}
-	// if err := ctx.ShouldBind(&regForm); err != nil {
-	// 	gin2.HandleValidatorError(ctx, err, us.trans)
-	// 	return
-	// }
+	// 表单验证
+	if err := ctx.ShouldBind(&regForm); err != nil {
+		gin2.HandleValidatorError(ctx, err, us.trans)
+		return
+	}
 
 	userDTO, err := us.sf.Users().Register(ctx, regForm.Mobile, regForm.PassWord, regForm.Code)
 	if err != nil {

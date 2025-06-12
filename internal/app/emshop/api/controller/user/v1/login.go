@@ -2,7 +2,7 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
-	// gin2 "emshop/internal/app/pkg/translator/gin"
+	gin2 "emshop/internal/app/pkg/translator/gin"
 	"emshop/pkg/log"
 	"net/http"
 )
@@ -20,10 +20,10 @@ func (us *userServer) Login(ctx *gin.Context) {
 	
 	passwordLoginForm := PassWordLoginForm{}
 	//表单验证
-	// if err := ctx.ShouldBind(&passwordLoginForm); err != nil {
-	// 	gin2.HandleValidatorError(ctx, err, us.trans)
-	// 	return
-	// }
+	if err := ctx.ShouldBind(&passwordLoginForm); err != nil {
+		gin2.HandleValidatorError(ctx, err, us.trans)
+		return
+	}
 
 	//验证码验证
 	// captcha.go 文件中

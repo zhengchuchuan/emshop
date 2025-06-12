@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	// gin2 "emshop/internal/app/pkg/translator/gin"
+	gin2 "emshop/internal/app/pkg/translator/gin"
 	"emshop/gin-micro/server/rest-server/middlewares"
 	"emshop/pkg/common/core"
 	jtime "emshop/pkg/common/time"
@@ -18,10 +18,11 @@ type UpdateUserForm struct {
 
 func (us *userServer) UpdateUser(ctx *gin.Context) {
 	updateForm := UpdateUserForm{}
-	// if err := ctx.ShouldBind(&updateForm); err != nil {
-	// 	gin2.HandleValidatorError(ctx, err, us.trans)
-	// 	return
-	// }
+	// 表单验证
+	if err := ctx.ShouldBind(&updateForm); err != nil {
+		gin2.HandleValidatorError(ctx, err, us.trans)
+		return
+	}
 
 	userID, _ := ctx.Get(middlewares.KeyUserID)
 	userIDInt := uint64(userID.(float64))
