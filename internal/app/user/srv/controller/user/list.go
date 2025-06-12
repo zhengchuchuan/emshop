@@ -8,8 +8,22 @@ import (
 	metav1 "emshop/pkg/common/meta/v1"
 )
 
-func DTOToResponse(userdto srvv1.UserDTO) *upbv1.UserInfoResponse {
-	return &upbv1.UserInfoResponse{}
+func DTOToResponse(userDTO srvv1.UserDTO) *upbv1.UserInfoResponse {
+	//在grpc的message中字段有默认值，不能随便赋值nil进去，容易出错
+	//这里要搞清， 哪些字段是有默认值
+	userInfoRsp := upbv1.UserInfoResponse{
+		Id:       userDTO.ID,
+		PassWord: userDTO.Password,
+		NickName: userDTO.NickName,
+		Gender:   userDTO.Gender,
+		Role:     int32(userDTO.Role),
+		Mobile:   userDTO.Mobile,
+	}
+	if userDTO.Birthday != nil {
+		userInfoRsp.BirthDay = uint64(userDTO.Birthday.Unix())
+	}
+	// 内部有mutex, 不能拷贝
+	return &userInfoRsp
 }
 /*
 controller 层依赖了service， service层依赖了data层：
@@ -22,7 +36,7 @@ func (us *userServer)GetUserList(ctx context.Context, info *upbv1.PageInfo) (*up
 		Page:    int(info.Pn),
 		PageSize: int(info.PSize),
 	}
-	dtoList, err := us.srv.List(ctx, srvOpts)
+	dtoList, err := us.srv.List(ctx,[]string{}, srvOpts)
 	if err != nil {
 		return nil, err
 	}

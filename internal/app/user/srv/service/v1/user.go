@@ -11,6 +11,14 @@ import (
 type UserDTO struct {
 	dv1.UserDO
 }
+type UserDTOList struct {
+	TotalCount int64      `json:"totalCount,omitempty"` //总数
+	Items      []*UserDTO `json:"data"`                 //数据
+}
+
+type userService struct {
+	userStrore dv1.UserStore
+}
 
 type UserSrv interface {
 	List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*UserDTOList, error)
@@ -20,9 +28,17 @@ type UserSrv interface {
 	GetByMobile(ctx context.Context, mobile string) (*UserDTO, error)
 }
 
-type userService struct {
-	userStrore dv1.UserStore
+
+
+func NewUserService(us dv1.UserStore) UserSrv {
+	return &userService{
+		userStrore: us,
+	}
 }
+var _ UserSrv = &userService{}
+
+
+
 
 func (u *userService) Create(ctx context.Context, user *UserDTO) error {
 	//先判断用户是否存在
@@ -63,19 +79,6 @@ func (u *userService) GetByMobile(ctx context.Context, mobile string) (*UserDTO,
 	return &UserDTO{*userDO}, nil
 }
 
-func NewUserService(us dv1.UserStore) UserSrv {
-	return &userService{
-		userStrore: us,
-	}
-}
-
-
-var _ UserSrv = &userService{}
-
-type UserDTOList struct {
-	TotalCount int64      `json:"totalCount,omitempty"` //总数
-	Items      []*UserDTO `json:"data"`                 //数据
-}
 
 func (u *userService) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*UserDTOList, error) {
 	//这里是业务逻辑1
