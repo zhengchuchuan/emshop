@@ -41,6 +41,7 @@ var _ UserSrv = &userService{}
 
 
 func (u *userService) Create(ctx context.Context, user *UserDTO) error {
+	// 检查用户是否存在的逻辑在servic层实现
 	//先判断用户是否存在
 	_, err := u.userStrore.GetByMobile(ctx, user.Mobile)
 	if err != nil && errors.IsCode(err, code.ErrUserNotFound) {
