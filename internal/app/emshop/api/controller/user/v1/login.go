@@ -1,10 +1,12 @@
 package user
 
 import (
-	"github.com/gin-gonic/gin"
 	gin2 "emshop/internal/app/pkg/translator/gin"
+	"emshop/pkg/common/core"
 	"emshop/pkg/log"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type PassWordLoginForm struct {
@@ -28,6 +30,7 @@ func (us *userServer) Login(ctx *gin.Context) {
 	//验证码验证
 	// captcha.go 文件中
 	if !store.Verify(passwordLoginForm.CaptchaId, passwordLoginForm.Captcha, true) {
+		// core.WriteResponse
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"captcha": "验证码错误",
 		})
@@ -41,6 +44,7 @@ func (us *userServer) Login(ctx *gin.Context) {
 		})
 		return
 	}
+	// 返回
 	ctx.JSON(http.StatusOK, gin.H{
 		"id":         userDTO.ID,
 		"nick_name":  userDTO.NickName,

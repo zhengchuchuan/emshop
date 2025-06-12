@@ -11,10 +11,10 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	v1 := g.Group("/v1")
 	ugroup := v1.Group("/user")
 
-	// data, err := rpc.GetDataFactoryOr(cfg.Registry)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	data, err := rpc.GetDataFactoryOr(cfg.Registry)
+	if err != nil {
+		panic(err)
+	}
 
 	// //原来的过程其实很复杂
 	serviceFactory := service.NewService(data, cfg.Sms, cfg.Jwt)

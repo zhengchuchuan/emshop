@@ -20,8 +20,8 @@ import (
 type UserDTO struct {
 	data.User
 
-	Token     string `json:"token"`
-	ExpiresAt int64  `json:"expires_at"`
+	Token     string `json:"token"`			// JWT Token
+	ExpiresAt int64  `json:"expires_at"`	// token过期时间
 }
 
 type UserSrv interface {
@@ -122,7 +122,7 @@ func (us *userService) Register(ctx context.Context, mobile, password, codes str
 
 	return &UserDTO{
 		User:      *user,
-		Token:     token,
+		Token:     token,	// 向上传递token
 		ExpiresAt: (time.Now().Local().Add(us.jwtOpts.Timeout)).Unix(),
 	}, nil
 }
