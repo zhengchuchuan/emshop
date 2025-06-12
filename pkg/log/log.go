@@ -3,6 +3,8 @@ package log
 import (
 	"context"
 	stdlog "log"
+	"os"
+	"path/filepath"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -23,6 +25,28 @@ func Init(opts *Options) {
 	defer mu.Unlock()
 	std = New(opts)
 }
+// 自动创建日志目录
+func ensureLogPathExists(opts *Options) {
+    paths := append([]string{}, opts.OutputPaths...)
+    paths = append(paths, opts.ErrorOutputPaths...)
+    
+    for _, path := range paths {
+        // 跳过标准输出和标准错误
+        if path == "stdout" || path == "stderr" {
+            continue
+        }
+        
+        // 获取目录路径
+        dir := filepath.Dir(path)
+        if dir != "" && dir != "." {
+            // 创建目录，包括所有必要的父目录
+            if err := os.MkdirAll(dir, 0755); err != nil {
+                // 只是打印错误，不中断程序
+                stdlog.Printf("无法创建日志目录 %s: %v", dir, err)
+            }
+        }
+    }
+}
 
 // New create logger by opts which can custmoized by command arguments.
 func New(opts *Options) *Logger {
@@ -30,6 +54,9 @@ func New(opts *Options) *Logger {
 		opts = NewOptions()
 	}
 
+    // 添加：确保日志文件所在目录存在
+    ensureLogPathExists(opts)
+	
 	var zapLevel zapcore.Level
 	if err := zapLevel.UnmarshalText([]byte(opts.Level)); err != nil {
 		zapLevel = zapcore.InfoLevel
