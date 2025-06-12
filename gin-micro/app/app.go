@@ -97,7 +97,7 @@ func (a *App) Run() error {
 	for _, srv := range servers {
 		//启动server
 		//在启动一个goroutine 去监听是否有err产生
-		srv := srv
+		srv := srv	// 避免闭包捕获问题
 		eg.Go(func() error {
 			<-ctx.Done() //wait for stop signal
 			//不可能无休止的等待stop

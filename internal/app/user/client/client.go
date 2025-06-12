@@ -19,7 +19,6 @@ func main() {
 	selector.SetGlobalSelector(random.NewBuilder())
 	rpc.InitBuilder()
 
-	// 注册consul的服务发现配置
 	conf := api.DefaultConfig()
 	conf.Address = "127.0.0.1:8500"
 	conf.Scheme = "http"
@@ -43,11 +42,11 @@ func main() {
 	uc := v1.NewUserClient(conn)
 
 	for {
-		_, err := uc.GetUserList(context.Background(), &v1.PageInfo{})
+		re, err := uc.GetUserList(context.Background(), &v1.PageInfo{Pn: 1, PSize: 10})
 		if err != nil {
 			panic(err)
 		}
-
+		fmt.Println(re)	
 		fmt.Println("success")
 		time.Sleep(time.Millisecond * 2)
 	}
