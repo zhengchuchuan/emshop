@@ -16,6 +16,7 @@ type users struct {
 	db *gorm.DB
 }
 
+// 暴露一个NewUsers函数来创建users实例
 func NewUsers(db *gorm.DB) *users {
 	return &users{db: db}
 }
