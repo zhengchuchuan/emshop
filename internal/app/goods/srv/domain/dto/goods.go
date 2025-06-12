@@ -1,6 +1,6 @@
 package dto
 
-import "mxshop/app/goods/srv/internal/domain/do"
+import "emshop/internal/app/goods/srv/domain/do"
 
 type GoodsDTO struct {
 	do.GoodsDO
