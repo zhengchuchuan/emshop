@@ -25,10 +25,10 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		ugroup.POST("pwd_login", uController.Login)
 		ugroup.POST("register", uController.Register)
 
-	// 	jwtAuth := newJWTAuth(cfg.Jwt)
-	// 	ugroup.GET("detail", jwtAuth.AuthFunc(), uController.GetUserDetail)
-	// 	ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.GetUserDetail)
-	// }
+		jwtAuth := newJWTAuth(cfg.Jwt)
+		ugroup.GET("detail", jwtAuth.AuthFunc(), uController.GetUserDetail)
+		ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.GetUserDetail)
+	}
 
 	baseRouter := v1.Group("base")
 	{
@@ -42,5 +42,5 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	// {
 	// 	goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
 	// 	goodsRouter.GET("", goodsController.List)
-	}
+	// }
 }
