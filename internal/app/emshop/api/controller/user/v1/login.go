@@ -26,6 +26,7 @@ func (us *userServer) Login(ctx *gin.Context) {
 	// }
 
 	//验证码验证
+	// captcha.go 文件中
 	if !store.Verify(passwordLoginForm.CaptchaId, passwordLoginForm.Captcha, true) {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"captcha": "验证码错误",

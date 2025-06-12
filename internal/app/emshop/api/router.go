@@ -1,14 +1,15 @@
 package admin
 
 import (
-	"emshop/gin-micro/server/rest-server"
+	restserver "emshop/gin-micro/server/rest-server"
 	"emshop/internal/app/emshop/api/config"
+	"emshop/internal/app/emshop/api/controller/user/v1"
 )
 
 func initRouter(g *restserver.Server, cfg *config.Config) {
 	
-	// v1 := g.Group("/v1")
-	// ugroup := v1.Group("/user")
+	v1 := g.Group("/v1")
+	ugroup := v1.Group("/user")
 
 	// data, err := rpc.GetDataFactoryOr(cfg.Registry)
 	// if err != nil {
@@ -16,11 +17,11 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	// }
 
 	// //原来的过程其实很复杂
-	// serviceFactory := service.NewService(data, cfg.Sms, cfg.Jwt)
-	// uController := user.NewUserController(g.Translator(), serviceFactory)
-	// {
-	// 	ugroup.POST("pwd_login", uController.Login)
-	// 	ugroup.POST("register", uController.Register)
+	serviceFactory := service.NewService(data, cfg.Sms, cfg.Jwt)
+	uController := user.NewUserController(g.Translator(), serviceFactory)
+	{
+		ugroup.POST("pwd_login", uController.Login)
+		ugroup.POST("register", uController.Register)
 
 	// 	jwtAuth := newJWTAuth(cfg.Jwt)
 	// 	ugroup.GET("detail", jwtAuth.AuthFunc(), uController.GetUserDetail)
@@ -39,5 +40,5 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	// {
 	// 	goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
 	// 	goodsRouter.GET("", goodsController.List)
-	// }
+	}
 }
