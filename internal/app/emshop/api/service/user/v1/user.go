@@ -84,6 +84,7 @@ func (us *userService) MobileLogin(ctx context.Context, mobile, password string)
 func (us *userService) Register(ctx context.Context, mobile, password, codes string) (*UserDTO, error) {
 	rstore := storage.RedisCluster{}
 
+	// 生成验证码的key
 	value, err := rstore.GetKey(ctx, fmt.Sprintf("%s_%d", mobile, 1))
 	if err != nil {
 		return nil, errors.WithCode(code.ErrCodeNotExist, "验证码不存在")
@@ -103,7 +104,7 @@ func (us *userService) Register(ctx context.Context, mobile, password, codes str
 		return nil, err
 	}
 
-	//生成token
+	// 直接生成token
 	j := middlewares.NewJWT(us.jwtOpts.Key)
 	claims := middlewares.CustomClaims{
 		ID:          uint(user.ID),

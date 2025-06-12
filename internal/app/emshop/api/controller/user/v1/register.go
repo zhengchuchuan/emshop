@@ -14,7 +14,6 @@ type RegisterForm struct {
 
 func (us *userServer) Register(ctx *gin.Context) {
 	regForm := RegisterForm{}
-	// 表单验证
 	if err := ctx.ShouldBind(&regForm); err != nil {
 		gin2.HandleValidatorError(ctx, err, us.trans)
 		return
