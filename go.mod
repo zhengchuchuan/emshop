@@ -4,6 +4,7 @@ module emshop
 go 1.24.3
 
 require (
+	github.com/anaskhan96/go-password-encoder v0.0.0-20201010210601-c765b799fd72
 	github.com/appleboy/gin-jwt/v2 v2.10.3
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/bitly/go-simplejson v0.5.1
