@@ -69,6 +69,7 @@ func NewUserService(us dv1.UserStore) UserSrv {
 	}
 }
 
+
 var _ UserSrv = &userService{}
 
 type UserDTOList struct {
