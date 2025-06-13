@@ -139,6 +139,7 @@ func (is *inventoryService) Reback(ctx context.Context, ordersn string, details 
 
 	//库存归还的时候有不少细节
 	//1. 主动取消 2. 网络问题引起的重试 3. 超时取消 4. 退款取消
+	// redis分布式锁
 	mutex := rs.NewMutex(orderLockPrefix + ordersn)
 	if err := mutex.Lock(); err != nil {
 		txn.Rollback() //回滚

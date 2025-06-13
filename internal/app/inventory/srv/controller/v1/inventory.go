@@ -60,6 +60,11 @@ func (is *inventoryServer) Sell(ctx context.Context, info *invpb.SellInfo) (*emp
 	return &emptypb.Empty{}, nil
 }
 
+// Reback 库存归还
+//	@param ctx 
+//	@param info 
+//	@return *emptypb.Empty 
+//	@return error 
 func (is *inventoryServer) Reback(ctx context.Context, info *invpb.SellInfo) (*emptypb.Empty, error) {
 	log.Infof("订单%s归还库存", info.OrderSn)
 	var detail []do.GoodsDetail
