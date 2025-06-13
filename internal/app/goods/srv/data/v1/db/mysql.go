@@ -69,7 +69,7 @@ func GetDBFactoryOr(mysqlOpts *options.MySQLOptions) (v1.DataFactory, error) {
 			mysqlOpts.Port,
 			mysqlOpts.Database)
 
-		//希望大家自己可以去封装logger
+		// gorm打印日志集成,使用的标准库的logger,没有使用自己封装的
 		newLogger := logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer（日志输出的目标，前缀和日志包含的内容——译者注）
 			logger.Config{

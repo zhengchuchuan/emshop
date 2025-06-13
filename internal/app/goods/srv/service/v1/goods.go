@@ -35,7 +35,7 @@ type GoodsSrv interface {
 }
 
 type goodsService struct {
-	//工厂
+	// 工厂模式注入
 	data v1.DataFactory
 
 	searchData v12.SearchFactory
@@ -74,11 +74,13 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 		}
 
 		var ids []interface{}
+		// 树形结构遍历
 		for _, value := range retrieveIDs(category) {
 			ids = append(ids, value)
 		}
 		searchReq.CategoryIDs = ids
 	}
+
 
 	goodsList, err := gs.searchData.Goods().Search(ctx, &searchReq)
 	if err != nil {
@@ -137,8 +139,12 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) error {
 	//之前的入es的方案是给gorm添加aftercreate
 	//分布式事务， 异构数据库的事务， 基于可靠消息最终一致性
 	//比较重的方案： 每次都要发送一个事务消息
-	txn := gs.data.Begin() //非常小心， 这种方案是不是就没有问题了呢
-	defer func() { //很重要
+
+	//非常小心， 这种方案是不是就没有问题了呢
+	txn := gs.data.Begin() 	//开启一个事务
+
+	//很重要
+	defer func() { 
 		if err := recover(); err != nil {
 			txn.Rollback()
 			log.Errorf("goodsService.Create panic: %v", err)
@@ -169,17 +175,21 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) error {
 		ShopPrice:   goods.ShopPrice,
 	}
 
-	err = gs.searchData.Goods().Create(ctx, &searchDO) //这个接口如果超时了
+	err = gs.searchData.Goods().Create(ctx, &searchDO) 
+	// 如果es超时了, 回滚事务
 	if err != nil {
 		txn.Rollback()
 		return err
 	}
-	txn.Commit()
+	// 事务提交
+	txn.Commit()	
 	return nil
 }
 
 func (gs *goodsService) Update(ctx context.Context, goods *dto.GoodsDTO) error {
 	//TODO implement me
+
+	// todo 另外采用基于可靠消息的最终一致性
 	panic("implement me")
 }
 
@@ -189,7 +199,7 @@ func (gs *goodsService) Delete(ctx context.Context, ID uint64) error {
 }
 
 func (gs *goodsService) BatchGet(ctx context.Context, ids []uint64) ([]*dto.GoodsDTO, error) {
-	//go-zero 非常好用， 但是我们自己去做并发的话 - 一次性启动多个goroutine
+	//go-zero内部的包非常好用， 但是自己去做并发的话 -> 一次性启动多个goroutine 细节繁琐
 	var ret []*dto.GoodsDTO
 	var callFuncs []func() error
 	var mu sync.Mutex
@@ -198,6 +208,7 @@ func (gs *goodsService) BatchGet(ctx context.Context, ids []uint64) ([]*dto.Good
 		tmp := value
 		callFuncs = append(callFuncs, func() error {
 			goodsDTO, err := gs.Get(ctx, tmp)
+			// 保证并发安全
 			mu.Lock()
 			ret = append(ret, goodsDTO)
 			mu.Unlock()

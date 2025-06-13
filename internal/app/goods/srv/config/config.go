@@ -1,9 +1,9 @@
 package config
 
 import (
-	"mxshop/app/pkg/options"
-	cliflag "mxshop/pkg/common/cli/flag"
-	"mxshop/pkg/log"
+	"emshop/internal/app/pkg/options"
+	cliflag "emshop/pkg/common/cli/flag"
+	"emshop/pkg/log"
 )
 
 type Config struct {
