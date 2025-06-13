@@ -14,7 +14,7 @@ type Config struct {
 	Server       *options.ServerOptions    `json:"server"     mapstructure:"server"`
 	Telemetry    *options.TelemetryOptions `json:"telemetry" mapstructure:"telemetry"`
 	Registry     *options.RegistryOptions  `json:"consul" mapstructure:"consul"`
-	Dtm          *options.DtmOptions       `json:"dtm" mapstructure:"dtm"`
+	Dtm          *options.DtmOptions       `json:"dtm" mapstructure:"dtm"` // 分布式事务
 }
 
 func New() *Config {

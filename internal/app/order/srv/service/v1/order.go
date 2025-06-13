@@ -31,6 +31,7 @@ type orderService struct {
 	dtmOpts *options.DtmOptions
 }
 
+// CreateCom 是Create的补偿方法， 主要是回滚订单的创建
 func (os *orderService) CreateCom(ctx context.Context, order *dto.OrderDTO) error {
 	/*
 		1. 删除orderinfo表
@@ -42,6 +43,7 @@ func (os *orderService) CreateCom(ctx context.Context, order *dto.OrderDTO) erro
 	return nil
 }
 
+// Create 创建订单
 func (os *orderService) Create(ctx context.Context, order *dto.OrderDTO) error {
 	/*
 		1. 生成orderinfo表
@@ -127,6 +129,7 @@ func (os *orderService) List(ctx context.Context, userID uint64, meta v1.ListMet
 	return &ret, nil
 }
 
+// Submit 提交订单， 这里是基于可靠消息最终一致性的思想， saga事务来解决订单生成的问题
 func (os *orderService) Submit(ctx context.Context, order *dto.OrderDTO) error {
 	//先从购物车中获取商品信息
 	list, err := os.data.ShoppingCarts().List(ctx, uint64(order.User), true, v1.ListMeta{}, []string{})
@@ -177,8 +180,13 @@ func (os *orderService) Submit(ctx context.Context, order *dto.OrderDTO) error {
 		OrderItems: orderItems,
 	}
 
+	// 注意：这里的qsBusi和gBusi是服务的地址， 需要根据实际情况修改,此处直接写死了consul的地址
 	qsBusi := "discovery:///emshop-inventory-srv"
 	gBusi := "discovery:///emshop-order-srv"
+	// saga事务分为正向和补偿两个阶段
+	// 正向阶段： Sell -> CreateOrder
+	// 补偿阶段： Reback -> CreateOrderCom
+	// 通过 DTM 的 Saga 模式，串联库存扣减和订单创建两个服务，保证跨服务的数据一致性。
 	saga := dtmgrpc.NewSagaGrpc(os.dtmOpts.GrpcServer, order.OrderSn).
 		Add(qsBusi+"/Inventory/Sell", qsBusi+"/Inventory/Reback", req).
 		Add(gBusi+"/Order/CreateOrder", gBusi+"/Order/CreateOrderCom", oReq)
