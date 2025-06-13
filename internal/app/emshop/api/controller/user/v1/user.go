@@ -1,8 +1,9 @@
 package user
 
 import (
+	"emshop/internal/app/emshop/api/service"
+
 	ut "github.com/go-playground/universal-translator"
-	"emshop/app/emshop/api/service"
 )
 
 type userServer struct {

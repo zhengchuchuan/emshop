@@ -3,9 +3,11 @@ package admin
 import (
 	restserver "emshop/gin-micro/server/rest-server"
 	"emshop/internal/app/emshop/api/config"
+	"emshop/internal/app/emshop/api/controller/goods/v1"
+	v12 "emshop/internal/app/emshop/api/controller/sms/v1"
 	"emshop/internal/app/emshop/api/controller/user/v1"
 	"emshop/internal/app/emshop/api/data/rpc"
-	v12 "emshop/internal/app/emshop/api/controller/sms/v1"
+	"emshop/internal/app/emshop/api/service"
 )
 
 func initRouter(g *restserver.Server, cfg *config.Config) {
@@ -37,10 +39,10 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		baseRouter.GET("captcha", user.GetCaptcha)
 	}
 
-	// //商品相关的api
-	// goodsRouter := v1.Group("goods")
-	// {
-	// 	goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
-	// 	goodsRouter.GET("", goodsController.List)
-	// }
+	//商品相关的api
+	goodsRouter := v1.Group("goods")
+	{
+		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
+		goodsRouter.GET("", goodsController.List)
+	}
 }

@@ -2,7 +2,6 @@ package user
 
 import (
 	gin2 "emshop/internal/app/pkg/translator/gin"
-	"emshop/pkg/common/core"
 	"emshop/pkg/log"
 	"net/http"
 
