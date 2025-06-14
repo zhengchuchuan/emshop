@@ -6,6 +6,7 @@ type ServerOptions struct {
 	//是否开启pprof
 	EnableProfiling bool `json:"profiling"      mapstructure:"profiling"`
 
+	// 是否开启限流
 	EnableLimit bool `json:"limit"      mapstructure:"limit"`
 
 	//是否开启metrics

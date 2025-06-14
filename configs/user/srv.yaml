@@ -1,6 +1,6 @@
 server:
   name: emshop-user-srv #服务名，注册到consul使用的名称
-  limit: true
+  limit: true     # 是否开启限流，默认 true
   host: "0.0.0.0" #host, 默认使用 0.0.0.0
   port: 8021 # grpc 安全模式的端口号，默认 8081
   http-port: 8022
@@ -41,11 +41,12 @@ mysql:
   max-connection-life-time: 10s # 空闲连接最大存活时间，默认 10s
   log-level: 4 # GORM log level, 1: silent, 2:error, 3:warn, 4:info
 
-# nacos:
-#   host: "39.107.30.137"
-#   port: 8848
-#   namespace: "public"
-#   user: "nacos"
-#   password: "nacos"
-#   dataid: "flow"
-#   group: "sentinel-go"
+# nacos 仅用于配置限流器的规则
+nacos:
+  host: "39.107.30.137"
+  port: 8848
+  namespace: "public"
+  user: "nacos"
+  password: "nacos"
+  dataid: "flow"
+  group: "sentinel-go"

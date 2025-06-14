@@ -64,7 +64,7 @@ func NewUserRPCServer(telemetry *options.TelemetryOptions, serverOpts *options.S
 	opts = append(opts, rpcserver.WithAddress(rpcAddr))
 	if serverOpts.EnableLimit {
 		opts = append(opts, rpcserver.WithUnaryInterceptor(grpc.NewUnaryServerInterceptor()))
-		//我去初始化nacos
+		//初始化nacos
 		err := dataNacos.Initialize()
 		if err != nil {
 			return nil, err

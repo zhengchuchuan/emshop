@@ -73,7 +73,6 @@ func NewServer(opts ...ServerOption) *Server {
 
 	//把传入的拦截器转换成grpc的ServerOption
 	grpcOpts := []grpc.ServerOption{grpc.ChainUnaryInterceptor(srv.unaryInts...)}
-	// grpcOpts := []grpc.ServerOption{grpc.ChainUnaryInterceptor(unaryInts...)}
 
 	//把用户自己传入的grpc.ServerOption放在一起
 	srv.Server = grpc.NewServer(grpcOpts...)
