@@ -5,8 +5,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"emshop/internal/app/pkg/code"
 	code2 "emshop/gin-micro/code"
+	"emshop/internal/app/pkg/code"
 	dv1 "emshop/internal/app/user/srv/data/v1"
 	metav1 "emshop/pkg/common/meta/v1"
 	"emshop/pkg/errors"
@@ -20,6 +20,10 @@ type users struct {
 func NewUsers(db *gorm.DB) *users {
 	return &users{db: db}
 }
+
+// 接口实现时的编译时检查
+// 删除后如果 *users 没有完整实现接口，只有在实际使用时才会报错（运行时或单元测试时），不利于早期发现问题。
+var _ dv1.UserStore = &users{}
 
 
 // GetByMobile
@@ -46,7 +50,6 @@ func (u *users) GetByMobile(ctx context.Context, mobile string) (*dv1.UserDO, er
 }
 
 // GetByID
-//
 //	@Description: 根据id获取用户信息
 //	@receiver u
 //	@param ctx
@@ -80,13 +83,12 @@ func (u *users) Create(ctx context.Context, user *dv1.UserDO) error {
 	return nil
 }
 
-// Update
-//
+// Update 
+// 
 //	@Description: 更新用户信息
-//	@receiver u
-//	@param ctx
-//	@param user
-//	@return error
+//	@param ctx 
+//	@param user 
+//	@return error 
 func (u *users) Update(ctx context.Context, user *dv1.UserDO) error {
 	tx := u.db.Save(user)
 	if tx.Error != nil {
@@ -95,8 +97,7 @@ func (u *users) Update(ctx context.Context, user *dv1.UserDO) error {
 	return nil
 }
 
-// Ensure users implements dv1.UserStore interface
-var _ dv1.UserStore = &users{}
+
 
 // List
 //

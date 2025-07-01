@@ -2,12 +2,14 @@ package user
 
 import (
 	"context"
-	"google.golang.org/protobuf/types/known/emptypb"
 	upbv1 "emshop/api/user/v1"
 	v1 "emshop/internal/app/user/srv/data/v1"
 	v12 "emshop/internal/app/user/srv/service/v1"
+	"emshop/pkg/db"
 	"emshop/pkg/log"
 	"time"
+
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (u *userServer) UpdateUser(ctx context.Context, request *upbv1.UpdateUserInfo) (*emptypb.Empty, error) {
@@ -15,7 +17,7 @@ func (u *userServer) UpdateUser(ctx context.Context, request *upbv1.UpdateUserIn
 
 	birthDay := time.Unix(int64(request.BirthDay), 0)
 	userDO := v1.UserDO{
-		BaseModel: v1.BaseModel{
+		BaseModel: db.BaseModel{
 			ID: request.Id,
 		},
 		NickName: request.NickName,

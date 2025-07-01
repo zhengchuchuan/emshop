@@ -19,6 +19,7 @@ func DTOToResponse(userDTO srvv1.UserDTO) *upbv1.UserInfoResponse {
 		Role:     int32(userDTO.Role),
 		Mobile:   userDTO.Mobile,
 	}
+	// Birthday是time.Time类型，不能直接赋值nil
 	if userDTO.Birthday != nil {
 		userInfoRsp.BirthDay = uint64(userDTO.Birthday.Unix())
 	}

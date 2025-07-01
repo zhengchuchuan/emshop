@@ -13,7 +13,9 @@ import (
 	"emshop/pkg/log"
 )
 
+// wire Injector
 func initApp(*options.NacosOptions, *log.Options, *options.ServerOptions, *options.RegistryOptions, *options.TelemetryOptions, *options.MySQLOptions) (*gapp.App, error) {
+	// 会在wire_gen文件中生成注入器的具体实现
 	wire.Build(ProviderSet, v1.ProviderSet, db.ProviderSet, user.ProviderSet)
 	return &gapp.App{}, nil
 }

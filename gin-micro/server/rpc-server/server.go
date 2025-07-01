@@ -86,7 +86,7 @@ func NewServer(opts ...ServerOption) *Server {
 		panic(err)
 	}
 
-	// 注册健康检查服务
+	// 注册grpc健康检查服务
 	grpc_health_v1.RegisterHealthServer(srv.Server, srv.health)
 
 	// 直接使用kratos的metadata服务

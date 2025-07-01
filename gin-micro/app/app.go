@@ -82,7 +82,7 @@ func (a *App) Run() error {
 		如果我们的服务启动了然后这个时候用户立马进行了访问
 	*/
 
-	// servers 可以添加种server
+	// servers 可以添加多种server
 	var servers []gs.Server
 	if a.opts.restServer != nil {
 		servers = append(servers, a.opts.restServer)
@@ -90,6 +90,7 @@ func (a *App) Run() error {
 	if a.opts.rpcServer != nil {
 		servers = append(servers, a.opts.rpcServer)
 	}
+	
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancel = cancel	// 保存取消函数,后续的 Stop() 方法可以调用它来取消所有的操作
 	eg, ctx := errgroup.WithContext(ctx)
@@ -132,6 +133,7 @@ func (a *App) Run() error {
 
 	//监听退出信息
 	c := make(chan os.Signal, 1)
+	// 将接收到的指定退出信号转发到通道c
 	signal.Notify(c, a.opts.sigs...)
 	eg.Go(func() error {
 		// 等待上下文取消或接收到退出信号
@@ -148,7 +150,7 @@ func (a *App) Run() error {
 	return nil
 }
 
-// 停止服务
+// 停止并注销服务
 func (a *App) Stop() error {
 	a.lk.Lock()
 	instance := a.instance

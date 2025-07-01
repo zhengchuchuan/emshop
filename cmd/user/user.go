@@ -10,6 +10,7 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	// 设置最大CPU数
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
