@@ -1,3 +1,5 @@
+// 自动识别并切换 Basic 和 Bearer（JWT）两种认证方式
+
 package auth
 
 import (

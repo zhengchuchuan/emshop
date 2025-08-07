@@ -13,8 +13,6 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/bitly/go-simplejson v0.5.1
 	github.com/buger/jsonparser v1.1.1
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/dtm-labs/client v1.18.7
 	github.com/fatih/color v1.18.0
 	github.com/gin-gonic/gin v1.10.1
@@ -24,6 +22,7 @@ require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-redsync/redsync/v4 v4.13.0
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
 	github.com/gosuri/uitable v0.0.4
@@ -97,7 +96,6 @@ require (
 	github.com/go-sql-driver/mysql v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect

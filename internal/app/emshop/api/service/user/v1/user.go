@@ -14,7 +14,7 @@ import (
 	"emshop/internal/app/emshop/api/data"
 	"emshop/internal/app/pkg/options"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type UserDTO struct {
@@ -63,9 +63,9 @@ func (us *userService) MobileLogin(ctx context.Context, mobile, password string)
 		ID:          uint(user.ID),
 		NickName:    user.NickName,
 		AuthorityId: uint(user.Role),
-		StandardClaims: jwt.StandardClaims{
-			NotBefore: time.Now().Unix(),                                   //签名的生效时间
-			ExpiresAt: (time.Now().Local().Add(us.jwtOpts.Timeout)).Unix(), //30天过期
+		RegisteredClaims: jwt.RegisteredClaims{
+			NotBefore: jwt.NewNumericDate(time.Now()),                                   //签名的生效时间
+			ExpiresAt: jwt.NewNumericDate(time.Now().Local().Add(us.jwtOpts.Timeout)), //30天过期
 			Issuer:    us.jwtOpts.Realm,
 		},
 	}
@@ -110,9 +110,9 @@ func (us *userService) Register(ctx context.Context, mobile, password, codes str
 		ID:          uint(user.ID),
 		NickName:    user.NickName,
 		AuthorityId: uint(user.Role),
-		StandardClaims: jwt.StandardClaims{
-			NotBefore: time.Now().Unix(),                                   //签名的生效时间
-			ExpiresAt: (time.Now().Local().Add(us.jwtOpts.Timeout)).Unix(), //30天过期
+		RegisteredClaims: jwt.RegisteredClaims{
+			NotBefore: jwt.NewNumericDate(time.Now()),                                   //签名的生效时间
+			ExpiresAt: jwt.NewNumericDate(time.Now().Local().Add(us.jwtOpts.Timeout)), //30天过期
 			Issuer:    us.jwtOpts.Realm,
 		},
 	}

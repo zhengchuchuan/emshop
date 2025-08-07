@@ -8,7 +8,7 @@ import (
 	"emshop/gin-micro/server/rest-server/middlewares"
 	"emshop/pkg/common/core"
 
-	jwt "github.com/dgrijalva/jwt-go/v4"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/gin-gonic/gin"
 	"emshop/pkg/errors"
 )
@@ -81,7 +81,7 @@ func (cache CacheStrategy) AuthFunc() gin.HandlerFunc {
 			}
 
 			return []byte(secret.Key), nil
-		}, jwt.WithAudience(AuthzAudience))
+		})
 		if err != nil || !parsedT.Valid {
 			core.WriteResponse(c, errors.WithCode(code.ErrSignatureInvalid, "%s", err.Error()), nil)
 			c.Abort()
