@@ -11,9 +11,9 @@ import (
 	"emshop/pkg/common/core"
 	"emshop/pkg/errors"
 	"emshop/pkg/storage"
+	"emshop/gin-micro/server/rest-server"
 
 	"github.com/gin-gonic/gin"
-	ut "github.com/go-playground/universal-translator"
 )
 
 type SendSmsForm struct {
@@ -24,10 +24,10 @@ type SendSmsForm struct {
 
 type SmsController struct {
 	sf    service.ServiceFactory
-	trans ut.Translator
+	trans restserver.I18nTranslator
 }
 
-func NewSmsController(sf service.ServiceFactory, trans ut.Translator) *SmsController {
+func NewSmsController(sf service.ServiceFactory, trans restserver.I18nTranslator) *SmsController {
 	return &SmsController{sf, trans}
 }
 
@@ -40,7 +40,7 @@ func (sc *SmsController) SendSms(c *gin.Context) {
 	smsCode := v1.GenerateSmsCode(6)
 	err := sc.sf.Sms().SendSms(c, sendSmsForm.Mobile, "SMS_181850725", "{\"code\":"+smsCode+"}")
 	if err != nil {
-		core.WriteResponse(c, errors.WithCode(code.ErrSmsSend, err.Error()), nil)
+		core.WriteResponse(c, errors.WithCode(code.ErrSmsSend, "%s", err.Error()), nil)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (sc *SmsController) SendSms(c *gin.Context) {
 	rstore := storage.RedisCluster{}
 	err = rstore.SetKey(c, sendSmsForm.Mobile, smsCode, 5*time.Minute)
 	if err != nil {
-		core.WriteResponse(c, errors.WithCode(code.ErrSmsSend, err.Error()), nil)
+		core.WriteResponse(c, errors.WithCode(code.ErrSmsSend, "%s", err.Error()), nil)
 		return
 	}
 

@@ -2,16 +2,15 @@ package user
 
 import (
 	"emshop/internal/app/emshop/api/service"
-
-	ut "github.com/go-playground/universal-translator"
+	"emshop/gin-micro/server/rest-server"
 )
 
 type userServer struct {
-	trans ut.Translator
+	trans restserver.I18nTranslator
 
 	sf service.ServiceFactory
 }
 
-func NewUserController(trans ut.Translator, sf service.ServiceFactory) *userServer {
+func NewUserController(trans restserver.I18nTranslator, sf service.ServiceFactory) *userServer {
 	return &userServer{trans, sf}
 }

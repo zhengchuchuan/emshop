@@ -16,6 +16,41 @@ import (
 	"emshop/pkg/log"
 )
 
+// I18nTranslator 定义翻译器接口，与universal-translator兼容
+type I18nTranslator interface {
+	T(key string, params ...interface{}) string
+}
+
+// i18nTranslatorWrapper 实现了I18nTranslator接口，包装go-i18n/v2的Localizer
+type i18nTranslatorWrapper struct {
+	localizer *i18n.Localizer
+}
+
+// T 翻译方法，与universal-translator的T方法兼容
+func (wrapper *i18nTranslatorWrapper) T(key string, params ...interface{}) string {
+	config := &i18n.LocalizeConfig{
+		MessageID: key,
+		DefaultMessage: &i18n.Message{
+			ID:    key,
+			Other: key, // 如果找不到翻译，返回key本身
+		},
+	}
+	
+	// 如果有参数，将第一个参数作为TemplateData
+	if len(params) > 0 {
+		if templateData, ok := params[0].(map[string]interface{}); ok {
+			config.TemplateData = templateData
+		}
+	}
+	
+	result, err := wrapper.localizer.Localize(config)
+	if err != nil {
+		return key // 翻译失败时返回原始key
+	}
+	
+	return result
+}
+
 type JwtInfo struct {
 	// defaults to "JWT"
 	Realm string
@@ -115,6 +150,12 @@ func (s *Server) Localizer() *i18n.Localizer {
 // GetLocale 获取当前语言环境
 func (s *Server) GetLocale() string {
 	return s.locale
+}
+
+// Translator 返回一个兼容universal-translator接口的翻译器
+// 这个方法用于保持与现有控制器的兼容性
+func (s *Server) Translator() I18nTranslator {
+	return &i18nTranslatorWrapper{localizer: s.localizer}
 }
 
 // start rest server

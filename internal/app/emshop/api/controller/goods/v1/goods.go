@@ -2,7 +2,7 @@ package goods
 
 import (
 	"github.com/gin-gonic/gin"
-	ut "github.com/go-playground/universal-translator"
+	"emshop/gin-micro/server/rest-server"
 	proto "emshop/api/goods/v1"
 	"emshop/internal/app/emshop/api/domain/request"
 	"emshop/internal/app/emshop/api/service"
@@ -13,12 +13,12 @@ import (
 )
 
 type goodsController struct {
-	trans    ut.Translator
+	trans    restserver.I18nTranslator
 	srv      service.ServiceFactory
 	goodssrv v1.GoodsSrv
 }
 
-func NewGoodsController(srv service.ServiceFactory, trans ut.Translator) *goodsController {
+func NewGoodsController(srv service.ServiceFactory, trans restserver.I18nTranslator) *goodsController {
 	return &goodsController{
 		srv:   srv,
 		trans: trans,
