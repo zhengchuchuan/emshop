@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	ut "github.com/go-playground/universal-translator"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	mws "emshop/gin-micro/server/rest-server/middlewares"
 	"emshop/gin-micro/server/rest-server/pprof"
 	"emshop/gin-micro/server/rest-server/validation"
@@ -54,8 +54,10 @@ type Server struct {
 
 	//翻译器, 默认值 zh
 	transName string
-	// 存储在Server中
-	trans     ut.Translator
+	// go-i18n/v2 localizer用于翻译消息
+	localizer *i18n.Localizer
+	// 当前语言环境
+	locale    string
 
 	server *http.Server
 
@@ -105,8 +107,14 @@ func NewServer(opts ...ServerOption) *Server {
 	return srv
 }
 
-func (s *Server) Translator() ut.Translator {
-	return s.trans
+// Localizer 获取当前的i18n localizer
+func (s *Server) Localizer() *i18n.Localizer {
+	return s.localizer
+}
+
+// GetLocale 获取当前语言环境
+func (s *Server) GetLocale() string {
+	return s.locale
 }
 
 // start rest server
@@ -131,7 +139,7 @@ func (s *Server) Start(ctx context.Context) error {
 	
 
 	//注册mobile验证码
-	validation.RegisterMobile(s.trans)
+	validation.RegisterMobile(s.localizer)
 
 	//根据配置初始化pprof路由
 	if s.enableProfiling {

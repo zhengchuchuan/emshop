@@ -2,20 +2,15 @@ package validation
 
 import (
 	"github.com/gin-gonic/gin/binding"
-	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"regexp"
 )
 
-func RegisterMobile(translator ut.Translator) {
+func RegisterMobile(localizer *i18n.Localizer) {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		_ = v.RegisterValidation("mobile", ValidateMobile)
-		_ = v.RegisterTranslation("mobile", translator, func(ut ut.Translator) error {
-			return ut.Add("mobile", "{0} 非法的手机号码!", true) // see universal-translator for details
-		}, func(ut ut.Translator, fe validator.FieldError) string {
-			t, _ := ut.T("mobile", fe.Field())
-			return t
-		})
+		// mobile验证的翻译将在Server.Translate方法中处理
 	}
 }
 
