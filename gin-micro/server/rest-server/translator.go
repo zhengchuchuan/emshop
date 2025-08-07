@@ -1,11 +1,14 @@
 package restserver
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 )
@@ -19,8 +22,8 @@ import (
 // 1. 获取gin框架的validator验证引擎
 // 2. 注册自定义字段名函数，使用JSON标签作为字段名
 // 3. 创建go-i18n/v2的Bundle和Localizer实例
-// 4. 根据locale参数选择对应的语言环境
-// 5. 注册自定义的验证错误消息翻译
+// 4. 从配置文件或内置消息加载翻译内容
+// 5. 根据locale参数选择对应的语言环境
 func (s *Server) initTrans(locale string) (err error) {
 	// 修改gin框架中的validator引擎属性, 实现定制
 	// 通过类型断言获取validator.Validate实例，以便进行自定义配置
@@ -42,10 +45,11 @@ func (s *Server) initTrans(locale string) (err error) {
 		// 创建go-i18n/v2的Bundle实例，默认语言为英文
 		// Bundle用于管理所有支持的语言和消息
 		bundle := i18n.NewBundle(language.English)
+		bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
 		
-		// 添加内置的验证错误消息到bundle
-		if err := s.addValidationMessages(bundle); err != nil {
-			return fmt.Errorf("failed to add validation messages: %w", err)
+		// 加载翻译消息：优先从文件加载，如果文件不存在则使用内置消息
+		if err := s.loadTranslationMessages(bundle); err != nil {
+			return fmt.Errorf("failed to load translation messages: %w", err)
 		}
 		
 		// 根据传入的locale参数创建对应的Localizer实例
@@ -73,8 +77,52 @@ func (s *Server) initTrans(locale string) (err error) {
 	return
 }
 
-// addValidationMessages 添加内置的验证错误消息到i18n bundle
-func (s *Server) addValidationMessages(bundle *i18n.Bundle) error {
+// loadTranslationMessages 加载翻译消息
+// 优先从指定的翻译文件目录加载，如果不存在则使用内置翻译消息
+func (s *Server) loadTranslationMessages(bundle *i18n.Bundle) error {
+	if s.localesDir != "" {
+		// 从文件加载翻译
+		return s.loadTranslationFromFiles(bundle)
+	}
+	
+	// 使用内置翻译消息
+	return s.addBuiltinValidationMessages(bundle)
+}
+
+// loadTranslationFromFiles 从文件系统加载翻译文件
+func (s *Server) loadTranslationFromFiles(bundle *i18n.Bundle) error {
+	// 支持的语言文件
+	languages := []string{"en.json", "zh-CN.json"}
+	
+	loadedFiles := 0
+	for _, langFile := range languages {
+		filePath := filepath.Join(s.localesDir, langFile)
+		
+		// 检查文件是否存在
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			continue // 跳过不存在的文件
+		}
+		
+		// 加载消息文件
+		_, err := bundle.LoadMessageFile(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to load translation file %s: %w", filePath, err)
+		}
+		
+		loadedFiles++
+	}
+	
+	// 如果没有加载任何文件，使用内置翻译作为备用
+	if loadedFiles == 0 {
+		return s.addBuiltinValidationMessages(bundle)
+	}
+	
+	return nil
+}
+
+// addBuiltinValidationMessages 添加内置的验证错误消息到i18n bundle
+// 当没有配置翻译文件时使用内置翻译
+func (s *Server) addBuiltinValidationMessages(bundle *i18n.Bundle) error {
 	// 添加英文验证消息
 	englishMessages := []*i18n.Message{
 		{ID: "required", Other: "{0} is a required field"},
@@ -133,15 +181,18 @@ func (s *Server) registerValidationTranslations(_ *validator.Validate) error {
 func (s *Server) Translate(errs validator.ValidationErrors) []string {
 	var messages []string
 	for _, err := range errs {
+		// 构造翻译消息ID：validation.{tag}
+		messageID := fmt.Sprintf("validation.%s", err.Tag())
+		
 		config := &i18n.LocalizeConfig{
-			MessageID: err.Tag(),
-			TemplateData: map[string]any{
+			MessageID: messageID,
+			TemplateData: map[string]interface{}{
 				"Field": err.Field(),
 				"Param": err.Param(),
 			},
 			DefaultMessage: &i18n.Message{
-				ID:    err.Tag(),
-				Other: fmt.Sprintf("{0} validation failed on tag '%s'", err.Tag()),
+				ID:    messageID,
+				Other: fmt.Sprintf("{{.Field}} validation failed on tag '%s'", err.Tag()),
 			},
 		}
 		
@@ -150,12 +201,34 @@ func (s *Server) Translate(errs validator.ValidationErrors) []string {
 			translated = fmt.Sprintf("%s validation failed on tag '%s'", err.Field(), err.Tag())
 		}
 		
-		// 替换模板变量
-		translated = strings.ReplaceAll(translated, "{0}", err.Field())
-		translated = strings.ReplaceAll(translated, "{1}", err.Param())
-		
 		messages = append(messages, translated)
 	}
 	
 	return messages
+}
+
+// TranslateBusiness 翻译业务错误消息
+func (s *Server) TranslateBusiness(key string, templateData ...map[string]interface{}) string {
+	// 构造翻译消息ID：business.{key}
+	messageID := fmt.Sprintf("business.%s", key)
+	
+	config := &i18n.LocalizeConfig{
+		MessageID: messageID,
+		DefaultMessage: &i18n.Message{
+			ID:    messageID,
+			Other: key, // 翻译失败时返回原始key
+		},
+	}
+	
+	// 如果提供了模板数据，使用第一个
+	if len(templateData) > 0 {
+		config.TemplateData = templateData[0]
+	}
+	
+	result, err := s.localizer.Localize(config)
+	if err != nil {
+		return key // 翻译失败时返回原始key
+	}
+	
+	return result
 }

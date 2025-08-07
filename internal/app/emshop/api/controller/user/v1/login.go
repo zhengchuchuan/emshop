@@ -27,11 +27,9 @@ func (us *userServer) Login(ctx *gin.Context) {
 	}
 
 	//验证码验证
-	// captcha.go 文件中
 	if !store.Verify(passwordLoginForm.CaptchaId, passwordLoginForm.Captcha, true) {
-		// core.WriteResponse
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"captcha": "验证码错误",
+			"captcha": us.trans.T("business.captcha_error"),
 		})
 		return
 	}
@@ -39,7 +37,7 @@ func (us *userServer) Login(ctx *gin.Context) {
 	userDTO, err := us.sf.Users().MobileLogin(ctx, passwordLoginForm.Mobile, passwordLoginForm.PassWord)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"msg": "登录失败",
+			"msg": us.trans.T("business.login_failed"),
 		})
 		return
 	}

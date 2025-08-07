@@ -3,6 +3,7 @@ package restserver
 import (
 	"context"
 	"fmt"
+	"strings"
 	"github.com/penglongli/gin-metrics/ginmetrics"
 	"net/http"
 	"time"
@@ -28,10 +29,18 @@ type i18nTranslatorWrapper struct {
 
 // T 翻译方法，与universal-translator的T方法兼容
 func (wrapper *i18nTranslatorWrapper) T(key string, params ...interface{}) string {
+	// 构造完整的消息ID，支持嵌套路径
+	var messageID string
+	if strings.Contains(key, ".") {
+		messageID = key
+	} else {
+		messageID = fmt.Sprintf("validation.%s", key)
+	}
+	
 	config := &i18n.LocalizeConfig{
-		MessageID: key,
+		MessageID: messageID,
 		DefaultMessage: &i18n.Message{
-			ID:    key,
+			ID:    messageID,
 			Other: key, // 如果找不到翻译，返回key本身
 		},
 	}
@@ -89,6 +98,8 @@ type Server struct {
 
 	//翻译器, 默认值 zh
 	transName string
+	// 翻译文件目录路径，默认为空（使用内置翻译）
+	localesDir string
 	// go-i18n/v2 localizer用于翻译消息
 	localizer *i18n.Localizer
 	// 当前语言环境

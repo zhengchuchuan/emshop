@@ -1,0 +1,54 @@
+{
+  "validation": {
+    "required": {
+      "other": "{{.Field}} is a required field"
+    },
+    "min": {
+      "other": "{{.Field}} must be at least {{.Param}} characters long"
+    },
+    "max": {
+      "other": "{{.Field}} must be at most {{.Param}} characters long"
+    },
+    "len": {
+      "other": "{{.Field}} must be {{.Param}} characters long"
+    },
+    "email": {
+      "other": "{{.Field}} must be a valid email address"
+    },
+    "oneof": {
+      "other": "{{.Field}} must be one of [{{.Param}}]"
+    },
+    "numeric": {
+      "other": "{{.Field}} must be a valid numeric value"
+    },
+    "alphanum": {
+      "other": "{{.Field}} can only contain alphanumeric characters"
+    },
+    "mobile": {
+      "other": "{{.Field}} is not a valid mobile number"
+    }
+  },
+  "business": {
+    "captcha_error": {
+      "other": "Captcha code is incorrect"
+    },
+    "login_failed": {
+      "other": "Login failed"
+    },
+    "sms_send_failed": {
+      "other": "Failed to send SMS code"
+    },
+    "user_not_found": {
+      "other": "User not found"
+    },
+    "password_incorrect": {
+      "other": "Password is incorrect"
+    },
+    "verification_code_error": {
+      "other": "Verification code is incorrect"
+    },
+    "verification_code_expired": {
+      "other": "Verification code has expired"
+    }
+  }
+}

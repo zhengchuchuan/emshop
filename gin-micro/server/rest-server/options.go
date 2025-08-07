@@ -50,6 +50,12 @@ func WithTransNames(transName string) ServerOption {
 	}
 }
 
+func WithLocalesDir(localesDir string) ServerOption {
+	return func(s *Server) {
+		s.localesDir = localesDir
+	}
+}
+
 func WithMetrics(enable bool) ServerOption {
 	return func(o *Server) {
 		o.enableMetrics = enable
