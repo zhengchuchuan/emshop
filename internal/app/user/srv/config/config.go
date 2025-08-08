@@ -16,7 +16,7 @@ type Config struct {
 
 	Telemetry    *options.TelemetryOptions `json:"telemetry" mapstructure:"telemetry"`
 	MySQLOptions *options.MySQLOptions     `json:"mysql" mapstructure:"mysql"`
-		Nacos        *options.NacosOptions     `json:"nacos" mapstructure:"nacos"`
+	Nacos        *options.NacosOptions     `json:"nacos" mapstructure:"nacos"`
 }
 
 func (c *Config) Validate() []error {

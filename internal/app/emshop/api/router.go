@@ -13,14 +13,15 @@ import (
 func initRouter(g *restserver.Server, cfg *config.Config) {
 	
 	v1 := g.Group("/v1")
-	ugroup := v1.Group("/user")
 
+
+	// 用户服务api
+	ugroup := v1.Group("/user")
 	data, err := rpc.GetDataFactoryOr(cfg.Registry)
 	if err != nil {
 		panic(err)
 	}
-
-	// //原来的过程其实很复杂
+	// 创建服务工厂
 	serviceFactory := service.NewService(data, cfg.Sms, cfg.Jwt)
 	uController := user.NewUserController(g.Translator(), serviceFactory)
 	{
@@ -32,6 +33,8 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.GetUserDetail)
 	}
 
+
+	// 基础服务api
 	baseRouter := v1.Group("base")
 	{
 		smsCtl := v12.NewSmsController(serviceFactory, g.Translator())
@@ -39,7 +42,7 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		baseRouter.GET("captcha", user.GetCaptcha)
 	}
 
-	//商品相关的api
+	//商品服务api
 	goodsRouter := v1.Group("goods")
 	{
 		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())

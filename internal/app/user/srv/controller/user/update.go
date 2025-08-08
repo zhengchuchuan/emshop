@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 	upbv1 "emshop/api/user/v1"
-	v1 "emshop/internal/app/user/srv/data/v1"
-	v12 "emshop/internal/app/user/srv/service/v1"
+	"emshop/internal/app/user/srv/domain/do"
+	"emshop/internal/app/user/srv/domain/dto"
 	"emshop/pkg/db"
 	"emshop/pkg/log"
 	"time"
@@ -16,7 +16,7 @@ func (u *userServer) UpdateUser(ctx context.Context, request *upbv1.UpdateUserIn
 	log.Infof("update user function called.")
 
 	birthDay := time.Unix(int64(request.BirthDay), 0)
-	userDO := v1.UserDO{
+	userDO := do.UserDO{
 		BaseModel: db.BaseModel{
 			ID: request.Id,
 		},
@@ -24,7 +24,7 @@ func (u *userServer) UpdateUser(ctx context.Context, request *upbv1.UpdateUserIn
 		Gender:   request.Gender,
 		Birthday: &birthDay,
 	}
-	userDTO := v12.UserDTO{userDO}
+	userDTO := dto.UserDTO{userDO}
 
 	err := u.srv.Update(ctx, &userDTO)
 	if err != nil {

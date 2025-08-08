@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"time"
 
-
+	"emshop/gin-micro/server/rest-server/middlewares"
+	"emshop/internal/app/emshop/api/data"
 	"emshop/internal/app/pkg/code"
+	"emshop/internal/app/pkg/options"
 	"emshop/pkg/errors"
 	"emshop/pkg/log"
 	"emshop/pkg/storage"
-	"emshop/gin-micro/server/rest-server/middlewares"
-	"emshop/internal/app/emshop/api/data"
-	"emshop/internal/app/pkg/options"
 
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -38,6 +37,7 @@ type userService struct {
 	data data.DataFactory
 
 	jwtOpts *options.JwtOptions
+	
 }
 
 func NewUserService(data data.DataFactory, jwtOpts *options.JwtOptions) UserSrv {
@@ -50,6 +50,7 @@ func (us *userService) MobileLogin(ctx context.Context, mobile, password string)
 	if err != nil {
 		return nil, err
 	}
+
 
 	//检查密码是否正确
 	err = us.data.Users().CheckPassWord(ctx, password, user.PassWord)
@@ -70,6 +71,7 @@ func (us *userService) MobileLogin(ctx context.Context, mobile, password string)
 		},
 	}
 	token, err := j.CreateToken(claims)
+	
 	if err != nil {
 		return nil, err
 	}

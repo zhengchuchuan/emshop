@@ -4,11 +4,11 @@ import (
 	"context"
 
 	upbv1 "emshop/api/user/v1"
-	srvv1 "emshop/internal/app/user/srv/service/v1"
+	"emshop/internal/app/user/srv/domain/dto"
 	metav1 "emshop/pkg/common/meta/v1"
 )
 
-func DTOToResponse(userDTO srvv1.UserDTO) *upbv1.UserInfoResponse {
+func DTOToResponse(userDTO dto.UserDTO) *upbv1.UserInfoResponse {
 	//在grpc的message中字段有默认值，不能随便赋值nil进去，容易出错
 	//这里要搞清， 哪些字段是有默认值
 	userInfoRsp := upbv1.UserInfoResponse{

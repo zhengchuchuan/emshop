@@ -7,7 +7,7 @@ import (
 
 	code2 "emshop/gin-micro/code"
 	"emshop/internal/app/pkg/code"
-	dv1 "emshop/internal/app/user/srv/data/v1"
+	"emshop/internal/app/user/srv/domain/do"
 	metav1 "emshop/pkg/common/meta/v1"
 	"emshop/pkg/errors"
 )
@@ -23,7 +23,7 @@ func NewUsers(db *gorm.DB) *users {
 
 // 接口实现时的编译时检查
 // 删除后如果 *users 没有完整实现接口，只有在实际使用时才会报错（运行时或单元测试时），不利于早期发现问题。
-var _ dv1.UserStore = &users{}
+var _ do.UserStore = &users{}
 
 
 // GetByMobile
@@ -34,8 +34,8 @@ var _ dv1.UserStore = &users{}
 //	@param mobile: 手机号
 //	@return *dv1.UserDO
 //	@return error
-func (u *users) GetByMobile(ctx context.Context, mobile string) (*dv1.UserDO, error) {
-	user := dv1.UserDO{}
+func (u *users) GetByMobile(ctx context.Context, mobile string) (*do.UserDO, error) {
+	user := do.UserDO{}
 
 	//err是gorm的error
 	err := u.db.Where("mobile=?", mobile).First(&user).Error
@@ -56,8 +56,8 @@ func (u *users) GetByMobile(ctx context.Context, mobile string) (*dv1.UserDO, er
 //	@param id: 用户id
 //	@return *dv1.UserDO
 //	@return error
-func (u *users) GetByID(ctx context.Context, id uint64) (*dv1.UserDO, error) {
-	user := dv1.UserDO{}
+func (u *users) GetByID(ctx context.Context, id uint64) (*do.UserDO, error) {
+	user := do.UserDO{}
 	err := u.db.First(&user, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -75,7 +75,7 @@ func (u *users) GetByID(ctx context.Context, id uint64) (*dv1.UserDO, error) {
 //	@param ctx
 //	@param user: 用户DO
 //	@return error
-func (u *users) Create(ctx context.Context, user *dv1.UserDO) error {
+func (u *users) Create(ctx context.Context, user *do.UserDO) error {
 	tx := u.db.Create(user)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
@@ -89,7 +89,7 @@ func (u *users) Create(ctx context.Context, user *dv1.UserDO) error {
 //	@param ctx 
 //	@param user 
 //	@return error 
-func (u *users) Update(ctx context.Context, user *dv1.UserDO) error {
+func (u *users) Update(ctx context.Context, user *do.UserDO) error {
 	tx := u.db.Save(user)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
@@ -107,9 +107,9 @@ func (u *users) Update(ctx context.Context, user *dv1.UserDO) error {
 //	@param opts
 //	@return *dv1.UserDOList
 //	@return error
-func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*dv1.UserDOList, error) {
+func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.UserDOList, error) {
 	//实现gorm查询
-	ret := &dv1.UserDOList{}
+	ret := &do.UserDOList{}
 
 	//分页
 	var limit, offset int
