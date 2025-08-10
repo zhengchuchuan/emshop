@@ -1,13 +1,14 @@
 package selector
 
+// globalSelector 全局选择器构建器
 var globalSelector Builder
 
-// GlobalSelector returns global selector builder.
+// GlobalSelector 返回全局选择器构建器
 func GlobalSelector() Builder {
 	return globalSelector
 }
 
-// SetGlobalSelector set global selector builder.
+// SetGlobalSelector 设置全局选择器构建器
 func SetGlobalSelector(builder Builder) {
 	globalSelector = builder
 }
