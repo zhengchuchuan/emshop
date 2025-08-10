@@ -29,6 +29,7 @@ func NewNacosDataSource(opts *options.NacosOptions) (*nacos.NacosDataSource, err
 	cc := constant.ClientConfig{
 		NamespaceId: opts.Namespace,
 		TimeoutMs:   5000,
+		LogDir:      "./logs",
 	}
 
 	client, err := clients.CreateConfigClient(map[string]interface{}{

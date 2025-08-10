@@ -1,11 +1,13 @@
 package admin
 
 import (
+	"context"
 	gapp "emshop/gin-micro/app"
 	"emshop/internal/app/emshop/api/config"
 	"emshop/internal/app/pkg/options"
 	"emshop/pkg/app"
 	"emshop/pkg/log"
+	"emshop/pkg/storage"
 
 	"github.com/hashicorp/consul/api"
 
@@ -44,23 +46,23 @@ func NewAPIApp(cfg *config.Config) (*gapp.App, error) {
 	register := NewRegistrar(cfg.Registry)
 
 	//连接redis
-	// redisConfig := &storage.Config{
-	// 	Host:                  cfg.Redis.Host,
-	// 	Port:                  cfg.Redis.Port,
-	// 	Addrs:                 cfg.Redis.Addrs,
-	// 	MasterName:            cfg.Redis.MasterName,
-	// 	Username:              cfg.Redis.Username,
-	// 	Password:              cfg.Redis.Password,
-	// 	Database:              cfg.Redis.Database,
-	// 	MaxIdle:               cfg.Redis.MaxIdle,
-	// 	MaxActive:             cfg.Redis.MaxActive,
-	// 	Timeout:               cfg.Redis.Timeout,
-	// 	EnableCluster:         cfg.Redis.EnableCluster,
-	// 	UseSSL:                cfg.Redis.UseSSL,
-	// 	SSLInsecureSkipVerify: cfg.Redis.SSLInsecureSkipVerify,
-	// 	EnableTracing:         cfg.Redis.EnableTracing,
-	// }
-	// go storage.ConnectToRedis(context.Background(), redisConfig)
+	redisConfig := &storage.Config{
+		Host:                  cfg.Redis.Host,
+		Port:                  cfg.Redis.Port,
+		Addrs:                 cfg.Redis.Addrs,
+		MasterName:            cfg.Redis.MasterName,
+		Username:              cfg.Redis.Username,
+		Password:              cfg.Redis.Password,
+		Database:              cfg.Redis.Database,
+		MaxIdle:               cfg.Redis.MaxIdle,
+		MaxActive:             cfg.Redis.MaxActive,
+		Timeout:               cfg.Redis.Timeout,
+		EnableCluster:         cfg.Redis.EnableCluster,
+		UseSSL:                cfg.Redis.UseSSL,
+		SSLInsecureSkipVerify: cfg.Redis.SSLInsecureSkipVerify,
+		EnableTracing:         cfg.Redis.EnableTracing,
+	}
+	go storage.ConnectToRedis(context.Background(), redisConfig)
 
 	//生成http服务
 	rpcServer, err := NewAPIHTTPServer(cfg)

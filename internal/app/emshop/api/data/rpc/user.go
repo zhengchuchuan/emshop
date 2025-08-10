@@ -6,12 +6,14 @@ import (
 	"emshop/gin-micro/server/rpc-server"
 	"emshop/gin-micro/server/rpc-server/client-interceptors"
 	"emshop/pkg/errors"
+	"emshop/pkg/log"
 	"time"
 
 	upbv1 "emshop/api/user/v1"
 	"emshop/internal/app/emshop/api/data"
 	"emshop/gin-micro/registry"
 	itime "emshop/pkg/common/time"
+	"google.golang.org/grpc"
 )
 
 const serviceName = "discovery:///emshop-user-srv"
@@ -25,15 +27,20 @@ func NewUsers(uc upbv1.UserClient) *users {
 }
 
 func NewUserServiceClient(r registry.Discovery) upbv1.UserClient {
+	log.Infof("Initializing gRPC connection to service: %s", serviceName)
 	conn, err := rpcserver.DialInsecure(
 		context.Background(),
 		rpcserver.WithEndpoint(serviceName),
 		rpcserver.WithDiscovery(r),	// 使用服务发现
+		rpcserver.WithClientTimeout(10*time.Second), // 增加连接超时时间到10秒
+		rpcserver.WithClientOptions(grpc.WithNoProxy()), // 禁用代理
 		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor), // 添加链路追踪拦截器
 	)
 	if err != nil {
+		log.Errorf("Failed to create gRPC connection: %v", err)
 		panic(err)
 	}
+	log.Info("gRPC connection established successfully")
 	c := upbv1.NewUserClient(conn)
 	return c
 }
@@ -58,12 +65,15 @@ func (u *users) Create(ctx context.Context, user *data.User) error {
 		NickName: user.NickName,
 		PassWord: user.PassWord,
 	}
+	log.Infof("Calling CreateUser gRPC for mobile: %s", user.Mobile)
 	userRsp, err := u.uc.CreateUser(ctx, protoUser)
 	if err != nil {
+		log.Errorf("CreateUser gRPC call failed: %v", err)
 		return err
 	}
+	log.Infof("CreateUser gRPC call successful, user ID: %d", userRsp.Id)
 	user.ID = uint64(userRsp.Id)
-	return err
+	return nil
 }
 
 func (u *users) Update(ctx context.Context, user *data.User) error {
