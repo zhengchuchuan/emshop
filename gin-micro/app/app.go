@@ -152,6 +152,11 @@ func (a *App) Run() error {
 
 // 停止并注销服务
 func (a *App) Stop() error {
+	// 首先取消上下文，触发所有goroutine退出
+	if a.cancel != nil {
+		a.cancel()
+	}
+
 	a.lk.Lock()
 	instance := a.instance
 	a.lk.Unlock()

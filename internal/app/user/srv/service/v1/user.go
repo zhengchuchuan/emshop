@@ -5,6 +5,7 @@ import (
 	"emshop/internal/app/pkg/code"
 	"emshop/internal/app/user/srv/domain/do"
 	"emshop/internal/app/user/srv/domain/dto"
+	"emshop/internal/app/user/srv/pkg/password"
 	metav1 "emshop/pkg/common/meta/v1"
 	"emshop/pkg/errors"
 )
@@ -35,10 +36,19 @@ var _ UserSrv = &userService{}
 
 
 func (u *userService) Create(ctx context.Context, user *dto.UserDTO) error {
-	// 检查用户是否存在的逻辑在servic层实现
+	// 检查用户是否存在的逻辑在service层实现
 	//先判断用户是否存在
 	_, err := u.userStrore.GetByMobile(ctx, user.Mobile)
 	if err != nil && errors.IsCode(err, code.ErrUserNotFound) {
+		// 密码加密逻辑应该在service层
+		encryptedPassword, err := password.EncryptPassword(user.Password)
+		if err != nil {
+			return errors.WithCode(code.ErrEncryptionFailed, "密码加密失败")
+		}
+		
+		// 更新用户密码为加密后的密码
+		user.Password = encryptedPassword
+		
 		return u.userStrore.Create(ctx, &user.UserDO)
 	}
 

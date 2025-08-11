@@ -18,4 +18,7 @@ const (
 
 	// ErrCodeInCorrect - 400: Sms code incorrect.
 	ErrCodeInCorrect
+
+	// ErrEncryptionFailed - 500: Password encryption failed.
+	ErrEncryptionFailed
 )

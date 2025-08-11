@@ -2,6 +2,8 @@ package user
 
 import (
 	gin2 "emshop/internal/app/pkg/translator/gin"
+	"emshop/internal/app/pkg/code"
+	"emshop/pkg/errors"
 	"emshop/pkg/log"
 	"net/http"
 
@@ -36,6 +38,23 @@ func (us *userServer) Login(ctx *gin.Context) {
 
 	userDTO, err := us.sf.Users().MobileLogin(ctx, passwordLoginForm.Mobile, passwordLoginForm.PassWord)
 	if err != nil {
+		// 根据错误类型返回不同的状态码和错误信息
+		if errors.IsCode(err, code.ErrUserNotFound) {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"msg": us.trans.T("business.user_not_found"),
+			})
+			return
+		}
+		
+		if errors.IsCode(err, code.ErrUserPasswordIncorrect) {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"msg": us.trans.T("business.password_incorrect"),
+			})
+			return
+		}
+
+		// 其他未知错误返回内部服务器错误
+		log.Errorf("login failed with unknown error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"msg": us.trans.T("business.login_failed"),
 		})

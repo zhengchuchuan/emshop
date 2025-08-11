@@ -55,6 +55,10 @@ func (us *userService) MobileLogin(ctx context.Context, mobile, password string)
 	//检查密码是否正确
 	err = us.data.Users().CheckPassWord(ctx, password, user.PassWord)
 	if err != nil {
+		// 如果是密码错误，返回特定的错误码
+		if errors.IsCode(err, code.ErrUserPasswordIncorrect) {
+			return nil, errors.WithCode(code.ErrUserPasswordIncorrect, "密码错误")
+		}
 		return nil, err
 	}
 

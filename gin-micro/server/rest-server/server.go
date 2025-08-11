@@ -29,6 +29,24 @@ type i18nTranslatorWrapper struct {
 
 // T 翻译方法，与universal-translator的T方法兼容
 func (wrapper *i18nTranslatorWrapper) T(key string, params ...interface{}) string {
+	// 添加空指针保护
+	if wrapper == nil || wrapper.localizer == nil {
+		log.Errorf("translator not initialized, key: %s", key)
+		// 返回友好的默认消息
+		switch key {
+		case "business.captcha_error":
+			return "验证码错误"
+		case "business.user_not_found":
+			return "用户不存在"
+		case "business.password_incorrect":
+			return "密码错误"
+		case "business.login_failed":
+			return "登录失败"
+		default:
+			return key // 返回key本身作为fallback
+		}
+	}
+	
 	// 构造完整的消息ID，支持嵌套路径
 	var messageID string
 	if strings.Contains(key, ".") {

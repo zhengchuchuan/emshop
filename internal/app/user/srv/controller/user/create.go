@@ -16,9 +16,9 @@ func (u *userServer) CreateUser(ctx context.Context, request *upbv1.CreateUserIn
 	userDO := do.UserDO{
 		Mobile:   request.Mobile,
 		NickName: request.NickName,
-		Password: request.PassWord,
+		Password: request.PassWord, // 原始密码传给Service层处理
 	}
-	userDTO := dto.UserDTO{userDO}
+	userDTO := dto.UserDTO{UserDO: userDO}
 
 	err := u.srv.Create(ctx, &userDTO)
 	if err != nil {
