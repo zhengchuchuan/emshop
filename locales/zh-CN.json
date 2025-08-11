@@ -49,6 +49,18 @@
     },
     "verification_code_expired": {
       "other": "验证码已过期"
+    },
+    "user_already_exists": {
+      "other": "用户已存在"
+    },
+    "encryption_failed": {
+      "other": "密码加密失败"
+    },
+    "registration_success": {
+      "other": "注册成功"
+    },
+    "login_success": {
+      "other": "登录成功"
     }
   }
 }

@@ -61,3 +61,10 @@ func WithMetrics(enable bool) ServerOption {
 		o.enableMetrics = enable
 	}
 }
+
+func WithRouterInit(initFunc func(*Server, interface{}), config interface{}) ServerOption {
+	return func(s *Server) {
+		s.routerInitFunc = initFunc
+		s.routerInitConfig = config
+	}
+}

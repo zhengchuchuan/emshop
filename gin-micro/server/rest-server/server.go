@@ -31,20 +31,8 @@ type i18nTranslatorWrapper struct {
 func (wrapper *i18nTranslatorWrapper) T(key string, params ...interface{}) string {
 	// 添加空指针保护
 	if wrapper == nil || wrapper.localizer == nil {
-		log.Errorf("translator not initialized, key: %s", key)
-		// 返回友好的默认消息
-		switch key {
-		case "business.captcha_error":
-			return "验证码错误"
-		case "business.user_not_found":
-			return "用户不存在"
-		case "business.password_incorrect":
-			return "密码错误"
-		case "business.login_failed":
-			return "登录失败"
-		default:
-			return key // 返回key本身作为fallback
-		}
+		log.Warnf("translator not initialized, returning original key: %s", key)
+		return key
 	}
 	
 	// 构造完整的消息ID，支持嵌套路径
@@ -59,7 +47,7 @@ func (wrapper *i18nTranslatorWrapper) T(key string, params ...interface{}) strin
 		MessageID: messageID,
 		DefaultMessage: &i18n.Message{
 			ID:    messageID,
-			Other: key, // 如果找不到翻译，返回key本身
+			Other: key, // 没有翻译时直接返回原key
 		},
 	}
 	
@@ -72,11 +60,13 @@ func (wrapper *i18nTranslatorWrapper) T(key string, params ...interface{}) strin
 	
 	result, err := wrapper.localizer.Localize(config)
 	if err != nil {
-		return key // 翻译失败时返回原始key
+		log.Debugf("translation not found for key: %s, returning original key", key)
+		return key
 	}
 	
 	return result
 }
+
 
 type JwtInfo struct {
 	// defaults to "JWT"
@@ -126,6 +116,10 @@ type Server struct {
 	server *http.Server
 
 	serviceName string
+
+	//路由初始化回调函数和配置
+	routerInitFunc func(*Server, interface{})
+	routerInitConfig interface{}
 }
 
 func NewServer(opts ...ServerOption) *Server {
@@ -189,6 +183,8 @@ func (s *Server) Translator() I18nTranslator {
 
 // start rest server
 func (s *Server) Start(ctx context.Context) error {
+	log.Infof("Starting REST server with transName: %s, localesDir: %s", s.transName, s.localesDir)
+	
 	//设置开发模式，打印路由信息
 	if s.mode != gin.DebugMode && s.mode != gin.ReleaseMode && s.mode != gin.TestMode {
 		return errors.New("mode must be one of debug/release/test")
@@ -207,6 +203,11 @@ func (s *Server) Start(ctx context.Context) error {
 		return err
 	}
 	
+	// 初始化路由（在翻译器初始化之后）
+	if s.routerInitFunc != nil {
+		log.Info("initializing routes after translator setup")
+		s.routerInitFunc(s, s.routerInitConfig)
+	}
 
 	//注册mobile验证码
 	validation.RegisterMobile(s.localizer)

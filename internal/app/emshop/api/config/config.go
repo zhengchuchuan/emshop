@@ -14,6 +14,7 @@ type Config struct {
 	Jwt      *options.JwtOptions      `json:"jwt" mapstructure:"jwt"`
 	Sms      *options.SmsOptions      `json:"sms" mapstructure:"sms"`
 	Redis    *options.RedisOptions    `json:"redis" mapstructure:"redis"`
+	I18n     *options.I18nOptions     `json:"i18n" mapstructure:"i18n"`
 }
 
 func (c *Config) Validate() []error {
@@ -24,6 +25,7 @@ func (c *Config) Validate() []error {
 	errors = append(errors, c.Jwt.Validate()...)
 	errors = append(errors, c.Sms.Validate()...)
 	errors = append(errors, c.Redis.Validate()...)
+	errors = append(errors, c.I18n.Validate()...)
 	return errors
 }
 
@@ -34,6 +36,7 @@ func (c *Config) Flags() (fss cliflag.NamedFlagSets) {
 	c.Jwt.AddFlags(fss.FlagSet("jwt"))
 	c.Sms.AddFlags(fss.FlagSet("sms"))
 	c.Redis.AddFlags(fss.FlagSet("redis"))
+	c.I18n.AddFlags(fss.FlagSet("i18n"))
 	return fss
 }
 
@@ -46,5 +49,6 @@ func New() *Config {
 		Jwt:      options.NewJwtOptions(),
 		Sms:      options.NewSmsOptions(),
 		Redis:    options.NewRedisOptions(),
+		I18n:     options.NewI18nOptions(),
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"emshop/pkg/log"
 )
 
 // initTrans 初始化翻译器
@@ -25,6 +26,8 @@ import (
 // 4. 从配置文件或内置消息加载翻译内容
 // 5. 根据locale参数选择对应的语言环境
 func (s *Server) initTrans(locale string) (err error) {
+	log.Infof("starting initTrans with locale: %s, localesDir: %s", locale, s.localesDir)
+	
 	// 修改gin框架中的validator引擎属性, 实现定制
 	// 通过类型断言获取validator.Validate实例，以便进行自定义配置
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
@@ -56,16 +59,19 @@ func (s *Server) initTrans(locale string) (err error) {
 		// Localizer负责根据语言环境获取翻译后的消息
 		var acceptLanguage string
 		switch locale {
-		case "zh":
+		case "zh", "zh-CN":
 			acceptLanguage = "zh-CN,zh,en"
 		case "en":
 			acceptLanguage = "en,zh-CN,zh"
 		default:
-			acceptLanguage = "en,zh-CN,zh"
+			// 默认使用中文
+			acceptLanguage = "zh-CN,zh,en"
 		}
 		
 		s.localizer = i18n.NewLocalizer(bundle, acceptLanguage)
 		s.locale = locale
+		
+		log.Infof("translator initialized with locale: %s, acceptLanguage: %s, localesDir: %s", locale, acceptLanguage, s.localesDir)
 
 		// 注册自定义的验证错误翻译函数
 		// 这个函数会在验证失败时被调用，用于翻译错误消息
@@ -94,23 +100,34 @@ func (s *Server) loadTranslationFromFiles(bundle *i18n.Bundle) error {
 	// 支持的语言文件
 	languages := []string{"en.json", "zh-CN.json"}
 	
+	// 获取当前工作目录用于调试
+	pwd, _ := os.Getwd()
+	log.Infof("current working directory: %s", pwd)
+	log.Infof("trying to load translation files from localesDir: %s", s.localesDir)
+	
 	loadedFiles := 0
 	for _, langFile := range languages {
 		filePath := filepath.Join(s.localesDir, langFile)
+		log.Infof("checking translation file: %s", filePath)
 		
 		// 检查文件是否存在
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			log.Warnf("translation file not found: %s", filePath)
 			continue // 跳过不存在的文件
 		}
 		
+		log.Infof("loading translation file: %s", filePath)
 		// 加载消息文件
 		_, err := bundle.LoadMessageFile(filePath)
 		if err != nil {
 			return fmt.Errorf("failed to load translation file %s: %w", filePath, err)
 		}
 		
+		log.Infof("successfully loaded translation file: %s", filePath)
 		loadedFiles++
 	}
+	
+	log.Infof("loaded %d translation files from directory: %s", loadedFiles, s.localesDir)
 	
 	// 如果没有加载任何文件，使用内置翻译作为备用
 	if loadedFiles == 0 {

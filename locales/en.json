@@ -49,6 +49,18 @@
     },
     "verification_code_expired": {
       "other": "Verification code has expired"
+    },
+    "user_already_exists": {
+      "other": "User already exists"
+    },
+    "encryption_failed": {
+      "other": "Password encryption failed"
+    },
+    "registration_success": {
+      "other": "Registration successful"
+    },
+    "login_success": {
+      "other": "Login successful"
     }
   }
 }
