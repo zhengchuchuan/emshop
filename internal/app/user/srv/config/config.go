@@ -9,10 +9,8 @@ import (
 type Config struct {
 	Log *log.Options `json:"log" mapstructure:"log"`
 
-	
 	Server       *options.ServerOptions    `json:"server" mapstructure:"server"`
 	Registry     *options.RegistryOptions  `json:"registry" mapstructure:"registry"`
-
 
 	Telemetry    *options.TelemetryOptions `json:"telemetry" mapstructure:"telemetry"`
 	MySQLOptions *options.MySQLOptions     `json:"mysql" mapstructure:"mysql"`

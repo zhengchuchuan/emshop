@@ -3,10 +3,11 @@ package user
 import (
 	"net/http"
 	"strconv"
-	
+
+	restserver "emshop/gin-micro/server/rest-server"
 	"emshop/internal/app/emshop/api/service"
-	"emshop/gin-micro/server/rest-server"
 	"emshop/pkg/common/core"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -80,7 +81,7 @@ func (us *userServer) GetById(ctx *gin.Context) {
 
 func (us *userServer) GetUserList(ctx *gin.Context) {
 	pnStr := ctx.DefaultQuery("pn", "1")
-	pSizeStr := ctx.DefaultQuery("psize", "10")
+	pSizeStr := ctx.DefaultQuery("pSize", "10")
 
 	pn, err := strconv.ParseUint(pnStr, 10, 32)
 	if err != nil {
@@ -93,10 +94,12 @@ func (us *userServer) GetUserList(ctx *gin.Context) {
 	pSize, err := strconv.ParseUint(pSizeStr, 10, 32)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"msg": "invalid psize parameter",
+			"msg": "invalid pSize parameter",
 		})
 		return
 	}
+
+	// fmt.Println("GetUserList called with pn:", pn, "pSize:", pSize)
 
 	userListDTO, err := us.sf.Users().GetUserList(ctx, uint32(pn), uint32(pSize))
 	if err != nil {

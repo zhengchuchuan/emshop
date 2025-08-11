@@ -26,8 +26,8 @@ func TestFormatNew(t *testing.T) {
 		New("error"),
 		"%+v",
 		"error\n" +
-			"imooc/emshop/pkg/errors.TestFormatNew\n" +
-			"\t.+/imooc/emshop/pkg/errors/format_test.go:26",
+			"emshop/pkg/errors.TestFormatNew\n" +
+			"\t.+/emshop/pkg/errors/format_test.go:26",
 	}, {
 		New("error"),
 		"%q",
@@ -56,8 +56,8 @@ func TestFormatErrorf(t *testing.T) {
 		Errorf("%s", "error"),
 		"%+v",
 		"error\n" +
-			"imooc/emshop/pkg/errors.TestFormatErrorf\n" +
-			"\t.+/imooc/emshop/pkg/errors/format_test.go:56",
+			"emshop/pkg/errors.TestFormatErrorf\n" +
+			"\t.+/emshop/pkg/errors/format_test.go:56",
 	}}
 
 	for i, tt := range tests {
@@ -82,8 +82,8 @@ func TestFormatWrap(t *testing.T) {
 		Wrap(New("error"), "error2"),
 		"%+v",
 		"error\n" +
-			"imooc/emshop/pkg/errors.TestFormatWrap\n" +
-			"\t.+/imooc/emshop/pkg/errors/format_test.go:82",
+			"emshop/pkg/errors.TestFormatWrap\n" +
+			"\t.+/emshop/pkg/errors/format_test.go:82",
 	}, {
 		Wrap(io.EOF, "error"),
 		"%s",
@@ -97,15 +97,15 @@ func TestFormatWrap(t *testing.T) {
 		"%+v",
 		"EOF\n" +
 			"error\n" +
-			"imooc/emshop/pkg/errors.TestFormatWrap\n" +
-			"\t.+/imooc/emshop/pkg/errors/format_test.go:96",
+			"emshop/pkg/errors.TestFormatWrap\n" +
+			"\t.+/emshop/pkg/errors/format_test.go:96",
 	}, {
 		Wrap(Wrap(io.EOF, "error1"), "error2"),
 		"%+v",
 		"EOF\n" +
 			"error1\n" +
-			"imooc/emshop/pkg/errors.TestFormatWrap\n" +
-			"\t.+/imooc/emshop/pkg/errors/format_test.go:103\n",
+			"emshop/pkg/errors.TestFormatWrap\n" +
+			"\t.+/emshop/pkg/errors/format_test.go:103\n",
 	}, {
 		Wrap(New("error with space"), "context"),
 		"%q",
@@ -135,8 +135,8 @@ func TestFormatWrapf(t *testing.T) {
 		"%+v",
 		"EOF\n" +
 			"error2\n" +
-			"imooc/emshop/pkg/errors.TestFormatWrapf\n" +
-			"\t.+/imooc/emshop/pkg/errors/format_test.go:134",
+			"emshop/pkg/errors.TestFormatWrapf\n" +
+			"\t.+/emshop/pkg/errors/format_test.go:134",
 	}, {
 		Wrapf(New("error"), "error%d", 2),
 		"%s",
@@ -149,8 +149,8 @@ func TestFormatWrapf(t *testing.T) {
 		Wrapf(New("error"), "error%d", 2),
 		"%+v",
 		"error\n" +
-			"imooc/emshop/pkg/errors.TestFormatWrapf\n" +
-			"\t.+/imooc/emshop/pkg/errors/format_test.go:149",
+			"emshop/pkg/errors.TestFormatWrapf\n" +
+			"\t.+/emshop/pkg/errors/format_test.go:149",
 	}}
 
 	for i, tt := range tests {
@@ -175,8 +175,8 @@ func TestFormatWithStack(t *testing.T) {
 		WithStack(io.EOF),
 		"%+v",
 		[]string{"EOF",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:175"},
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:175"},
 	}, {
 		WithStack(New("error")),
 		"%s",
@@ -189,37 +189,37 @@ func TestFormatWithStack(t *testing.T) {
 		WithStack(New("error")),
 		"%+v",
 		[]string{"error",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:189",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:189"},
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:189",
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:189"},
 	}, {
 		WithStack(WithStack(io.EOF)),
 		"%+v",
 		[]string{"EOF",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:197",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:197"},
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:197",
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:197"},
 	}, {
 		WithStack(WithStack(Wrapf(io.EOF, "message"))),
 		"%+v",
 		[]string{"EOF",
 			"message",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:205",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:205",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:205"},
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:205",
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:205",
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:205"},
 	}, {
 		WithStack(Errorf("error%d", 1)),
 		"%+v",
 		[]string{"error1",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:216",
-			"imooc/emshop/pkg/errors.TestFormatWithStack\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:216"},
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:216",
+			"emshop/pkg/errors.TestFormatWithStack\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:216"},
 	}}
 
 	for i, tt := range tests {
@@ -245,8 +245,8 @@ func TestFormatWithMessage(t *testing.T) {
 		"%+v",
 		[]string{
 			"error",
-			"imooc/emshop/pkg/errors.TestFormatWithMessage\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:244",
+			"emshop/pkg/errors.TestFormatWithMessage\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:244",
 			"error2"},
 	}, {
 		WithMessage(io.EOF, "addition1"),
@@ -272,33 +272,33 @@ func TestFormatWithMessage(t *testing.T) {
 		Wrap(WithMessage(io.EOF, "error1"), "error2"),
 		"%+v",
 		[]string{"EOF", "error1", "error2",
-			"imooc/emshop/pkg/errors.TestFormatWithMessage\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:272"},
+			"emshop/pkg/errors.TestFormatWithMessage\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:272"},
 	}, {
 		WithMessage(Errorf("error%d", 1), "error2"),
 		"%+v",
 		[]string{"error1",
-			"imooc/emshop/pkg/errors.TestFormatWithMessage\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:278",
+			"emshop/pkg/errors.TestFormatWithMessage\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:278",
 			"error2"},
 	}, {
 		WithMessage(WithStack(io.EOF), "error"),
 		"%+v",
 		[]string{
 			"EOF",
-			"imooc/emshop/pkg/errors.TestFormatWithMessage\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:285",
+			"emshop/pkg/errors.TestFormatWithMessage\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:285",
 			"error"},
 	}, {
 		WithMessage(Wrap(WithStack(io.EOF), "inside-error"), "outside-error"),
 		"%+v",
 		[]string{
 			"EOF",
-			"imooc/emshop/pkg/errors.TestFormatWithMessage\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:293",
+			"emshop/pkg/errors.TestFormatWithMessage\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:293",
 			"inside-error",
-			"imooc/emshop/pkg/errors.TestFormatWithMessage\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:293",
+			"emshop/pkg/errors.TestFormatWithMessage\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:293",
 			"outside-error"},
 	}}
 
@@ -314,12 +314,12 @@ func TestFormatGeneric(t *testing.T) {
 	}{
 		{New("new-error"), []string{
 			"new-error",
-			"imooc/emshop/pkg/errors.TestFormatGeneric\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:315"},
+			"emshop/pkg/errors.TestFormatGeneric\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:315"},
 		}, {Errorf("errorf-error"), []string{
 			"errorf-error",
-			"imooc/emshop/pkg/errors.TestFormatGeneric\n" +
-				"\t.+/imooc/emshop/pkg/errors/format_test.go:319"},
+			"emshop/pkg/errors.TestFormatGeneric\n" +
+				"\t.+/emshop/pkg/errors/format_test.go:319"},
 		}, {errors.New("errors-new-error"), []string{
 			"errors-new-error"},
 		},
@@ -332,22 +332,22 @@ func TestFormatGeneric(t *testing.T) {
 		}, {
 			func(err error) error { return WithStack(err) },
 			[]string{
-				"imooc/emshop/pkg/errors.(func·002|TestFormatGeneric.func2)\n\t" +
-					".+/imooc/emshop/pkg/errors/format_test.go:333",
+				"emshop/pkg/errors.(func·002|TestFormatGeneric.func2)\n\t" +
+					".+/emshop/pkg/errors/format_test.go:333",
 			},
 		}, {
 			func(err error) error { return Wrap(err, "wrap-error") },
 			[]string{
 				"wrap-error",
-				"imooc/emshop/pkg/errors.(func·003|TestFormatGeneric.func3)\n\t" +
-					".+/imooc/emshop/pkg/errors/format_test.go:339",
+				"emshop/pkg/errors.(func·003|TestFormatGeneric.func3)\n\t" +
+					".+/emshop/pkg/errors/format_test.go:339",
 			},
 		}, {
 			func(err error) error { return Wrapf(err, "wrapf-error%d", 1) },
 			[]string{
 				"wrapf-error1",
-				"imooc/emshop/pkg/errors.(func·004|TestFormatGeneric.func4)\n\t" +
-					".+/imooc/emshop/pkg/errors/format_test.go:346",
+				"emshop/pkg/errors.(func·004|TestFormatGeneric.func4)\n\t" +
+					".+/emshop/pkg/errors/format_test.go:346",
 			},
 		},
 	}
@@ -373,10 +373,10 @@ func TestFormatWrappedNew(t *testing.T) {
 		wrappedNew("error"),
 		"%+v",
 		"error\n" +
-			"imooc/emshop/pkg/errors.wrappedNew\n" +
-			"\t.+/imooc/emshop/pkg/errors/format_test.go:364\n" +
-			"imooc/emshop/pkg/errors.TestFormatWrappedNew\n" +
-			"\t.+/imooc/emshop/pkg/errors/format_test.go:373",
+			"emshop/pkg/errors.wrappedNew\n" +
+			"\t.+/emshop/pkg/errors/format_test.go:364\n" +
+			"emshop/pkg/errors.TestFormatWrappedNew\n" +
+			"\t.+/emshop/pkg/errors/format_test.go:373",
 	}}
 
 	for i, tt := range tests {
@@ -568,8 +568,8 @@ func TestFormatCode(t *testing.T) {
 		{"%v", `ConfigurationNotValid error`},
 		{"%-v", `^service configuration could not be loaded - #3 \[.*mocks_test.go:34 \(.*errors.loadConfig\)\] \(1000\) ConfigurationNotValid error$`},
 		{"%+v", `^service configuration could not be loaded - #3 \[.*mocks_test.go:34 \(.*errors.loadConfig\)\] \(1000\) ConfigurationNotValid error; could not decode configuration data - #2 \[.*mocks_test.go:39 \(.*errors.decodeConfig\)\] \(1001\) Data is not valid JSON; could not read configuration file - #1 \[.*mocks_test.go:44 \(.*errors.readConfig\)\] \(1002\) End of input; read: end of input - #0 read: end of input`},
-		{"%#-v", `[{\"caller\":\"#3 /home/lk/workspace/golang/src/imooc/emshop/pkg/errors/mocks_test.go:34 (imooc/emshop/pkg/errors.loadConfig)\",\"code\":1000,\"error\":\"service configuration could not be loaded\",\"message\":\"ConfigurationNotValid error\"}]`},
-		{"%#+v", `[{\"caller\":\"#3 /home/lk/workspace/golang/src/imooc/emshop/pkg/errors/mocks_test.go:34 (imooc/emshop/pkg/errors.loadConfig)\",\"code\":1000,\"error\":\"service configuration could not be loaded\",\"message\":\"ConfigurationNotValid error\"},{\"caller\":\"#2 /home/lk/workspace/golang/src/imooc/emshop/pkg/errors/mocks_test.go:39 (imooc/emshop/pkg/errors.decodeConfig)\",\"code\":1001,\"error\":\"could not decode configuration data\",\"message\":\"Data is not valid JSON\"},{\"caller\":\"#1 /home/lk/workspace/golang/src/imooc/emshop/pkg/errors/mocks_test.go:39 (imooc/emshop/pkg/errors.readConfig)\",\"code\":1002,\"error\":\"could not read configuration file\",\"message\":\"End of input\"},{\"caller\":\"#0\",\"code\":1,\"error\":\"read: end of input\",\"message\":\"read: end of input\"}]`},
+		{"%#-v", `[{\"caller\":\"#3 /home/lk/workspace/golang/src/emshop/pkg/errors/mocks_test.go:34 (emshop/pkg/errors.loadConfig)\",\"code\":1000,\"error\":\"service configuration could not be loaded\",\"message\":\"ConfigurationNotValid error\"}]`},
+		{"%#+v", `[{\"caller\":\"#3 /home/lk/workspace/golang/src/emshop/pkg/errors/mocks_test.go:34 (emshop/pkg/errors.loadConfig)\",\"code\":1000,\"error\":\"service configuration could not be loaded\",\"message\":\"ConfigurationNotValid error\"},{\"caller\":\"#2 /home/lk/workspace/golang/src/emshop/pkg/errors/mocks_test.go:39 (emshop/pkg/errors.decodeConfig)\",\"code\":1001,\"error\":\"could not decode configuration data\",\"message\":\"Data is not valid JSON\"},{\"caller\":\"#1 /home/lk/workspace/golang/src/emshop/pkg/errors/mocks_test.go:39 (emshop/pkg/errors.readConfig)\",\"code\":1002,\"error\":\"could not read configuration file\",\"message\":\"End of input\"},{\"caller\":\"#0\",\"code\":1,\"error\":\"read: end of input\",\"message\":\"read: end of input\"}]`},
 	}
 
 	for i, tt := range tests {

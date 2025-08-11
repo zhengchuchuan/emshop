@@ -32,7 +32,9 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		ugroup.GET("detail", jwtAuth.AuthFunc(), uController.GetUserDetail)
 		ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.GetUserDetail)
 
-		ugroup.GET("list", jwtAuth.AuthFunc(), uController.GetUserList)
+		ugroup.GET("list", jwtAuth.AuthFunc(), uController.GetUserList) // GET /v1/user/list?pn=页码&psize=每页数量
+		ugroup.GET("mobile", uController.GetByMobile)  // GET /v1/user/mobile?mobile=手机号
+  		ugroup.GET("id", uController.GetById)          // GET /v1/user/id?id=用户ID
 	}
 
 

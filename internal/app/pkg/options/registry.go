@@ -30,6 +30,6 @@ func (o *RegistryOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.Address, "consul.address", o.Address, ""+
 		"consul address, if left , default is 127.0.0.1:8500")
 
-	fs.StringVar(&o.Scheme, "consul.scheme", o.Scheme, "" +
+	fs.StringVar(&o.Scheme, "consul.scheme", o.Scheme, ""+
 		"registry schema, if left , default is http")
 }

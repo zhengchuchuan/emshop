@@ -1,14 +1,14 @@
 package options
 
 import (
-	"github.com/spf13/pflag"
 	"emshop/pkg/errors"
+	"github.com/spf13/pflag"
 )
 
 type TelemetryOptions struct {
 	Name     string  `json:"name"`
 	Endpoint string  `json:"endpoint"`
-	Sampler  float64 `json:"sampler"`	// 采样率
+	Sampler  float64 `json:"sampler"` // 采样率
 	Batcher  string  `json:"batcher"`
 }
 

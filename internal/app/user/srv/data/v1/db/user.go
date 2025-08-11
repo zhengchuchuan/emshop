@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 
 	"gorm.io/gorm"
 
@@ -132,9 +133,14 @@ func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 		query = query.Order(value)
 	}
 
-	d := query.Offset(offset).Limit(limit).Find(&ret.Items).Count(&ret.TotalCount)
-	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+	// 先获取总数（不受分页限制）
+	if err := query.Model(&do.UserDO{}).Count(&ret.TotalCount).Error; err != nil {
+		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+	}
+	fmt.Println("TotalCount:", ret.TotalCount)
+	// 再获取分页数据
+	if err := query.Offset(offset).Limit(limit).Find(&ret.Items).Error; err != nil {
+		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
 	}
 	return ret, nil
 }

@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"fmt"
 
 	upbv1 "emshop/api/user/v1"
 	"emshop/internal/app/user/srv/domain/dto"
@@ -47,5 +48,8 @@ func (us *userServer)GetUserList(ctx context.Context, info *upbv1.PageInfo) (*up
 		userRsp := DTOToResponse(*value)
 		rsp.Data = append(rsp.Data, userRsp)
 	}
+	fmt.Printf("dtoList.TotalCount: %d\n", dtoList.TotalCount)
+	rsp.Total = int32(dtoList.TotalCount)  // 设置总数
+	fmt.Printf("rsp.Total: %d\n", rsp.Total)
 	return &rsp, nil
 }

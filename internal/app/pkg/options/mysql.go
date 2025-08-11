@@ -36,31 +36,31 @@ func NewMySQLOptions() *MySQLOptions {
 
 // Validate verifies flags passed to MySQLOptions.
 func (o *MySQLOptions) Validate() []error {
-    errs := []error{}
+	errs := []error{}
 
-    if o.Host == "" {
-        errs = append(errs, fmt.Errorf("mysql host cannot be empty"))
-    }
-    if o.Port == "" {
-        errs = append(errs, fmt.Errorf("mysql port cannot be empty"))
-    }
-    if o.Database == "" {
-        errs = append(errs, fmt.Errorf("mysql database cannot be empty"))
-    }
-    if o.MaxIdleConnections < 0 {
-        errs = append(errs, fmt.Errorf("max idle connections cannot be negative"))
-    }
-    if o.MaxOpenConnections < 0 {
-        errs = append(errs, fmt.Errorf("max open connections cannot be negative"))
-    }
-    if o.MaxConnectionLifetime < 0 {
-        errs = append(errs, fmt.Errorf("max connection lifetime cannot be negative"))
-    }
-    if o.LogLevel < 0 || o.LogLevel > 4 {
-        errs = append(errs, fmt.Errorf("log level must be between 0 and 4"))
-    }
+	if o.Host == "" {
+		errs = append(errs, fmt.Errorf("mysql host cannot be empty"))
+	}
+	if o.Port == "" {
+		errs = append(errs, fmt.Errorf("mysql port cannot be empty"))
+	}
+	if o.Database == "" {
+		errs = append(errs, fmt.Errorf("mysql database cannot be empty"))
+	}
+	if o.MaxIdleConnections < 0 {
+		errs = append(errs, fmt.Errorf("max idle connections cannot be negative"))
+	}
+	if o.MaxOpenConnections < 0 {
+		errs = append(errs, fmt.Errorf("max open connections cannot be negative"))
+	}
+	if o.MaxConnectionLifetime < 0 {
+		errs = append(errs, fmt.Errorf("max connection lifetime cannot be negative"))
+	}
+	if o.LogLevel < 0 || o.LogLevel > 4 {
+		errs = append(errs, fmt.Errorf("log level must be between 0 and 4"))
+	}
 
-    return errs
+	return errs
 }
 
 // AddFlags adds flags related to mysql storage for a specific APIServer to the specified FlagSet.

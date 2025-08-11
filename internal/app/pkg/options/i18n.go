@@ -23,20 +23,20 @@ func NewI18nOptions() *I18nOptions {
 // Validate 验证配置参数
 func (o *I18nOptions) Validate() []error {
 	var errors []error
-	
+
 	// 验证语言环境
 	if o.Locale != "zh-CN" && o.Locale != "en" {
 		// 这里可以添加更多支持的语言环境验证
 		// 目前只是警告，不返回错误，使用默认值
 	}
-	
+
 	return errors
 }
 
 // AddFlags 添加命令行参数
 func (o *I18nOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.Locale, "i18n.locale", o.Locale, 
+	fs.StringVar(&o.Locale, "i18n.locale", o.Locale,
 		"Default locale for internationalization (zh-CN, en)")
-	fs.StringVar(&o.LocalesDir, "i18n.locales-dir", o.LocalesDir, 
+	fs.StringVar(&o.LocalesDir, "i18n.locales-dir", o.LocalesDir,
 		"Directory path for translation files, empty for built-in translations")
 }

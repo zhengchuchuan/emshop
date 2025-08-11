@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"emshop/internal/app/pkg/code"
 	"emshop/gin-micro/server/rpc-server"
 	"emshop/gin-micro/server/rpc-server/client-interceptors"
@@ -150,6 +151,7 @@ func (u *users) List(ctx context.Context, pn, pSize uint32) (data.UserList, erro
 		})
 	}
 
+	fmt.Printf("gRPC response Total: %d\n", userListResponse.Total)
 	return data.UserList{
 		TotalCount: int64(userListResponse.Total),
 		Items:      users,

@@ -60,8 +60,8 @@ Use "%s --help" for more information about a command.{{end}}
 	)
 )
 
-// App is the main structure of a cli application.
-// It is recommended that an app be created with the app.NewApp() function.
+ // App 是 CLI 应用程序的主结构体。
+ // 推荐使用 app.NewApp() 函数来创建一个应用实例。
 type App struct {
 	basename    string
 	name        string
@@ -76,66 +76,62 @@ type App struct {
 	cmd         *cobra.Command
 }
 
-// Option defines optional parameters for initializing the application
-// structure.
+ // Option 定义了初始化应用程序结构体的可选参数。
 type Option func(*App)
 
-// WithOptions to open the application's function to read from the command line
-// or read parameters from the configuration file.
+ // WithOptions 用于开启应用程序从命令行或配置文件读取参数的功能。
 func WithOptions(opt CliOptions) Option {
 	return func(a *App) {
 		a.options = opt
 	}
 }
 
-// RunFunc defines the application's startup callback function.
+ // RunFunc 定义了应用程序启动时的回调函数类型。
 type RunFunc func(basename string) error
 
-// WithRunFunc is used to set the application startup callback function option.
+ // WithRunFunc 用于设置应用程序启动时的回调函数选项。
 func WithRunFunc(run RunFunc) Option {
 	return func(a *App) {
 		a.runFunc = run
 	}
 }
 
-// WithDescription is used to set the description of the application.
+ // WithDescription 用于设置应用程序的描述信息。
 func WithDescription(desc string) Option {
 	return func(a *App) {
 		a.description = desc
 	}
 }
 
-// WithSilence sets the application to silent mode, in which the program startup
-// information, configuration information, and version information are not
-// printed in the console.
+ // WithSilence 设置应用程序为静默模式，启动信息、配置信息和版本信息不会输出到控制台。
 func WithSilence() Option {
 	return func(a *App) {
 		a.silence = true
 	}
 }
 
-// WithNoVersion set the application does not provide version flag.
+ // WithNoVersion 设置应用程序不提供版本标志。
 func WithNoVersion() Option {
 	return func(a *App) {
 		a.noVersion = true
 	}
 }
 
-// WithNoConfig set the application does not provide config flag.
+ // WithNoConfig 设置应用程序不提供配置文件标志。
 func WithNoConfig() Option {
 	return func(a *App) {
 		a.noConfig = true
 	}
 }
 
-// WithValidArgs set the validation function to valid non-flag arguments.
+ // WithValidArgs 设置校验非 flag 参数的校验函数。
 func WithValidArgs(args cobra.PositionalArgs) Option {
 	return func(a *App) {
 		a.args = args
 	}
 }
 
-// WithDefaultValidArgs set default validation function to valid non-flag arguments.
+ // WithDefaultValidArgs 设置默认的非 flag 参数校验函数。
 func WithDefaultValidArgs() Option {
 	return func(a *App) {
 		a.args = func(cmd *cobra.Command, args []string) error {
@@ -150,85 +146,106 @@ func WithDefaultValidArgs() Option {
 	}
 }
 
-// NewApp creates a new application instance based on the given application name,
-// binary name, and other options.
+ // NewApp 根据给定的应用名称、二进制名称和其他选项创建一个新的应用实例。
 func NewApp(name string, basename string, opts ...Option) *App {
 	a := &App{
 		name:     name,
 		basename: basename,
 	}
-
+	
 	for _, o := range opts {
 		o(a)
 	}
-
+	// 
 	a.buildCommand()
 
 	return a
 }
 
+// buildCommand 构建并配置应用程序的 Cobra 命令实例
+// 这是应用程序初始化的核心方法，负责设置命令行界面的所有方面
 func (a *App) buildCommand() {
+	// 1. 创建基础的 Cobra 命令结构
 	cmd := cobra.Command{
-		Use:   FormatBaseName(a.basename),
-		Short: a.name,
-		Long:  a.description,
-		// stop printing usage when the command errors
+		Use:   FormatBaseName(a.basename),  // 命令名称（格式化后的可执行文件名）
+		Short: a.name,                      // 简短描述
+		Long:  a.description,               // 详细描述
+		// 禁用错误时自动打印使用说明，由应用程序自己控制错误处理
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Args:          a.args,
+		Args:          a.args,  // 位置参数验证函数
 	}
-	// cmd.SetUsageTemplate(usageTemplate)
-	cmd.SetOut(os.Stdout)
-	cmd.SetErr(os.Stderr)
-	cmd.Flags().SortFlags = true
-	cliflag.InitFlags(cmd.Flags())
+	
+	// 2. 配置命令的输入输出流
+	// cmd.SetUsageTemplate(usageTemplate)  // 可选：自定义使用说明模板
+	cmd.SetOut(os.Stdout)          // 标准输出流
+	cmd.SetErr(os.Stderr)          // 标准错误流
+	cmd.Flags().SortFlags = true   // 按字母顺序排序标志
+	cliflag.InitFlags(cmd.Flags()) // 初始化命令行标志系统
 
+	// 3. 添加子命令支持
 	if len(a.commands) > 0 {
+		// 将应用程序定义的子命令添加到根命令
 		for _, command := range a.commands {
 			cmd.AddCommand(command.cobraCommand())
 		}
+		// 设置帮助命令
 		cmd.SetHelpCommand(helpCommand(a.name))
 	}
+	
+	// 4. 设置命令执行函数
 	if a.runFunc != nil {
-		cmd.RunE = a.runCommand
+		cmd.RunE = a.runCommand  // 绑定运行函数到 Cobra 命令
 	}
 
+	// 5. 处理应用程序选项和标志
 	var namedFlagSets cliflag.NamedFlagSets
 	if a.options != nil {
+		// 从应用程序选项中获取命令行标志定义
 		namedFlagSets = a.options.Flags()
 		fs := cmd.Flags()
+		// 将所有标志集合添加到命令的标志系统中
 		for _, f := range namedFlagSets.FlagSets {
 			fs.AddFlagSet(f)
 		}
 
+		// 6. 自定义帮助和使用说明格式
 		usageFmt := "Usage:\n  %s\n"
-		cols, _, _ := term.TerminalSize(cmd.OutOrStdout())
+		cols, _, _ := term.TerminalSize(cmd.OutOrStdout()) // 获取终端宽度
+		
+		// 自定义帮助函数，支持分组显示标志
 		cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(cmd.OutOrStdout(), "%s\n\n"+usageFmt, cmd.Long, cmd.UseLine())
 			cliflag.PrintSections(cmd.OutOrStdout(), namedFlagSets, cols)
 		})
+		
+		// 自定义使用说明函数
 		cmd.SetUsageFunc(func(cmd *cobra.Command) error {
 			fmt.Fprintf(cmd.OutOrStderr(), usageFmt, cmd.UseLine())
 			cliflag.PrintSections(cmd.OutOrStderr(), namedFlagSets, cols)
-
 			return nil
 		})
 	}
 
+	// 7. 添加全局标志
+	// 版本标志（如 --version, -v）
 	if !a.noVersion {
 		verflag.AddFlags(namedFlagSets.FlagSet("global"))
 	}
 
+	// 配置文件标志（如 --config, -c）
 	if !a.noConfig {
 		addConfigFlag(a.basename, namedFlagSets.FlagSet("global"))
 	}
 
+	// 其他全局标志（如日志级别等）
 	globalflag.AddGlobalFlags(namedFlagSets.FlagSet("global"), cmd.Name())
 
+	// 8. 保存构建好的命令实例
 	a.cmd = &cmd
 }
 
-// Run is used to launch the application.
+ // Run 用于启动应用程序。
 func (a *App) Run() {
 	if err := a.cmd.Execute(); err != nil {
 		fmt.Printf("%v %v\n", color.RedString("Error:"), err)
@@ -236,7 +253,7 @@ func (a *App) Run() {
 	}
 }
 
-// Command returns cobra command instance inside the application.
+ // Command 返回应用程序内部的 cobra.Command 实例。
 func (a *App) Command() *cobra.Command {
 	return a.cmd
 }

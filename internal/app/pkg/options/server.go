@@ -5,28 +5,20 @@ import "github.com/spf13/pflag"
 type ServerOptions struct {
 	//是否开启pprof
 	EnableProfiling bool `json:"profiling"      mapstructure:"profiling"`
-
 	// 是否开启限流
 	EnableLimit bool `json:"limit"      mapstructure:"limit"`
-
 	//是否开启metrics
 	EnableMetrics bool `json:"enable-metrics" mapstructure:"enable-metrics"`
-
 	//是否开启health check
 	EnableHealthCheck bool `json:"enable-health-check" mapstructure:"enable-health-check"`
-
 	//host
 	Host string `json:"host,omitempty"                     mapstructure:"host"`
-
 	//port
 	Port int `json:"port,omitempty"                     mapstructure:"port"`
-
 	//http port
 	HttpPort int `json:"http-port,omitempty"                     mapstructure:"http-port"`
-
 	//名称
 	Name string `json:"name,omitempty"                 mapstructure:"name"`
-
 	//中间件
 	Middlewares []string `json:"middlewares,omitempty"                 mapstructure:"middlewares"`
 }
