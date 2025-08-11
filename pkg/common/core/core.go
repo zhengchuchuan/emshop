@@ -9,26 +9,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ErrResponse defines the return messages when an error occurred.
-// Reference will be omitted if it does not exist.
-// swagger:model
+ // ErrResponse 定义了发生错误时的返回消息结构。
+ // 如果 Reference 不存在，则不会返回该字段。
+ // swagger:model
 type ErrResponse struct {
-	// Code defines the business error code.
-	Code int `json:"code"`
+	 // Code 业务错误码。
+		Code int `json:"code"`
 
-	// Message contains the detail of this message.
-	// This message is suitable to be exposed to external
-	Message string `json:"msg"`
+	 // Message 包含该消息的详细信息。
+	 // 此消息适合对外暴露。
+		Message string `json:"msg"`
 
 	Detail string `json:"detail"`
 
-	// Reference returns the reference document which maybe useful to solve this error.
-	Reference string `json:"reference,omitempty"`
+	 // Reference 返回可能有助于解决该错误的参考文档。
+		Reference string `json:"reference,omitempty"`
 }
 
-// WriteResponse write an error or the response data into http response body.
-// It use errors.ParseCoder to parse any error into errors.Coder
-// errors.Coder contains error code, user-safe error message and http status code.
+ // WriteResponse 将错误或响应数据写入 HTTP 响应体。
+ // 它使用 errors.ParseCoder 将任意 error 解析为 errors.Coder。
+ // errors.Coder 包含错误码、可安全暴露的错误信息和 HTTP 状态码。
 func WriteResponse(c *gin.Context, err error, data interface{}) {
 	if err != nil {
 		errStr := fmt.Sprintf("%#+v", err)

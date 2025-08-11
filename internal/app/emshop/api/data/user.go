@@ -27,5 +27,6 @@ type UserData interface {
 	Update(ctx context.Context, user *User) error
 	Get(ctx context.Context, userID uint64) (User, error)
 	GetByMobile(ctx context.Context, mobile string) (User, error)
+	List(ctx context.Context, pn, pSize uint32) (UserList, error)
 	CheckPassWord(ctx context.Context, password, encryptedPwd string) error
 }

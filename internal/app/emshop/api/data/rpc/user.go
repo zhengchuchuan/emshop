@@ -128,4 +128,32 @@ func (u *users) GetByMobile(ctx context.Context, mobile string) (data.User, erro
 	}, nil
 }
 
+func (u *users) List(ctx context.Context, pn, pSize uint32) (data.UserList, error) {
+	userListResponse, err := u.uc.GetUserList(ctx, &upbv1.PageInfo{
+		Pn:    pn,
+		PSize: pSize,
+	})
+	if err != nil {
+		return data.UserList{}, err
+	}
+
+	var users []*data.User
+	for _, user := range userListResponse.Data {
+		users = append(users, &data.User{
+			ID:       uint64(user.Id),
+			Mobile:   user.Mobile,
+			NickName: user.NickName,
+			Birthday: itime.Time{Time: time.Unix(int64(user.BirthDay), 0)},
+			Gender:   user.Gender,
+			Role:     user.Role,
+			PassWord: user.PassWord,
+		})
+	}
+
+	return data.UserList{
+		TotalCount: int64(userListResponse.Total),
+		Items:      users,
+	}, nil
+}
+
 var _ data.UserData = &users{}

@@ -31,6 +31,8 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		jwtAuth := newJWTAuth(cfg.Jwt)
 		ugroup.GET("detail", jwtAuth.AuthFunc(), uController.GetUserDetail)
 		ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.GetUserDetail)
+
+		ugroup.GET("list", jwtAuth.AuthFunc(), uController.GetUserList)
 	}
 
 

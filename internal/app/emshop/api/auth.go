@@ -9,7 +9,7 @@ import (
 	ginjwt "github.com/appleboy/gin-jwt/v2"
 )
 
-func newJWTAuth(opts *options.JwtOptions) middlewares.AuthStrategy {
+func fnewJWTAuth(opts *options.JwtOptions) middlewares.AuthStrategy {
 	gjwt, _ := ginjwt.New(&ginjwt.GinJWTMiddleware{
 		Realm:            opts.Realm,
 		SigningAlgorithm: "HS256",
@@ -21,7 +21,7 @@ func newJWTAuth(opts *options.JwtOptions) middlewares.AuthStrategy {
 		},
 		IdentityHandler: claimHandlerFun,
 		IdentityKey:     middlewares.KeyUserID,
-		TokenLookup:     "header: Authorization:, query: token, cookie: jwt",
+		TokenLookup:     "header: Authorization, query: token, cookie: jwt",
 		TokenHeadName:   "Bearer",
 	})
 	return auth.NewJWTStrategy(*gjwt)

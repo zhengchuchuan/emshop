@@ -23,12 +23,18 @@ type UserDTO struct {
 	ExpiresAt int64  `json:"expires_at"`	// token过期时间
 }
 
+type UserListDTO struct {
+	TotalCount int64      `json:"totalCount,omitempty"`
+	Items      []*UserDTO `json:"items"`
+}
+
 type UserSrv interface {
 	MobileLogin(ctx context.Context, mobile, password string) (*UserDTO, error)
 	Register(ctx context.Context, mobile, password, code string) (*UserDTO, error)
 	Update(ctx context.Context, userDTO *UserDTO) error
 	Get(ctx context.Context, userID uint64) (*UserDTO, error)
 	GetByMobile(ctx context.Context, mobile string) (*UserDTO, error)
+	GetUserList(ctx context.Context, pn, pSize uint32) (*UserListDTO, error)
 	CheckPassWord(ctx context.Context, password, EncryptedPassword string) (bool, error)
 }
 
@@ -169,6 +175,23 @@ func (u *userService) CheckPassWord(ctx context.Context, password, EncryptedPass
 		return false, err
 	}
 	return true, nil
+}
+
+func (u *userService) GetUserList(ctx context.Context, pn, pSize uint32) (*UserListDTO, error) {
+	userList, err := u.data.Users().List(ctx, pn, pSize)
+	if err != nil {
+		return nil, err
+	}
+
+	var userDTOs []*UserDTO
+	for _, user := range userList.Items {
+		userDTOs = append(userDTOs, &UserDTO{User: *user})
+	}
+
+	return &UserListDTO{
+		TotalCount: userList.TotalCount,
+		Items:      userDTOs,
+	}, nil
 }
 
 var _ UserSrv = &userService{}
