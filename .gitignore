@@ -35,5 +35,6 @@ go.work.sum
 **.tmp
 
 logs/*
+cache/*
 
 components/*
