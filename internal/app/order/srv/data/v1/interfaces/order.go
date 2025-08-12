@@ -1,4 +1,4 @@
-package v1
+package interfaces
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// OrderStore 订单存储接口
 type OrderStore interface {
 	Get(ctx context.Context, orderSn string) (*do.OrderInfoDO, error)
 

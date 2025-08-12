@@ -1,11 +1,11 @@
-package db
+package mysql
 
 import (
 	"context"
 	code2 "emshop/gin-micro/code"
 	"emshop/pkg/errors"
 
-	v1 "emshop/internal/app/order/srv/data/v1"
+	"emshop/internal/app/order/srv/data/v1/interfaces"
 	"emshop/internal/app/order/srv/domain/do"
 	metav1 "emshop/pkg/common/meta/v1"
 
@@ -13,18 +13,18 @@ import (
 )
 
 type orders struct {
-	db *gorm.DB
+	factory *mysqlFactory
 }
 
-func newOrders(factory *dataFactory) *orders {
+func newOrders(factory *mysqlFactory) *orders {
 	return &orders{
-		db: factory.db,
+		factory: factory,
 	}
 }
 
 func (o *orders) Get(ctx context.Context, orderSn string) (*do.OrderInfoDO, error) {
 	var order do.OrderInfoDO
-	err := o.db.WithContext(ctx).Preload("OrderGoods").Where("order_sn = ?", orderSn).First(&order).Error
+	err := o.factory.db.WithContext(ctx).Preload("OrderGoods").Where("order_sn = ?", orderSn).First(&order).Error
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (o *orders) Get(ctx context.Context, orderSn string) (*do.OrderInfoDO, erro
 
 func (o *orders) List(ctx context.Context, userID uint64, meta metav1.ListMeta, orderby []string) (*do.OrderInfoDOList, error) {
 	ret := &do.OrderInfoDOList{}
-	//分页
+	// 分页
 	var limit, offset int
 	if meta.PageSize == 0 {
 		limit = 10
@@ -45,8 +45,8 @@ func (o *orders) List(ctx context.Context, userID uint64, meta metav1.ListMeta, 
 		offset = (meta.Page - 1) * limit
 	}
 
-	//排序
-	query := o.db.Preload("OrderGoods")
+	// 排序
+	query := o.factory.db.Preload("OrderGoods")
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
@@ -60,7 +60,7 @@ func (o *orders) List(ctx context.Context, userID uint64, meta metav1.ListMeta, 
 
 // Create 创建订单之后要删除对应的购物车记录
 func (o *orders) Create(ctx context.Context, txn *gorm.DB, order *do.OrderInfoDO) error {
-	db := o.db
+	db := o.factory.db
 	if txn != nil {
 		db = txn
 	}
@@ -68,11 +68,11 @@ func (o *orders) Create(ctx context.Context, txn *gorm.DB, order *do.OrderInfoDO
 }
 
 func (o *orders) Update(ctx context.Context, txn *gorm.DB, order *do.OrderInfoDO) error {
-	db := o.db
+	db := o.factory.db
 	if txn != nil {
 		db = txn
 	}
 	return db.Model(order).Save(order).Error
 }
 
-var _ v1.OrderStore = &orders{}
+var _ interfaces.OrderStore = &orders{}

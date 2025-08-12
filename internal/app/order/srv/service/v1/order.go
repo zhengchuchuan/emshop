@@ -5,7 +5,7 @@ import (
 	proto2 "emshop/api/goods/v1"
 	proto "emshop/api/inventory/v1"
 	proto3 "emshop/api/order/v1"
-	v12 "emshop/internal/app/order/srv/data/v1"
+	"emshop/internal/app/order/srv/data/v1/mysql"
 	"emshop/internal/app/order/srv/domain/do"
 	"emshop/internal/app/order/srv/domain/dto"
 	"emshop/internal/app/pkg/code"
@@ -27,7 +27,7 @@ type OrderSrv interface {
 }
 
 type orderService struct {
-	data    v12.DataFactory
+	data    mysql.DataFactory
 	dtmOpts *options.DtmOptions
 }
 

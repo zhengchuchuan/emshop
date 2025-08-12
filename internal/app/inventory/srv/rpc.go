@@ -6,7 +6,7 @@ import (
 	"emshop/gin-micro/core/trace"
 	"emshop/gin-micro/server/rpc-server"
 	v12 "emshop/internal/app/inventory/srv/controller/v1"
-	db2 "emshop/internal/app/inventory/srv/data/v1/db"
+	v1 "emshop/internal/app/inventory/srv/data/v1"
 	v13 "emshop/internal/app/inventory/srv/service/v1"
 	"fmt"
 
@@ -23,11 +23,11 @@ func NewInventoryRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 	})
 
 	//有点繁琐，wire， ioc-golang
-	dataFactory, err := db2.GetDBFactoryOr(cfg.MySQLOptions)
+	factoryManager, err := v1.NewFactoryManager(cfg.MySQLOptions)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	invService := v13.NewService(dataFactory, cfg.RedisOptions)
+	invService := v13.NewService(factoryManager.GetDataFactory(), cfg.RedisOptions)
 	invServer := v12.NewInventoryServer(invService)
 	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	grpcServer := rpcserver.NewServer(rpcserver.WithAddress(rpcAddr))

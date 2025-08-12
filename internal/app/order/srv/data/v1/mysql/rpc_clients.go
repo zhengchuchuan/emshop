@@ -1,8 +1,10 @@
-package db
+package mysql
 
 import (
 	"context"
+
 	gpbv1 "emshop/api/goods/v1"
+	proto "emshop/api/inventory/v1"
 	"emshop/gin-micro/registry/consul"
 	"emshop/gin-micro/server/rpc-server"
 	"emshop/gin-micro/server/rpc-server/client-interceptors"
@@ -13,7 +15,10 @@ import (
 	"emshop/gin-micro/registry"
 )
 
-const goodsserviceName = "discovery:///emshop-goods-srv"
+const (
+	goodsserviceName = "discovery:///emshop-goods-srv"
+	ginvserviceName  = "discovery:///emshop-inventory-srv"
+)
 
 func NewDiscovery(opts *options.RegistryOptions) registry.Discovery {
 	c := cosulAPI.DefaultConfig()
@@ -44,5 +49,25 @@ func NewGoodsServiceClient(r registry.Discovery) gpbv1.GoodsClient {
 		panic(err)
 	}
 	c := gpbv1.NewGoodsClient(conn)
+	return c
+}
+
+func GetInventoryClient(opts *options.RegistryOptions) proto.InventoryClient {
+	discovery := NewDiscovery(opts)
+	invClient := NewInventoryServiceClient(discovery)
+	return invClient
+}
+
+func NewInventoryServiceClient(r registry.Discovery) proto.InventoryClient {
+	conn, err := rpcserver.DialInsecure(
+		context.Background(),
+		rpcserver.WithEndpoint(ginvserviceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	)
+	if err != nil {
+		panic(err)
+	}
+	c := proto.NewInventoryClient(conn)
 	return c
 }

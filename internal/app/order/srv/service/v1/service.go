@@ -1,7 +1,7 @@
 package service
 
 import (
-	v1 "emshop/internal/app/order/srv/data/v1"
+	"emshop/internal/app/order/srv/data/v1/mysql"
 	"emshop/internal/app/pkg/options"
 )
 
@@ -10,7 +10,7 @@ type ServiceFactory interface {
 }
 
 type service struct {
-	data    v1.DataFactory
+	data    mysql.DataFactory
 	dtmopts *options.DtmOptions
 }
 
@@ -20,6 +20,6 @@ func (s *service) Orders() OrderSrv {
 
 var _ ServiceFactory = &service{}
 
-func NewService(data v1.DataFactory, dtmopts *options.DtmOptions) *service {
+func NewService(data mysql.DataFactory, dtmopts *options.DtmOptions) *service {
 	return &service{data: data, dtmopts: dtmopts}
 }

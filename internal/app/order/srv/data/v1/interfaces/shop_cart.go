@@ -1,4 +1,4 @@
-package v1
+package interfaces
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	metav1 "emshop/pkg/common/meta/v1"
 )
 
+// ShopCartStore 购物车存储接口
 type ShopCartStore interface {
 	List(ctx context.Context, userID uint64, checked bool, meta metav1.ListMeta, orderby []string) (*do.ShoppingCartDOList, error)
 	Create(ctx context.Context, cartItem *do.ShoppingCartDO) error

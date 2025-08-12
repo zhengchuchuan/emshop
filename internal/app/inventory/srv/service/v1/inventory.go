@@ -2,7 +2,7 @@ package v1
 
 import (
 	"context"
-	v1 "emshop/internal/app/inventory/srv/data/v1"
+	"emshop/internal/app/inventory/srv/data/v1/mysql"
 	"emshop/internal/app/pkg/code"
 	"emshop/internal/app/pkg/options"
 	"emshop/pkg/errors"
@@ -37,7 +37,7 @@ type InventorySrv interface {
 }
 
 type inventoryService struct {
-	data v1.DataFactory
+	data mysql.DataFactory
 
 	redisOptions *options.RedisOptions
 

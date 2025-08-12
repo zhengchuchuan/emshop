@@ -6,7 +6,7 @@ import (
 	"emshop/gin-micro/server/rpc-server"
 	"emshop/internal/app/order/srv/config"
 	"emshop/internal/app/order/srv/controller/order/v1"
-	db2 "emshop/internal/app/order/srv/data/v1/db"
+	v1 "emshop/internal/app/order/srv/data/v1"
 	v13 "emshop/internal/app/order/srv/service/v1"
 	"fmt"
 
@@ -22,12 +22,12 @@ func NewOrderRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 		cfg.Telemetry.Batcher,
 	})
 
-	dataFactory, err := db2.GetDataFactoryOr(cfg.MySQLOptions, cfg.Registry)
+	factoryManager, err := v1.NewFactoryManager(cfg.MySQLOptions, cfg.Registry)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	orderSrvFactory := v13.NewService(dataFactory, cfg.Dtm)
+	orderSrvFactory := v13.NewService(factoryManager.GetDataFactory(), cfg.Dtm)
 	orderServer := order.NewOrderServer(orderSrvFactory)
 	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	grpcServer := rpcserver.NewServer(rpcserver.WithAddress(rpcAddr))

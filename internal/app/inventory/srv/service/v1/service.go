@@ -1,7 +1,7 @@
 package v1
 
 import (
-	v1 "emshop/internal/app/inventory/srv/data/v1"
+	"emshop/internal/app/inventory/srv/data/v1/mysql"
 	"emshop/internal/app/pkg/options"
 	"fmt"
 
@@ -16,7 +16,7 @@ type ServiceFactory interface {
 }
 
 type service struct {
-	data v1.DataFactory
+	data mysql.DataFactory
 
 	redisOptions *options.RedisOptions
 	pool         redsyncredis.Pool
@@ -27,7 +27,7 @@ func (s *service) Inventorys() InventorySrv {
 	return newInventoryService(s)
 }
 
-func NewService(store v1.DataFactory, redisOptions *options.RedisOptions) *service {
+func NewService(store mysql.DataFactory, redisOptions *options.RedisOptions) *service {
 	client := goredislib.NewClient(&goredislib.Options{
 		Addr: fmt.Sprintf("%s:%d", redisOptions.Host, redisOptions.Port),
 	})
