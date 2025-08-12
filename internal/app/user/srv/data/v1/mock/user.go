@@ -2,49 +2,67 @@ package mock
 
 import (
 	"context"
-
+	"emshop/internal/app/user/srv/data/v1/interfaces"
 	"emshop/internal/app/user/srv/domain/do"
 	metav1 "emshop/pkg/common/meta/v1"
 )
 
-type users struct{
-	users []*do.UserDO
-}
+type users struct{}
 
-func NewUsers() *users {
+func NewUsers() interfaces.UserStore {
 	return &users{}
 }
 
-func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.UserDOList, error) {
- 
-	// 模拟返回数据
-	return &do.UserDOList{
-		TotalCount: 1,
-		Items: u.users,
+var _ interfaces.UserStore = &users{}
+
+func (u *users) Get(ctx context.Context, ID uint64) (*do.UserDO, error) {
+	return &do.UserDO{
+		Mobile:   "13800138000",
+		Password: "password123",
+		NickName: "test_user",
+		Gender:   "male",
+		Role:     1,
 	}, nil
 }
 
-// 添加 Create 方法
-func (u *users) Create(ctx context.Context, user *do.UserDO) error {
-    // 模拟实现
-    u.users = append(u.users, user)
-    return nil
-}
-
-// 添加 GetByMobile 方法
 func (u *users) GetByMobile(ctx context.Context, mobile string) (*do.UserDO, error) {
-    // 模拟实现
-    return nil, nil
+	return &do.UserDO{
+		Mobile:   mobile,
+		Password: "password123",
+		NickName: "test_user",
+		Gender:   "male",
+		Role:     1,
+	}, nil
 }
 
-// 添加 GetByID 方法
-func (u *users) GetByID(ctx context.Context, id uint64) (*do.UserDO, error) {
-    // 模拟实现
-    return nil, nil
+func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.UserDOList, error) {
+	users := []*do.UserDO{
+		{
+			Mobile:   "13800138001",
+			Password: "password123",
+			NickName: "user1",
+			Gender:   "male",
+			Role:     1,
+		},
+		{
+			Mobile:   "13800138002",
+			Password: "password456",
+			NickName: "user2",
+			Gender:   "female",
+			Role:     1,
+		},
+	}
+
+	return &do.UserDOList{
+		TotalCount: int64(len(users)),
+		Items:      users,
+	}, nil
 }
 
-// 添加 Update 方法
+func (u *users) Create(ctx context.Context, user *do.UserDO) error {
+	return nil
+}
+
 func (u *users) Update(ctx context.Context, user *do.UserDO) error {
-    // 模拟实现
-    return nil
+	return nil
 }

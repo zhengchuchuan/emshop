@@ -3,7 +3,7 @@ package v1
 import (
 	"context"
 	"emshop/internal/app/pkg/code"
-	"emshop/internal/app/user/srv/domain/do"
+	"emshop/internal/app/user/srv/data/v1/interfaces"
 	"emshop/internal/app/user/srv/domain/dto"
 	"emshop/internal/app/user/srv/pkg/password"
 	metav1 "emshop/pkg/common/meta/v1"
@@ -12,7 +12,7 @@ import (
 
 
 type userService struct {
-	userStrore do.UserStore
+	userStrore interfaces.UserStore
 }
 
 type UserSrv interface {
@@ -25,7 +25,7 @@ type UserSrv interface {
 
 
 
-func NewUserService(us do.UserStore) UserSrv {
+func NewUserService(us interfaces.UserStore) UserSrv {
 	return &userService{
 		userStrore: us,
 	}
@@ -58,7 +58,7 @@ func (u *userService) Create(ctx context.Context, user *dto.UserDTO) error {
 
 func (u *userService) Update(ctx context.Context, user *dto.UserDTO) error {
 	//先查询用户是否存在
-	_, err := u.userStrore.GetByID(ctx, uint64(user.ID))
+	_, err := u.userStrore.Get(ctx, uint64(user.ID))
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (u *userService) Update(ctx context.Context, user *dto.UserDTO) error {
 }
 
 func (u *userService) GetByID(ctx context.Context, ID uint64) (*dto.UserDTO, error) {
-	userDO, err := u.userStrore.GetByID(ctx, ID)
+	userDO, err := u.userStrore.Get(ctx, ID)
 	if err != nil {
 		return nil, err
 	}
