@@ -27,9 +27,9 @@ func (b *brands) Get(ctx context.Context, ID uint64) (*do.BrandsDO, error) {
 	err := b.db.First(brand, ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrBrandNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrBrandNotFound, "%s", err.Error())
 		}
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return brand, nil
 }
@@ -57,7 +57,7 @@ func (b *brands) List(ctx context.Context, orderby []string, opts metav1.ListMet
 
 	d := query.Offset(offset).Limit(limit).Find(&ret.Items).Count(&ret.TotalCount)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -65,7 +65,7 @@ func (b *brands) List(ctx context.Context, orderby []string, opts metav1.ListMet
 func (b *brands) Create(ctx context.Context, brand *do.BrandsDO) error {
 	tx := b.db.Create(brand)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -73,7 +73,7 @@ func (b *brands) Create(ctx context.Context, brand *do.BrandsDO) error {
 func (b *brands) CreateInTxn(ctx context.Context, txn *gorm.DB, brand *do.BrandsDO) error {
 	tx := txn.Create(brand)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -81,7 +81,7 @@ func (b *brands) CreateInTxn(ctx context.Context, txn *gorm.DB, brand *do.Brands
 func (b *brands) Update(ctx context.Context, brand *do.BrandsDO) error {
 	tx := b.db.Save(brand)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -89,7 +89,7 @@ func (b *brands) Update(ctx context.Context, brand *do.BrandsDO) error {
 func (b *brands) UpdateInTxn(ctx context.Context, txn *gorm.DB, brand *do.BrandsDO) error {
 	tx := txn.Save(brand)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }

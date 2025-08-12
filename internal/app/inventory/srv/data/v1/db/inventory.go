@@ -26,7 +26,7 @@ func (i *inventorys) UpdateStockSellDetailStatus(ctx context.Context, txn *gorm.
 	//update语句如果没有更新的话那么不会报错，但是他会返回一个影响的行数，所以我们可以根据影响的行数来判断是否更新成功
 	result := db.Model(do.StockSellDetailDO{}).Where("order_sn = ?", ordersn).Update("status", status)
 	if result.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, result.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", result.Error.Error())
 	}
 
 	//这里应该在service层去写代码判断更合理
@@ -46,9 +46,9 @@ func (i *inventorys) GetSellDetail(ctx context.Context, txn *gorm.DB, ordersn st
 	err := db.Where("order_sn = ?", ordersn).First(&ordersellDetail).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrInvSellDetailNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrInvSellDetailNotFound, "%s", err.Error())
 		}
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return &ordersellDetail, err
 }
@@ -78,7 +78,7 @@ func (i *inventorys) CreateStockSellDetail(ctx context.Context, txn *gorm.DB, de
 
 	tx := db.Create(&detail)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -87,7 +87,7 @@ func (i *inventorys) Create(ctx context.Context, inv *do.InventoryDO) error {
 	//设置库存， 如果我要更新库存
 	tx := i.db.Create(&inv)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -98,10 +98,10 @@ func (i *inventorys) Get(ctx context.Context, goodsID uint64) (*do.InventoryDO, 
 	if err != nil {
 		log.Errorf("get inv err: %v", err)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrInventoryNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrInventoryNotFound, "%s", err.Error())
 		}
 
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 
 	return &inv, nil

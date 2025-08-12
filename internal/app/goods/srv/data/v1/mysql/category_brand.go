@@ -27,9 +27,9 @@ func (cb *categoryBrands) Get(ctx context.Context, ID uint64) (*do.GoodsCategory
 	err := cb.db.Preload("Category").Preload("Brand").First(categoryBrand, ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrCategoryBrandNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrCategoryBrandNotFound, "%s", err.Error())
 		}
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return categoryBrand, nil
 }
@@ -57,7 +57,7 @@ func (cb *categoryBrands) List(ctx context.Context, orderby []string, opts metav
 
 	d := query.Offset(offset).Limit(limit).Find(&ret.Items).Count(&ret.TotalCount)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -66,7 +66,7 @@ func (cb *categoryBrands) GetByCategory(ctx context.Context, categoryID uint64) 
 	ret := &do.GoodsCategoryBrandDOList{}
 	d := cb.db.Preload("Category").Preload("Brand").Where("category_id = ?", categoryID).Find(&ret.Items)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -75,7 +75,7 @@ func (cb *categoryBrands) GetByBrand(ctx context.Context, brandID uint64) (*do.G
 	ret := &do.GoodsCategoryBrandDOList{}
 	d := cb.db.Preload("Category").Preload("Brand").Where("brand_id = ?", brandID).Find(&ret.Items)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -83,7 +83,7 @@ func (cb *categoryBrands) GetByBrand(ctx context.Context, brandID uint64) (*do.G
 func (cb *categoryBrands) Create(ctx context.Context, categoryBrand *do.GoodsCategoryBrandDO) error {
 	tx := cb.db.Create(categoryBrand)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func (cb *categoryBrands) Create(ctx context.Context, categoryBrand *do.GoodsCat
 func (cb *categoryBrands) CreateInTxn(ctx context.Context, txn *gorm.DB, categoryBrand *do.GoodsCategoryBrandDO) error {
 	tx := txn.Create(categoryBrand)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -99,7 +99,7 @@ func (cb *categoryBrands) CreateInTxn(ctx context.Context, txn *gorm.DB, categor
 func (cb *categoryBrands) Update(ctx context.Context, categoryBrand *do.GoodsCategoryBrandDO) error {
 	tx := cb.db.Save(categoryBrand)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -107,7 +107,7 @@ func (cb *categoryBrands) Update(ctx context.Context, categoryBrand *do.GoodsCat
 func (cb *categoryBrands) UpdateInTxn(ctx context.Context, txn *gorm.DB, categoryBrand *do.GoodsCategoryBrandDO) error {
 	tx := txn.Save(categoryBrand)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }

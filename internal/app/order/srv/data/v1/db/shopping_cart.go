@@ -61,7 +61,7 @@ func (sc *shoppingCarts) List(ctx context.Context, userID uint64, checked bool, 
 
 	d := query.Offset(offset).Limit(limit).Find(&ret.Items).Count(&ret.TotalCount)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -69,7 +69,7 @@ func (sc *shoppingCarts) List(ctx context.Context, userID uint64, checked bool, 
 func (sc *shoppingCarts) Create(ctx context.Context, cartItem *do.ShoppingCartDO) error {
 	tx := sc.db.Create(cartItem)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -79,9 +79,9 @@ func (sc *shoppingCarts) Get(ctx context.Context, userID, goodsID uint64) (*do.S
 	err := sc.db.WithContext(ctx).Where("user = ? AND goods = ?", userID, goodsID).First(&shopCart).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrShopCartItemNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrShopCartItemNotFound, "%s", err.Error())
 		}
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return &shopCart, nil
 }

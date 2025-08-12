@@ -28,9 +28,9 @@ func (c *categorys) Get(ctx context.Context, ID uint64) (*do.CategoryDO, error) 
 	err := c.db.Preload("SubCategory").Preload("SubCategory.SubCategory").First(category, ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrCategoryNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrCategoryNotFound, "%s", err.Error())
 		}
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return category, nil
 }
@@ -58,7 +58,7 @@ func (c *categorys) List(ctx context.Context, orderby []string, opts metav1.List
 
 	d := query.Offset(offset).Limit(limit).Find(&ret.Items).Count(&ret.TotalCount)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -74,7 +74,7 @@ func (c *categorys) GetByLevel(ctx context.Context, level int) (*do.CategoryDOLi
 
 	d := query.Find(&ret.Items)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -83,7 +83,7 @@ func (c *categorys) GetSubCategories(ctx context.Context, parentID uint64) (*do.
 	ret := &do.CategoryDOList{}
 	d := c.db.Where("parent_category_id = ?", parentID).Find(&ret.Items)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -91,7 +91,7 @@ func (c *categorys) GetSubCategories(ctx context.Context, parentID uint64) (*do.
 func (c *categorys) Create(ctx context.Context, category *do.CategoryDO) error {
 	tx := c.db.Create(category)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -99,7 +99,7 @@ func (c *categorys) Create(ctx context.Context, category *do.CategoryDO) error {
 func (c *categorys) CreateInTxn(ctx context.Context, txn *gorm.DB, category *do.CategoryDO) error {
 	tx := txn.Create(category)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -107,7 +107,7 @@ func (c *categorys) CreateInTxn(ctx context.Context, txn *gorm.DB, category *do.
 func (c *categorys) Update(ctx context.Context, category *do.CategoryDO) error {
 	tx := c.db.Save(category)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -115,7 +115,7 @@ func (c *categorys) Update(ctx context.Context, category *do.CategoryDO) error {
 func (c *categorys) UpdateInTxn(ctx context.Context, txn *gorm.DB, category *do.CategoryDO) error {
 	tx := txn.Save(category)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }

@@ -96,7 +96,7 @@ func (g *goods) Search(ctx context.Context, req *interfaces.GoodsFilterRequest) 
 		Size(int(req.PagePerNums)).Do(ctx)
 
 	if err != nil {
-		return nil, errors.WithCode(code.ErrEsQuery, err.Error())
+		return nil, errors.WithCode(code.ErrEsQuery, "%s", err.Error())
 	}
 
 	var ret do.GoodsSearchDOList
@@ -108,7 +108,7 @@ func (g *goods) Search(ctx context.Context, req *interfaces.GoodsFilterRequest) 
 			goods := do.GoodsSearchDO{}
 			err := json.Unmarshal(value.Source, &goods)
 			if err != nil {
-				return nil, errors.WithCode(code.ErrEsUnmarshal, err.Error())
+				return nil, errors.WithCode(code.ErrEsUnmarshal, "%s", err.Error())
 			}
 			ret.Items = append(ret.Items, &goods)
 		}

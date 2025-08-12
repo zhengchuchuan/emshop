@@ -86,3 +86,65 @@ func (gc *goodsController) List(ctx *gin.Context) {
 
 	core.WriteResponse(ctx, nil, reMap)
 }
+
+func (gc *goodsController) New(ctx *gin.Context) {
+	log.Info("goods new function called ...")
+
+	var r request.CreateGoods
+
+	if err := ctx.ShouldBindJSON(&r); err != nil {
+		gin2.HandleValidatorError(ctx, err, gc.trans)
+		return
+	}
+
+	createGoodsInfo := proto.CreateGoodsInfo{
+		Name:            r.Name,
+		GoodsSn:         r.GoodsSn,
+		Stocks:          r.Stocks,
+		MarketPrice:     r.MarketPrice,
+		ShopPrice:       r.ShopPrice,
+		GoodsBrief:      r.GoodsBrief,
+		GoodsDesc:       r.GoodsDesc,
+		ShipFree:        r.ShipFree,
+		Images:          r.Images,
+		DescImages:      r.DescImages,
+		GoodsFrontImage: r.GoodsFrontImage,
+		IsNew:           r.IsNew,
+		IsHot:           r.IsHot,
+		OnSale:          r.OnSale,
+		CategoryId:      r.CategoryId,
+		BrandId:         r.BrandId,
+	}
+
+	goodsDTO, err := gc.srv.Goods().Create(ctx, &createGoodsInfo)
+	if err != nil {
+		core.WriteResponse(ctx, err, nil)
+		return
+	}
+
+	response := map[string]interface{}{
+		"id":          goodsDTO.Id,
+		"name":        goodsDTO.Name,
+		"goods_brief": goodsDTO.GoodsBrief,
+		"desc":        goodsDTO.GoodsDesc,
+		"ship_free":   goodsDTO.ShipFree,
+		"images":      goodsDTO.Images,
+		"desc_images": goodsDTO.DescImages,
+		"front_image": goodsDTO.GoodsFrontImage,
+		"shop_price":  goodsDTO.ShopPrice,
+		"category": map[string]interface{}{
+			"id":   goodsDTO.Category.Id,
+			"name": goodsDTO.Category.Name,
+		},
+		"brand": map[string]interface{}{
+			"id":   goodsDTO.Brand.Id,
+			"name": goodsDTO.Brand.Name,
+			"logo": goodsDTO.Brand.Logo,
+		},
+		"is_hot":  goodsDTO.IsHot,
+		"is_new":  goodsDTO.IsNew,
+		"on_sale": goodsDTO.OnSale,
+	}
+
+	core.WriteResponse(ctx, nil, response)
+}

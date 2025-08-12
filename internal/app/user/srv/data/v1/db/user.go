@@ -43,9 +43,9 @@ func (u *users) GetByMobile(ctx context.Context, mobile string) (*do.UserDO, err
 	// 这种error尽量不要抛出去,转换成自定义的error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrUserNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrUserNotFound, "%s", err.Error())
 		}
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return &user, nil
 }
@@ -62,9 +62,9 @@ func (u *users) GetByID(ctx context.Context, id uint64) (*do.UserDO, error) {
 	err := u.db.First(&user, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrUserNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrUserNotFound, "%s", err.Error())
 		}
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return &user, nil
 }
@@ -79,7 +79,7 @@ func (u *users) GetByID(ctx context.Context, id uint64) (*do.UserDO, error) {
 func (u *users) Create(ctx context.Context, user *do.UserDO) error {
 	tx := u.db.Create(user)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -93,7 +93,7 @@ func (u *users) Create(ctx context.Context, user *do.UserDO) error {
 func (u *users) Update(ctx context.Context, user *do.UserDO) error {
 	tx := u.db.Save(user)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -135,12 +135,12 @@ func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 
 	// 先获取总数（不受分页限制）
 	if err := query.Model(&do.UserDO{}).Count(&ret.TotalCount).Error; err != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	fmt.Println("TotalCount:", ret.TotalCount)
 	// 再获取分页数据
 	if err := query.Offset(offset).Limit(limit).Find(&ret.Items).Error; err != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return ret, nil
 }

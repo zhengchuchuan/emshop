@@ -27,9 +27,9 @@ func (b *banner) Get(ctx context.Context, ID uint64) (*do.BannerDO, error) {
 	err := b.db.First(banner, ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrBannerNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrBannerNotFound, "%s", err.Error())
 		}
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return banner, nil
 }
@@ -57,7 +57,7 @@ func (b *banner) List(ctx context.Context, orderby []string, opts metav1.ListMet
 
 	d := query.Offset(offset).Limit(limit).Find(&ret.Items).Count(&ret.TotalCount)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -65,7 +65,7 @@ func (b *banner) List(ctx context.Context, orderby []string, opts metav1.ListMet
 func (b *banner) Create(ctx context.Context, banner *do.BannerDO) error {
 	tx := b.db.Create(banner)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -73,7 +73,7 @@ func (b *banner) Create(ctx context.Context, banner *do.BannerDO) error {
 func (b *banner) CreateInTxn(ctx context.Context, txn *gorm.DB, banner *do.BannerDO) error {
 	tx := txn.Create(banner)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -81,7 +81,7 @@ func (b *banner) CreateInTxn(ctx context.Context, txn *gorm.DB, banner *do.Banne
 func (b *banner) Update(ctx context.Context, banner *do.BannerDO) error {
 	tx := b.db.Save(banner)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -89,7 +89,7 @@ func (b *banner) Update(ctx context.Context, banner *do.BannerDO) error {
 func (b *banner) UpdateInTxn(ctx context.Context, txn *gorm.DB, banner *do.BannerDO) error {
 	tx := txn.Save(banner)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }

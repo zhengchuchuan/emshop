@@ -2,9 +2,11 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"emshop/internal/app/goods/srv/domain/do"
 	"emshop/internal/app/goods/srv/domain/dto"
 	v12 "emshop/pkg/common/meta/v1"
+	"emshop/pkg/errors"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	proto "emshop/api/goods/v1"
@@ -17,7 +19,87 @@ type goodsServer struct {
 	srv v1.ServiceFactory
 }
 
+// Common error codes for validation
+const (
+	ErrInvalidParameter = 100400 // HTTP 400 Bad Request equivalent
+)
+
+// Validation functions
+func validateGoodsFilterRequest(request *proto.GoodsFilterRequest) error {
+	if request.Pages < 0 {
+		return errors.WithCode(ErrInvalidParameter, "pages must be non-negative")
+	}
+	if request.PagePerNums < 0 {
+		return errors.WithCode(ErrInvalidParameter, "pagePerNums must be non-negative")
+	}
+	if request.PriceMin < 0 || request.PriceMax < 0 {
+		return errors.WithCode(ErrInvalidParameter, "price range must be non-negative")
+	}
+	if request.PriceMin > 0 && request.PriceMax > 0 && request.PriceMin > request.PriceMax {
+		return errors.WithCode(ErrInvalidParameter, "priceMin cannot be greater than priceMax")
+	}
+	return nil
+}
+
+func validateCreateGoodsInfo(info *proto.CreateGoodsInfo) error {
+	if info.Name == "" {
+		return errors.WithCode(ErrInvalidParameter, "goods name is required")
+	}
+	if info.GoodsSn == "" {
+		return errors.WithCode(ErrInvalidParameter, "goods SN is required")
+	}
+	if info.CategoryId <= 0 {
+		return errors.WithCode(ErrInvalidParameter, "invalid category ID")
+	}
+	if info.BrandId <= 0 {
+		return errors.WithCode(ErrInvalidParameter, "invalid brand ID")
+	}
+	if info.ShopPrice < 0 {
+		return errors.WithCode(ErrInvalidParameter, "shop price must be non-negative")
+	}
+	if info.MarketPrice < 0 {
+		return errors.WithCode(ErrInvalidParameter, "market price must be non-negative")
+	}
+	return nil
+}
+
+func validateCategoryInfoRequest(request *proto.CategoryInfoRequest) error {
+	if request.Name == "" {
+		return errors.WithCode(ErrInvalidParameter, "category name is required")
+	}
+	if request.Level < 1 || request.Level > 3 {
+		return errors.WithCode(ErrInvalidParameter, "category level must be between 1 and 3")
+	}
+	if request.Level > 1 && request.ParentCategory <= 0 {
+		return errors.WithCode(ErrInvalidParameter, "parent category is required for non-root categories")
+	}
+	return nil
+}
+
+func validateBrandRequest(request *proto.BrandRequest) error {
+	if request.Name == "" {
+		return errors.WithCode(ErrInvalidParameter, "brand name is required")
+	}
+	return nil
+}
+
+func validateBannerRequest(request *proto.BannerRequest) error {
+	if request.Image == "" {
+		return errors.WithCode(ErrInvalidParameter, "banner image is required")
+	}
+	if request.Url == "" {
+		return errors.WithCode(ErrInvalidParameter, "banner URL is required")
+	}
+	return nil
+}
+
 func (gs *goodsServer) GoodsList(ctx context.Context, request *proto.GoodsFilterRequest) (*proto.GoodsListResponse, error) {
+	// Input validation
+	if err := validateGoodsFilterRequest(request); err != nil {
+		log.Errorf("invalid goods filter request: %v", err)
+		return nil, err
+	}
+
 	list, err := gs.srv.Goods().List(ctx, v12.ListMeta{Page: int(request.Pages), PageSize: int(request.PagePerNums)}, request, []string{})
 	if err != nil {
 		log.Errorf("get goods list error: %v", err.Error())
@@ -32,12 +114,25 @@ func (gs *goodsServer) GoodsList(ctx context.Context, request *proto.GoodsFilter
 }
 
 func (gs *goodsServer) BatchGetGoods(ctx context.Context, info *proto.BatchGoodsIdInfo) (*proto.GoodsListResponse, error) {
+	// Input validation
+	if len(info.Id) == 0 {
+		return nil, errors.WithCode(ErrInvalidParameter, "goods IDs are required")
+	}
+	if len(info.Id) > 100 {
+		return nil, errors.WithCode(ErrInvalidParameter, "too many goods IDs, maximum 100 allowed")
+	}
+
 	var ids []uint64
 	for _, id := range info.Id {
+		if id <= 0 {
+			return nil, errors.WithCode(ErrInvalidParameter, "invalid goods ID")
+		}
 		ids = append(ids, uint64(id))
 	}
+	
 	get, err := gs.srv.Goods().BatchGet(ctx, ids)
 	if err != nil {
+		log.Errorf("batch get goods error: %v", err)
 		return nil, err
 	}
 	var ret proto.GoodsListResponse
@@ -48,6 +143,12 @@ func (gs *goodsServer) BatchGetGoods(ctx context.Context, info *proto.BatchGoods
 }
 
 func (gs *goodsServer) CreateGoods(ctx context.Context, info *proto.CreateGoodsInfo) (*proto.GoodsInfoResponse, error) {
+	// Input validation
+	if err := validateCreateGoodsInfo(info); err != nil {
+		log.Errorf("invalid create goods info: %v", err)
+		return nil, err
+	}
+
 	// 构建商品DTO
 	goodsDTO := &dto.GoodsDTO{}
 	goodsDTO.Name = info.Name
@@ -78,6 +179,11 @@ func (gs *goodsServer) CreateGoods(ctx context.Context, info *proto.CreateGoodsI
 }
 
 func (gs *goodsServer) DeleteGoods(ctx context.Context, info *proto.DeleteGoodsInfo) (*emptypb.Empty, error) {
+	// Input validation
+	if info.Id <= 0 {
+		return nil, errors.WithCode(ErrInvalidParameter, "invalid goods ID")
+	}
+
 	err := gs.srv.Goods().Delete(ctx, uint64(info.Id))
 	if err != nil {
 		log.Errorf("delete goods error: %v", err)
@@ -88,6 +194,15 @@ func (gs *goodsServer) DeleteGoods(ctx context.Context, info *proto.DeleteGoodsI
 }
 
 func (gs *goodsServer) UpdateGoods(ctx context.Context, info *proto.CreateGoodsInfo) (*emptypb.Empty, error) {
+	// Input validation
+	if info.Id <= 0 {
+		return nil, errors.WithCode(ErrInvalidParameter, "invalid goods ID")
+	}
+	if err := validateCreateGoodsInfo(info); err != nil {
+		log.Errorf("invalid update goods info: %v", err)
+		return nil, err
+	}
+
 	// 构建商品DTO
 	goodsDTO := &dto.GoodsDTO{}
 	goodsDTO.ID = info.Id
@@ -117,6 +232,11 @@ func (gs *goodsServer) UpdateGoods(ctx context.Context, info *proto.CreateGoodsI
 }
 
 func (gs *goodsServer) GetGoodsDetail(ctx context.Context, request *proto.GoodInfoRequest) (*proto.GoodsInfoResponse, error) {
+	// Input validation
+	if request.Id <= 0 {
+		return nil, errors.WithCode(ErrInvalidParameter, "invalid goods ID")
+	}
+
 	goods, err := gs.srv.Goods().Get(ctx, uint64(request.Id))
 	if err != nil {
 		log.Errorf("get goods detail error: %v", err)
@@ -133,13 +253,47 @@ func (gs *goodsServer) GetAllCategorysList(ctx context.Context, empty *emptypb.E
 		return nil, err
 	}
 
-	// 简化的JSON序列化（可以扩展为完整的JSON序列化）
-	jsonData := "[]"
-	if len(categories.Items) > 0 {
-		// TODO: 实现完整的JSON序列化逻辑
-		jsonData = "[]"
+	response := &proto.CategoryListResponse{
+		Total: int32(categories.TotalCount),
 	}
-	return &proto.CategoryListResponse{JsonData: jsonData}, nil
+
+	// 构建树状结构的分类数据
+	categoryMap := make(map[int32][]*proto.CategoryInfoResponse)
+	var rootCategories []*proto.CategoryInfoResponse
+
+	// 首先收集所有分类并按父级分组
+	for _, item := range categories.Items {
+		categoryInfo := &proto.CategoryInfoResponse{
+			Id:             item.ID,
+			Name:           item.Name,
+			Level:          item.Level,
+			IsTab:          item.IsTab,
+			ParentCategory: item.ParentCategoryID,
+		}
+
+		if item.ParentCategoryID == 0 {
+			rootCategories = append(rootCategories, categoryInfo)
+		} else {
+			categoryMap[item.ParentCategoryID] = append(categoryMap[item.ParentCategoryID], categoryInfo)
+		}
+	}
+
+	// 将所有分类（包括层级关系）添加到响应中
+	response.Data = rootCategories
+	for _, children := range categoryMap {
+		response.Data = append(response.Data, children...)
+	}
+
+	// 生成JSON格式的分类树结构
+	jsonData, err := buildCategoryTree(rootCategories, categoryMap)
+	if err != nil {
+		log.Errorf("build category tree error: %v", err)
+		response.JsonData = "[]"
+	} else {
+		response.JsonData = jsonData
+	}
+
+	return response, nil
 }
 
 func (gs *goodsServer) GetSubCategory(ctx context.Context, request *proto.CategoryListRequest) (*proto.SubCategoryListResponse, error) {
@@ -174,6 +328,12 @@ func (gs *goodsServer) GetSubCategory(ctx context.Context, request *proto.Catego
 }
 
 func (gs *goodsServer) CreateCategory(ctx context.Context, request *proto.CategoryInfoRequest) (*proto.CategoryInfoResponse, error) {
+	// Input validation
+	if err := validateCategoryInfoRequest(request); err != nil {
+		log.Errorf("invalid create category request: %v", err)
+		return nil, err
+	}
+
 	categoryDTO := &dto.CategoryDTO{
 		CategoryDO: do.CategoryDO{
 			Name:             request.Name,
@@ -244,6 +404,12 @@ func (gs *goodsServer) BrandList(ctx context.Context, request *proto.BrandFilter
 }
 
 func (gs *goodsServer) CreateBrand(ctx context.Context, request *proto.BrandRequest) (*proto.BrandInfoResponse, error) {
+	// Input validation
+	if err := validateBrandRequest(request); err != nil {
+		log.Errorf("invalid create brand request: %v", err)
+		return nil, err
+	}
+
 	brandDTO := &dto.BrandDTO{
 		BrandsDO: do.BrandsDO{
 			Name: request.Name,
@@ -311,6 +477,12 @@ func (gs *goodsServer) BannerList(ctx context.Context, empty *emptypb.Empty) (*p
 }
 
 func (gs *goodsServer) CreateBanner(ctx context.Context, request *proto.BannerRequest) (*proto.BannerResponse, error) {
+	// Input validation
+	if err := validateBannerRequest(request); err != nil {
+		log.Errorf("invalid create banner request: %v", err)
+		return nil, err
+	}
+
 	bannerDTO := &dto.BannerDTO{
 		BannerDO: do.BannerDO{
 			Image: request.Image,
@@ -487,4 +659,65 @@ func ModelToResponse(goods *dto.GoodsDTO) *proto.GoodsInfoResponse {
 			Logo: goods.Brands.Logo,
 		},
 	}
+}
+
+// CategoryTreeNode represents a category node in tree structure for JSON serialization
+type CategoryTreeNode struct {
+	Id             int32               `json:"id"`
+	Name           string              `json:"name"`
+	Level          int32               `json:"level"`
+	IsTab          bool                `json:"is_tab"`
+	ParentCategory int32               `json:"parent_category"`
+	Children       []*CategoryTreeNode `json:"children,omitempty"`
+}
+
+// buildCategoryTree builds a hierarchical JSON string from category data
+func buildCategoryTree(rootCategories []*proto.CategoryInfoResponse, categoryMap map[int32][]*proto.CategoryInfoResponse) (string, error) {
+	var treeNodes []*CategoryTreeNode
+
+	for _, root := range rootCategories {
+		node := &CategoryTreeNode{
+			Id:             root.Id,
+			Name:           root.Name,
+			Level:          root.Level,
+			IsTab:          root.IsTab,
+			ParentCategory: root.ParentCategory,
+		}
+
+		// Recursively build children
+		node.Children = buildChildren(root.Id, categoryMap)
+		treeNodes = append(treeNodes, node)
+	}
+
+	jsonData, err := json.Marshal(treeNodes)
+	if err != nil {
+		return "[]", err
+	}
+
+	return string(jsonData), nil
+}
+
+// buildChildren recursively builds child nodes
+func buildChildren(parentId int32, categoryMap map[int32][]*proto.CategoryInfoResponse) []*CategoryTreeNode {
+	children, exists := categoryMap[parentId]
+	if !exists {
+		return nil
+	}
+
+	var childNodes []*CategoryTreeNode
+	for _, child := range children {
+		childNode := &CategoryTreeNode{
+			Id:             child.Id,
+			Name:           child.Name,
+			Level:          child.Level,
+			IsTab:          child.IsTab,
+			ParentCategory: child.ParentCategory,
+		}
+
+		// Recursively build grandchildren
+		childNode.Children = buildChildren(child.Id, categoryMap)
+		childNodes = append(childNodes, childNode)
+	}
+
+	return childNodes
 }

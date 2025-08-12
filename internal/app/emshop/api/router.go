@@ -23,18 +23,18 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	}
 	// 创建服务工厂
 	serviceFactory := service.NewService(data, cfg.Sms, cfg.Jwt)
+	jwtAuth := newJWTAuth(cfg.Jwt)
 	uController := user.NewUserController(g.Translator(), serviceFactory)
 	{
 		ugroup.POST("pwd_login", uController.Login)
 		ugroup.POST("register", uController.Register)
 
-		jwtAuth := newJWTAuth(cfg.Jwt)
 		ugroup.GET("detail", jwtAuth.AuthFunc(), uController.GetUserDetail)
 		ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.GetUserDetail)
 
 		ugroup.GET("list", jwtAuth.AuthFunc(), uController.GetUserList) // GET /v1/user/list?pn=页码&psize=每页数量
-		ugroup.GET("mobile", uController.GetByMobile)  // GET /v1/user/mobile?mobile=手机号
-  		ugroup.GET("id", uController.GetById)          // GET /v1/user/id?id=用户ID
+		ugroup.GET("mobile",jwtAuth.AuthFunc(), uController.GetByMobile)  // GET /v1/user/mobile?mobile=手机号
+  		ugroup.GET("id",jwtAuth.AuthFunc(), uController.GetById)          // GET /v1/user/id?id=用户ID
 	}
 
 
@@ -50,6 +50,13 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	goodsRouter := v1.Group("goods")
 	{
 		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
-		goodsRouter.GET("", goodsController.List)
+		goodsRouter.GET("", goodsController.List)                                                            //商品列表
+		// TODO: 待实现以下接口
+		goodsRouter.POST("", jwtAuth.AuthFunc(), goodsController.New)          //该接口需要管理员权限
+		// goodsRouter.GET("/:id", goodsController.Detail)                                                      //获取商品的详情
+		// goodsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.Delete) //删除商品
+		// goodsRouter.GET("/:id/stocks", goodsController.Stocks)                                               //获取商品的库存
+		// goodsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.Update)
+		// goodsRouter.PATCH("/:id", jwtAuth.AuthFunc(), goodsController.UpdateStatus)
 	}
 }

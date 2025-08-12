@@ -4,10 +4,13 @@ import (
 	"context"
 	gpb "emshop/api/goods/v1"
 	"emshop/internal/app/emshop/api/data"
+
+
 )
 
 type GoodsSrv interface {
 	List(ctx context.Context, request *gpb.GoodsFilterRequest) (*gpb.GoodsListResponse, error)
+	Create(ctx context.Context, info *gpb.CreateGoodsInfo) (*gpb.GoodsInfoResponse, error)
 }
 
 type goodsService struct {
@@ -17,6 +20,12 @@ type goodsService struct {
 func (gs *goodsService) List(ctx context.Context, request *gpb.GoodsFilterRequest) (*gpb.GoodsListResponse, error) {
 	return gs.data.Goods().GoodsList(ctx, request)
 }
+
+func (gs *goodsService) Create(ctx context.Context, info *gpb.CreateGoodsInfo) (*gpb.GoodsInfoResponse, error) {
+	return gs.data.Goods().CreateGoods(ctx, info)
+}
+
+
 
 func NewGoods(data data.DataFactory) *goodsService {
 	return &goodsService{data: data}

@@ -25,7 +25,7 @@ func newGoods(factory *mysqlFactory) *goods {
 func (g *goods) CreateInTxn(ctx context.Context, txn *gorm.DB, goods *do.GoodsDO) error {
 	tx := txn.Create(goods)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -33,7 +33,7 @@ func (g *goods) CreateInTxn(ctx context.Context, txn *gorm.DB, goods *do.GoodsDO
 func (g *goods) UpdateInTxn(ctx context.Context, txn *gorm.DB, goods *do.GoodsDO) error {
 	tx := txn.Save(goods)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -65,7 +65,7 @@ func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 
 	d := query.Offset(offset).Limit(limit).Find(&ret.Items).Count(&ret.TotalCount)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -75,9 +75,9 @@ func (g *goods) Get(ctx context.Context, ID uint64) (*do.GoodsDO, error) {
 	err := g.db.Preload("Category").Preload("Brands").First(good, ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.WithCode(code.ErrGoodsNotFound, err.Error())
+			return nil, errors.WithCode(code.ErrGoodsNotFound, "%s", err.Error())
 		}
-		return nil, errors.WithCode(code2.ErrDatabase, err.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return good, nil
 }
@@ -93,7 +93,7 @@ func (g *goods) ListByIDs(ctx context.Context, ids []uint64, orderby []string) (
 
 	d := query.Where("id in ?", ids).Find(&ret.Items).Count(&ret.TotalCount)
 	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, d.Error.Error())
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
@@ -101,7 +101,7 @@ func (g *goods) ListByIDs(ctx context.Context, ids []uint64, orderby []string) (
 func (g *goods) Create(ctx context.Context, goods *do.GoodsDO) error {
 	tx := g.db.Create(goods)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
@@ -109,7 +109,7 @@ func (g *goods) Create(ctx context.Context, goods *do.GoodsDO) error {
 func (g *goods) Update(ctx context.Context, goods *do.GoodsDO) error {
 	tx := g.db.Save(goods)
 	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, tx.Error.Error())
+		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }

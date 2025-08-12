@@ -77,7 +77,7 @@ func (w *withCode) Format(state fmt.State, verb rune) {
 	default:
 		finfo := buildFormatInfo(w)
 		// Externally-safe error message
-		fmt.Fprintf(state, finfo.message)
+		fmt.Fprintf(state, "%s", finfo.message)
 	}
 }
 
@@ -126,7 +126,7 @@ func format(k int, jsonData []map[string]interface{}, str *bytes.Buffer, finfo *
 			}
 
 		} else {
-			fmt.Fprintf(str, finfo.message)
+			fmt.Fprintf(str, "%s", finfo.message)
 		}
 	}
 

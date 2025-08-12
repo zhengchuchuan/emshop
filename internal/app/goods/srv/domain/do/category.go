@@ -12,6 +12,7 @@ type CategoryDO struct {
 	SubCategory      []*CategoryDO `gorm:"foreignKey:ParentCategoryID;references:ID" json:"sub_category"`
 	Level            int32         `gorm:"type:int;not null;default:1" json:"level"`
 	IsTab            bool          `gorm:"default:false;not null" json:"is_tab"`
+	Url              string        `gorm:"type:varchar(200);default:'';not null" json:"url"`
 }
 
 func (CategoryDO) TableName() string {
