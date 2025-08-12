@@ -9,6 +9,11 @@ service Inventory {
     rpc InvDetail(GoodsInvInfo) returns (GoodsInvInfo); // 获取库存信息
     rpc Sell(SellInfo) returns (google.protobuf.Empty); //库存扣减
     rpc Reback(SellInfo) returns(google.protobuf.Empty); //库存归还
+    
+    // TCC 分布式事务方法
+    rpc TrySell(SellInfo) returns(google.protobuf.Empty); // Try: 冻结库存
+    rpc ConfirmSell(SellInfo) returns(google.protobuf.Empty); // Confirm: 确认扣减
+    rpc CancelSell(SellInfo) returns(google.protobuf.Empty); // Cancel: 取消冻结，释放库存
 }
 
 message GoodsInvInfo {

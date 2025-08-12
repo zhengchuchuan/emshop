@@ -37,20 +37,31 @@ func (id *InventoryDO) TableName() string {
 	return "inventory"
 }
 
-//type InventoryNew struct {
-//	bgorm.BaseModel
-//	Goods   int32 `gorm:"type:int;index"`
-//	Stocks  int32 `gorm:"type:int"`
-//	Version int32 `gorm:"type:int"` //分布式锁的乐观锁
-//	Freeze  int32 `gorm:"type:int"` //冻结库存
-//}
+// TCC分布式事务支持的库存模型
+type InventoryNewDO struct {
+	bgorm.BaseModel
+	Goods   int32 `gorm:"type:int;index"`
+	Stocks  int32 `gorm:"type:int"`
+	Version int32 `gorm:"type:int"` //分布式锁的乐观锁
+	Freeze  int32 `gorm:"type:int"` //冻结库存
+}
 
-//type Delivery struct {
-//	Goods   int32  `gorm:"type:int;index"`
-//	Nums    int32  `gorm:"type:int"`
-//	OrderSn string `gorm:"type:varchar(200)"`
-//	Status  string `gorm:"type:varchar(200)"` //1. 表示等待支付 2. 表示支付成功 3. 失败
-//}
+func (ind *InventoryNewDO) TableName() string {
+	return "inventory_new"
+}
+
+// 出库单，使用状态字段实现TCC分布式事务
+type DeliveryDO struct {
+	bgorm.BaseModel
+	Goods   int32  `gorm:"type:int;index"`
+	Nums    int32  `gorm:"type:int"`
+	OrderSn string `gorm:"type:varchar(200)"`
+	Status  string `gorm:"type:varchar(200)"` //1. 表示等待支付 2. 表示支付成功 3. 失败
+}
+
+func (dd *DeliveryDO) TableName() string {
+	return "delivery"
+}
 
 type StockSellDetailDO struct {
 	OrderSn string          `gorm:"type:varchar(200);index:idx_order_sn,unique;"`

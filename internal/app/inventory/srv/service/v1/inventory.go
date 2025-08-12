@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"fmt"
 	"emshop/internal/app/inventory/srv/data/v1/mysql"
 	"emshop/internal/app/pkg/code"
 	"emshop/internal/app/pkg/options"
@@ -34,6 +35,11 @@ type InventorySrv interface {
 
 	//归还库存
 	Reback(ctx context.Context, ordersn string, detail []do.GoodsDetail) error
+
+	// TCC分布式事务方法
+	TrySell(ctx context.Context, ordersn string, detail []do.GoodsDetail) error   // Try: 冻结库存
+	ConfirmSell(ctx context.Context, ordersn string, detail []do.GoodsDetail) error // Confirm: 确认扣减
+	CancelSell(ctx context.Context, ordersn string, detail []do.GoodsDetail) error  // Cancel: 取消冻结，释放库存
 }
 
 type inventoryService struct {
@@ -83,33 +89,42 @@ func (is *inventoryService) Sell(ctx context.Context, ordersn string, details []
 	}
 
 	for _, goodsInfo := range detail {
-		mutex := rs.NewMutex(inventoryLockPrefix + ordersn)
+		// 使用商品ID作为锁的key，而不是订单号，避免不同商品之间的锁竞争
+		mutex := rs.NewMutex(fmt.Sprintf("goods_%d", goodsInfo.Goods))
 		if err := mutex.Lock(); err != nil {
-			log.Errorf("订单%s获取锁失败", ordersn)
+			txn.Rollback()
+			log.Errorf("订单%s获取商品%d锁失败: %v", ordersn, goodsInfo.Goods, err)
+			return errors.WithCode(code.ErrConnectDB, "获取分布式锁失败")
 		}
-      		defer mutex.Unlock()
 
 		inv, err := is.data.Inventorys().Get(ctx, uint64(goodsInfo.Goods))
 		if err != nil {
+			mutex.Unlock()
+			txn.Rollback()
 			log.Errorf("订单%s获取库存失败", ordersn)
 			return err
 		}
 
 		//判断库存是否充足
 		if inv.Stocks < goodsInfo.Num {
+			mutex.Unlock()
 			txn.Rollback() //回滚
 			log.Errorf("商品%d库存%d不足, 现有库存: %d", goodsInfo.Goods, goodsInfo.Num, inv.Stocks)
 			return errors.WithCode(code.ErrInvNotEnough, "库存不足")
 		}
-		inv.Stocks -= goodsInfo.Num
 
 		err = is.data.Inventorys().Reduce(ctx, txn, uint64(goodsInfo.Goods), int(goodsInfo.Num))
 		if err != nil {
+			mutex.Unlock()
 			txn.Rollback() //回滚
 			log.Errorf("订单%s扣减库存失败", ordersn)
 			return err
 		}
 
+		// 释放锁
+		if ok, err := mutex.Unlock(); !ok || err != nil {
+			log.Errorf("订单%s释放商品%d锁失败: %v", ordersn, goodsInfo.Goods, err)
+		}
 	}
 
 	err := is.data.Inventorys().CreateStockSellDetail(ctx, txn, &sellDetail)
@@ -195,6 +210,130 @@ func (is *inventoryService) Reback(ctx context.Context, ordersn string, details 
 		log.Errorf("订单%s更新扣减库存记录失败", ordersn)
 		return err
 	}
+
+	txn.Commit()
+	return nil
+}
+
+// TrySell 冻结库存 - TCC分布式事务Try阶段
+func (is *inventoryService) TrySell(ctx context.Context, ordersn string, details []do.GoodsDetail) error {
+	log.Infof("订单%s冻结库存", ordersn)
+
+	rs := redsync.New(is.pool)
+	var detail = do.GoodsDetailList(details)
+	sort.Sort(detail)
+
+	txn := is.data.Begin()
+	defer func() {
+		if err := recover(); err != nil {
+			_ = txn.Rollback()
+			log.Error("事务进行中出现异常，回滚")
+			return
+		}
+	}()
+
+	// 创建出库单记录
+	deliveryDetail := do.DeliveryDO{
+		OrderSn: ordersn,
+		Status:  "1", // 1. 表示等待支付
+	}
+
+	for _, goodsInfo := range detail {
+		mutex := rs.NewMutex(fmt.Sprintf("goods_%d", goodsInfo.Goods))
+		if err := mutex.Lock(); err != nil {
+			txn.Rollback()
+			log.Errorf("订单%s获取商品%d锁失败: %v", ordersn, goodsInfo.Goods, err)
+			return errors.WithCode(code.ErrInventoryNotFound, "获取分布式锁失败")
+		}
+
+		// 查询库存
+		inv, err := is.data.Inventorys().Get(ctx, uint64(goodsInfo.Goods))
+		if err != nil {
+			mutex.Unlock()
+			txn.Rollback()
+			return err
+		}
+
+		// 判断可用库存是否充足（实际库存 - 已冻结库存）
+		// 这里需要扩展库存模型支持冻结字段，或者通过业务逻辑计算
+		if inv.Stocks < goodsInfo.Num {
+			mutex.Unlock()
+			txn.Rollback()
+			return errors.WithCode(code.ErrInvNotEnough, "库存不足")
+		}
+
+		// 冻结库存而不是直接扣减
+		// TODO: 这里需要使用InventoryNewDO来支持冻结字段
+		// 或者通过创建冻结记录来实现
+
+		if ok, err := mutex.Unlock(); !ok || err != nil {
+			log.Errorf("订单%s释放商品%d锁失败: %v", ordersn, goodsInfo.Goods, err)
+		}
+	}
+
+	// 保存出库单
+	if err := txn.Create(&deliveryDetail).Error; err != nil {
+		txn.Rollback()
+		return errors.WithCode(code.ErrInventoryNotFound, "创建出库单失败")
+	}
+
+	txn.Commit()
+	return nil
+}
+
+// ConfirmSell 确认扣减 - TCC分布式事务Confirm阶段
+func (is *inventoryService) ConfirmSell(ctx context.Context, ordersn string, details []do.GoodsDetail) error {
+	log.Infof("订单%s确认扣减库存", ordersn)
+
+	txn := is.data.Begin()
+	defer func() {
+		if err := recover(); err != nil {
+			_ = txn.Rollback()
+			log.Error("事务进行中出现异常，回滚")
+			return
+		}
+	}()
+
+	// 更新出库单状态为支付成功
+	if err := txn.Model(&do.DeliveryDO{}).Where("order_sn = ?", ordersn).Update("status", "2").Error; err != nil {
+		txn.Rollback()
+		return errors.WithCode(code.ErrInventoryNotFound, "更新出库单状态失败")
+	}
+
+	// 执行实际的库存扣减
+	for _, goodsInfo := range details {
+		err := is.data.Inventorys().Reduce(ctx, txn, uint64(goodsInfo.Goods), int(goodsInfo.Num))
+		if err != nil {
+			txn.Rollback()
+			return err
+		}
+	}
+
+	txn.Commit()
+	return nil
+}
+
+// CancelSell 取消冻结 - TCC分布式事务Cancel阶段
+func (is *inventoryService) CancelSell(ctx context.Context, ordersn string, details []do.GoodsDetail) error {
+	log.Infof("订单%s取消库存冻结", ordersn)
+
+	txn := is.data.Begin()
+	defer func() {
+		if err := recover(); err != nil {
+			_ = txn.Rollback()
+			log.Error("事务进行中出现异常，回滚")
+			return
+		}
+	}()
+
+	// 更新出库单状态为失败
+	if err := txn.Model(&do.DeliveryDO{}).Where("order_sn = ?", ordersn).Update("status", "3").Error; err != nil {
+		txn.Rollback()
+		return errors.WithCode(code.ErrInventoryNotFound, "更新出库单状态失败")
+	}
+
+	// 释放冻结的库存
+	// TODO: 这里需要根据具体的冻结实现来释放库存
 
 	txn.Commit()
 	return nil
