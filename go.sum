@@ -36,8 +36,6 @@ github.com/alibaba/sentinel-golang/pkg/datasource/nacos v0.0.0-20250513022732-36
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.18/go.mod h1:v8ESoHo4SyHmuB4b1tJqDHxfTGEciD+yhvOU/5s1Rfk=
 github.com/aliyun/alibaba-cloud-sdk-go v1.63.107 h1:qagvUyrgOnBIlVRQWOyCZGVKUIYbMBdGdJ104vBpRFU=
 github.com/aliyun/alibaba-cloud-sdk-go v1.63.107/go.mod h1:SOSDHfe1kX91v3W5QiBsWSLqeLxImobbMX1mxrFHsVQ=
-github.com/anaskhan96/go-password-encoder v0.0.0-20201010210601-c765b799fd72 h1:a93gW7OBt55SksMQVibqPWdu4Ly73KM4d3zoIUUX3cs=
-github.com/anaskhan96/go-password-encoder v0.0.0-20201010210601-c765b799fd72/go.mod h1:PsJICrlruG9QcJDYuZ0dO/2KtMDALzRbony8NkxZ2nE=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/apache/thrift v0.12.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
 github.com/apache/thrift v0.13.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=

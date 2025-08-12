@@ -16,39 +16,8 @@ type goodsServer struct {
 	srv v1.ServiceFactory
 }
 
-func ModelToResponse(goods *dto.GoodsDTO) *proto.GoodsInfoResponse {
-	return &proto.GoodsInfoResponse{
-		Id:              goods.ID,
-		CategoryId:      goods.CategoryID,
-		Name:            goods.Name,
-		GoodsSn:         goods.GoodsSn,
-		ClickNum:        goods.ClickNum,
-		SoldNum:         goods.SoldNum,
-		FavNum:          goods.FavNum,
-		MarketPrice:     goods.MarketPrice,
-		ShopPrice:       goods.ShopPrice,
-		GoodsBrief:      goods.GoodsBrief,
-		ShipFree:        goods.ShipFree,
-		GoodsFrontImage: goods.GoodsFrontImage,
-		IsNew:           goods.IsNew,
-		IsHot:           goods.IsHot,
-		OnSale:          goods.OnSale,
-		DescImages:      goods.DescImages,
-		Images:          goods.Images,
-		Category: &proto.CategoryBriefInfoResponse{
-			Id:   goods.Category.ID,
-			Name: goods.Category.Name,
-		},
-		Brand: &proto.BrandInfoResponse{
-			Id:   goods.Brands.ID,
-			Name: goods.Brands.Name,
-			Logo: goods.Brands.Logo,
-		},
-	}
-}
-
 func (gs *goodsServer) GoodsList(ctx context.Context, request *proto.GoodsFilterRequest) (*proto.GoodsListResponse, error) {
-	list, err := gs.srv.Goods().List(ctx, v12.ListMeta{int(request.Pages), int(request.PagePerNums)}, request, []string{})
+	list, err := gs.srv.Goods().List(ctx, v12.ListMeta{Page: int(request.Pages), PageSize: int(request.PagePerNums)}, request, []string{})
 	if err != nil {
 		log.Errorf("get goods list error: %v", err.Error())
 		return nil, err
@@ -78,23 +47,82 @@ func (gs *goodsServer) BatchGetGoods(ctx context.Context, info *proto.BatchGoods
 }
 
 func (gs *goodsServer) CreateGoods(ctx context.Context, info *proto.CreateGoodsInfo) (*proto.GoodsInfoResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	// 构建商品DTO
+	goodsDTO := &dto.GoodsDTO{}
+	goodsDTO.Name = info.Name
+	goodsDTO.GoodsSn = info.GoodsSn
+	goodsDTO.CategoryID = info.CategoryId
+	goodsDTO.BrandsID = info.BrandId
+	goodsDTO.MarketPrice = info.MarketPrice
+	goodsDTO.ShopPrice = info.ShopPrice
+	goodsDTO.GoodsBrief = info.GoodsBrief
+	goodsDTO.ShipFree = info.ShipFree
+	goodsDTO.Images = info.Images
+	goodsDTO.DescImages = info.DescImages
+	goodsDTO.GoodsFrontImage = info.GoodsFrontImage
+	goodsDTO.IsNew = info.IsNew
+	goodsDTO.IsHot = info.IsHot
+	goodsDTO.OnSale = info.OnSale
+
+	// 创建商品（业务层会验证分类和品牌）
+	err := gs.srv.Goods().Create(ctx, goodsDTO)
+	if err != nil {
+		log.Errorf("create goods error: %v", err)
+		return nil, err
+	}
+
+	return &proto.GoodsInfoResponse{
+		Id: goodsDTO.ID,
+	}, nil
 }
 
 func (gs *goodsServer) DeleteGoods(ctx context.Context, info *proto.DeleteGoodsInfo) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	err := gs.srv.Goods().Delete(ctx, uint64(info.Id))
+	if err != nil {
+		log.Errorf("delete goods error: %v", err)
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func (gs *goodsServer) UpdateGoods(ctx context.Context, info *proto.CreateGoodsInfo) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	// 构建商品DTO
+	goodsDTO := &dto.GoodsDTO{}
+	goodsDTO.ID = info.Id
+	goodsDTO.Name = info.Name
+	goodsDTO.GoodsSn = info.GoodsSn
+	goodsDTO.CategoryID = info.CategoryId
+	goodsDTO.BrandsID = info.BrandId
+	goodsDTO.MarketPrice = info.MarketPrice
+	goodsDTO.ShopPrice = info.ShopPrice
+	goodsDTO.GoodsBrief = info.GoodsBrief
+	goodsDTO.ShipFree = info.ShipFree
+	goodsDTO.Images = info.Images
+	goodsDTO.DescImages = info.DescImages
+	goodsDTO.GoodsFrontImage = info.GoodsFrontImage
+	goodsDTO.IsNew = info.IsNew
+	goodsDTO.IsHot = info.IsHot
+	goodsDTO.OnSale = info.OnSale
+
+	// 更新商品
+	err := gs.srv.Goods().Update(ctx, goodsDTO)
+	if err != nil {
+		log.Errorf("update goods error: %v", err)
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func (gs *goodsServer) GetGoodsDetail(ctx context.Context, request *proto.GoodInfoRequest) (*proto.GoodsInfoResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	goods, err := gs.srv.Goods().Get(ctx, uint64(request.Id))
+	if err != nil {
+		log.Errorf("get goods detail error: %v", err)
+		return nil, err
+	}
+
+	return ModelToResponse(goods), nil
 }
 
 func (gs *goodsServer) GetAllCategorysList(ctx context.Context, empty *emptypb.Empty) (*proto.CategoryListResponse, error) {
@@ -189,4 +217,35 @@ func (gs *goodsServer) UpdateCategoryBrand(ctx context.Context, request *proto.C
 
 func NewGoodsServer(srv v1.ServiceFactory) *goodsServer {
 	return &goodsServer{srv: srv}
+}
+
+func ModelToResponse(goods *dto.GoodsDTO) *proto.GoodsInfoResponse {
+	return &proto.GoodsInfoResponse{
+		Id:              goods.ID,
+		CategoryId:      goods.CategoryID,
+		Name:            goods.Name,
+		GoodsSn:         goods.GoodsSn,
+		ClickNum:        goods.ClickNum,
+		SoldNum:         goods.SoldNum,
+		FavNum:          goods.FavNum,
+		MarketPrice:     goods.MarketPrice,
+		ShopPrice:       goods.ShopPrice,
+		GoodsBrief:      goods.GoodsBrief,
+		ShipFree:        goods.ShipFree,
+		GoodsFrontImage: goods.GoodsFrontImage,
+		IsNew:           goods.IsNew,
+		IsHot:           goods.IsHot,
+		OnSale:          goods.OnSale,
+		DescImages:      goods.DescImages,
+		Images:          goods.Images,
+		Category: &proto.CategoryBriefInfoResponse{
+			Id:   goods.Category.ID,
+			Name: goods.Category.Name,
+		},
+		Brand: &proto.BrandInfoResponse{
+			Id:   goods.Brands.ID,
+			Name: goods.Brands.Name,
+			Logo: goods.Brands.Logo,
+		},
+	}
 }

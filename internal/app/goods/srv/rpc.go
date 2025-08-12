@@ -5,8 +5,7 @@ import (
 	gpb "emshop/api/goods/v1"
 	"emshop/internal/app/goods/srv/config"
 	v12 "emshop/internal/app/goods/srv/controller/v1"
-	db2 "emshop/internal/app/goods/srv/data/v1/db"
-	"emshop/internal/app/goods/srv/data_search/v1/es"
+	dataV1 "emshop/internal/app/goods/srv/data/v1"
 	v1 "emshop/internal/app/goods/srv/service/v1"
 	"emshop/gin-micro/core/trace"
 	"emshop/gin-micro/server/rpc-server"
@@ -23,19 +22,15 @@ func NewGoodsRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 		Batcher:  cfg.Telemetry.Batcher,
 	})
 
-	//有点繁琐，wire， ioc-golang
-	dataFactory, err := db2.GetDBFactoryOr(cfg.MySQLOptions)
+	// 使用新的工厂管理器
+	factoryManager, err := dataV1.NewFactoryManager(cfg.MySQLOptions, cfg.EsOptions)
 	if err != nil {
 		log.Fatal(err.Error())
+		return nil, err
 	}
 
-	//构建，繁琐 - 工厂模式
-	searchFactory, err := es.GetSearchFactoryOr(cfg.EsOptions)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	srvFactory := v1.NewService(dataFactory, searchFactory)
+	// 创建服务层
+	srvFactory := v1.NewService(factoryManager)
 	goodsServer := v12.NewGoodsServer(srvFactory)
 	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	grpcServer := rpcserver.NewServer(rpcserver.WithAddress(rpcAddr))

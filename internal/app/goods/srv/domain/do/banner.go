@@ -19,3 +19,8 @@ type BannerList struct {
 	TotalCount int64       `json:"totalCount,omitempty"`
 	Items      []*BannerDO `json:"items"`
 }
+
+type BannerDOList struct {
+	TotalCount int64       `json:"totalCount,omitempty"`
+	Items      []*BannerDO `json:"items"`
+}

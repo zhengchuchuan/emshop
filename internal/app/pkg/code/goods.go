@@ -7,6 +7,18 @@ const (
 	// ErrCategoryNotFound - 404: Category not found.
 	ErrCategoryNotFound
 
-	// ErrBrandNotFound - 500: Es unmarshal error.
+	// ErrBrandNotFound - 404: Brand not found.
+	ErrBrandNotFound
+
+	// ErrBannerNotFound - 404: Banner not found.
+	ErrBannerNotFound
+
+	// ErrCategoryBrandNotFound - 404: CategoryBrand not found.
+	ErrCategoryBrandNotFound
+
+	// ErrEsQuery - 500: Es query error.
+	ErrEsQuery
+
+	// ErrEsUnmarshal - 500: Es unmarshal error.
 	ErrEsUnmarshal
 )

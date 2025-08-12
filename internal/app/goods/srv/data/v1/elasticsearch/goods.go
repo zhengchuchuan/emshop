@@ -1,4 +1,4 @@
-package es
+package elasticsearch
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/olivere/elastic/v7"
-	v1 "emshop/internal/app/goods/srv/data_search/v1"
+	"emshop/internal/app/goods/srv/data/v1/interfaces"
 	"emshop/internal/app/goods/srv/domain/do"
 )
 
@@ -16,12 +16,8 @@ type goods struct {
 	esClient *elastic.Client
 }
 
-func newGoods(ds *dataSearch) *goods {
-	return &goods{esClient: ds.esClient}
-}
-
-func NewGoods(esClient *elastic.Client) *goods {
-	return &goods{esClient: esClient}
+func newGoods(esf *esSearchFactory) *goods {
+	return &goods{esClient: esf.esClient}
 }
 
 func (g *goods) Create(ctx context.Context, goods *do.GoodsSearchDO) error {
@@ -29,12 +25,16 @@ func (g *goods) Create(ctx context.Context, goods *do.GoodsSearchDO) error {
 		Index(goods.GetIndexName()).
 		Id(strconv.Itoa(int(goods.ID))).
 		BodyJson(&goods).
-		Do(context.TODO())
+		Do(ctx)
 	return err
 }
 
 func (g *goods) Delete(ctx context.Context, ID uint64) error {
-	_, err := g.esClient.Delete().Index(do.GoodsSearchDO{}.GetIndexName()).Id(strconv.Itoa(int(ID))).Refresh("true").Do(ctx)
+	_, err := g.esClient.Delete().
+		Index(do.GoodsSearchDO{}.GetIndexName()).
+		Id(strconv.Itoa(int(ID))).
+		Refresh("true").
+		Do(ctx)
 	return err
 }
 
@@ -50,8 +50,8 @@ func (g *goods) Update(ctx context.Context, goods *do.GoodsSearchDO) error {
 	return nil
 }
 
-func (g *goods) Search(ctx context.Context, req *v1.GoodsFilterRequest) (*do.GoodsSearchDOList, error) {
-	//match bool 复合查询
+func (g *goods) Search(ctx context.Context, req *interfaces.GoodsFilterRequest) (*do.GoodsSearchDOList, error) {
+	// match bool 复合查询
 	q := elastic.NewBoolQuery()
 	if req.KeyWords != "" {
 		q = q.Must(elastic.NewMultiMatchQuery(req.KeyWords, "name", "goods_brief"))
@@ -70,15 +70,15 @@ func (g *goods) Search(ctx context.Context, req *v1.GoodsFilterRequest) (*do.Goo
 		q = q.Filter(elastic.NewRangeQuery("shop_price").Lte(req.PriceMax))
 	}
 
-	if req.Brand > 0 {
-		q = q.Filter(elastic.NewTermQuery("brands_id", req.Brand))
+	if req.BrandID > 0 {
+		q = q.Filter(elastic.NewTermQuery("brands_id", req.BrandID))
 	}
 
-	if req.TopCategory > 0 {
+	if len(req.CategoryIDs) > 0 {
 		q = q.Filter(elastic.NewTermsQuery("category_id", req.CategoryIDs...))
 	}
 
-	//分页
+	// 分页
 	if req.Pages == 0 {
 		req.Pages = 1
 	}
@@ -95,17 +95,25 @@ func (g *goods) Search(ctx context.Context, req *v1.GoodsFilterRequest) (*do.Goo
 		From(int(req.Pages-1) * int(req.PagePerNums)).
 		Size(int(req.PagePerNums)).Do(ctx)
 
-	var ret do.GoodsSearchDOList
-	ret.TotalCount = res.Hits.TotalHits.Value
-	for _, value := range res.Hits.Hits {
-		goods := do.GoodsSearchDO{}
-		err := json.Unmarshal(value.Source, &goods)
-		if err != nil {
-			return nil, errors.WithCode(code.ErrEsUnmarshal, err.Error())
-		}
-		ret.Items = append(ret.Items, &goods)
+	if err != nil {
+		return nil, errors.WithCode(code.ErrEsQuery, err.Error())
 	}
-	return &ret, err
+
+	var ret do.GoodsSearchDOList
+	if res.Hits != nil && res.Hits.TotalHits != nil {
+		ret.TotalCount = res.Hits.TotalHits.Value
+	}
+	if res.Hits != nil && res.Hits.Hits != nil {
+		for _, value := range res.Hits.Hits {
+			goods := do.GoodsSearchDO{}
+			err := json.Unmarshal(value.Source, &goods)
+			if err != nil {
+				return nil, errors.WithCode(code.ErrEsUnmarshal, err.Error())
+			}
+			ret.Items = append(ret.Items, &goods)
+		}
+	}
+	return &ret, nil
 }
 
-var _ v1.GoodsStore = &goods{}
+var _ interfaces.GoodsSearchStore = &goods{}

@@ -22,3 +22,8 @@ type GoodsCategoryBrandList struct {
 	TotalCount int64                   `json:"totalCount,omitempty"`
 	Items      []*GoodsCategoryBrandDO `json:"items"`
 }
+
+type GoodsCategoryBrandDOList struct {
+	TotalCount int64                   `json:"totalCount,omitempty"`
+	Items      []*GoodsCategoryBrandDO `json:"items"`
+}

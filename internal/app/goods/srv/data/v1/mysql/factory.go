@@ -1,11 +1,11 @@
-package db
+package mysql
 
 import (
 	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"log"
-	v1 "emshop/internal/app/goods/srv/data/v1"
+	"emshop/internal/app/goods/srv/data/v1/interfaces"
 	"emshop/internal/app/pkg/code"
 	"emshop/internal/app/pkg/options"
 	errors2 "emshop/pkg/errors"
@@ -16,48 +16,83 @@ import (
 	"gorm.io/driver/mysql"
 )
 
+// SearchFactory 搜索工厂接口
+type SearchFactory interface {
+	Goods() interfaces.GoodsSearchStore
+}
+
+// DataFactory 数据工厂接口
+type DataFactory interface {
+	// 主存储接口
+	Goods() interfaces.GoodsStore
+	Categorys() interfaces.CategoryStore
+	Brands() interfaces.BrandsStore
+	Banners() interfaces.BannerStore
+	CategoryBrands() interfaces.GoodsCategoryBrandStore
+
+	// 搜索引擎接口
+	Search() SearchFactory
+
+	// 事务支持
+	Begin() *gorm.DB
+	
+	// 关闭连接
+	Close() error
+}
+
 var (
-	dbFactory v1.DataFactory
-	once      sync.Once
+	factory DataFactory
+	once    sync.Once
 )
 
+// mysqlFactory MySQL数据工厂实现
 type mysqlFactory struct {
-	db *gorm.DB
+	db           *gorm.DB
+	searchFactory SearchFactory
 }
 
 func (mf *mysqlFactory) Begin() *gorm.DB {
 	return mf.db.Begin()
 }
 
-func (mf *mysqlFactory) Goods() v1.GoodsStore {
+func (mf *mysqlFactory) Close() error {
+	sqlDB, err := mf.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
+}
+
+func (mf *mysqlFactory) Goods() interfaces.GoodsStore {
 	return newGoods(mf)
 }
 
-func (mf *mysqlFactory) Categorys() v1.CategoryStore {
+func (mf *mysqlFactory) Categorys() interfaces.CategoryStore {
 	return newCategorys(mf)
 }
 
-func (mf *mysqlFactory) Brands() v1.BrandsStore {
+func (mf *mysqlFactory) Brands() interfaces.BrandsStore {
 	return newBrands(mf)
 }
 
-func (mf *mysqlFactory) Banners() v1.BannerStore {
+func (mf *mysqlFactory) Banners() interfaces.BannerStore {
 	return newBanner(mf)
 }
 
-func (m *mysqlFactory) CategoryBrands() v1.GoodsCategoryBrandStore {
-	//TODO implement me
-	panic("implement me")
+func (mf *mysqlFactory) CategoryBrands() interfaces.GoodsCategoryBrandStore {
+	return newCategoryBrands(mf)
 }
 
-var _ v1.DataFactory = &mysqlFactory{}
+func (mf *mysqlFactory) Search() SearchFactory {
+	return mf.searchFactory
+}
 
-// 这个方法会返回gorm连接
-// 还不够
-// 这个方法应该返回的是全局的一个变量，如果一开始的时候没有初始化好，那么就初始化一次，后续呢直接拿到这个变量
-func GetDBFactoryOr(mysqlOpts *options.MySQLOptions) (v1.DataFactory, error) {
-	if mysqlOpts == nil && dbFactory == nil {
-		return nil, fmt.Errorf("failed to get mysql store fatory")
+var _ DataFactory = &mysqlFactory{}
+
+// NewMySQLFactory 创建MySQL数据工厂
+func NewMySQLFactory(mysqlOpts *options.MySQLOptions, searchFactory SearchFactory) (DataFactory, error) {
+	if mysqlOpts == nil && factory == nil {
+		return nil, fmt.Errorf("failed to get mysql store factory")
 	}
 
 	var err error
@@ -87,8 +122,9 @@ func GetDBFactoryOr(mysqlOpts *options.MySQLOptions) (v1.DataFactory, error) {
 		}
 
 		sqlDB, _ := db.DB()
-		dbFactory = &mysqlFactory{
-			db: db,
+		factory = &mysqlFactory{
+			db:           db,
+			searchFactory: searchFactory,
 		}
 
 		sqlDB.SetMaxOpenConns(mysqlOpts.MaxOpenConnections)
@@ -96,8 +132,8 @@ func GetDBFactoryOr(mysqlOpts *options.MySQLOptions) (v1.DataFactory, error) {
 		sqlDB.SetConnMaxLifetime(mysqlOpts.MaxConnectionLifetime)
 	})
 
-	if dbFactory == nil || err != nil {
+	if factory == nil || err != nil {
 		return nil, errors2.WithCode(code.ErrConnectDB, "failed to get mysql store factory")
 	}
-	return dbFactory, nil
+	return factory, nil
 }

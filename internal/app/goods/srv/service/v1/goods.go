@@ -3,8 +3,8 @@ package v1
 import (
 	"context"
 	proto "emshop/api/goods/v1"
-	v1 "emshop/internal/app/goods/srv/data/v1"
-	v12 "emshop/internal/app/goods/srv/data_search/v1"
+	dataV1 "emshop/internal/app/goods/srv/data/v1"
+	"emshop/internal/app/goods/srv/data/v1/interfaces"
 	"emshop/internal/app/goods/srv/domain/do"
 	"emshop/internal/app/goods/srv/domain/dto"
 	"sync"
@@ -14,60 +14,34 @@ import (
 	"emshop/pkg/log"
 )
 
-type GoodsSrv interface {
-	// 商品列表
-	List(ctx context.Context, opts metav1.ListMeta, req *proto.GoodsFilterRequest, orderby []string) (*dto.GoodsDTOList, error)
-
-	// 商品详情
-	Get(ctx context.Context, ID uint64) (*dto.GoodsDTO, error)
-
-	// 创建商品
-	Create(ctx context.Context, goods *dto.GoodsDTO) error
-
-	// 更新商品
-	Update(ctx context.Context, goods *dto.GoodsDTO) error
-
-	// 删除商品
-	Delete(ctx context.Context, ID uint64) error
-
-	//批量查询商品
-	BatchGet(ctx context.Context, ids []uint64) ([]*dto.GoodsDTO, error)
-}
-
 type goodsService struct {
-	// 工厂模式注入
-	data v1.DataFactory
-
-	searchData v12.SearchFactory
+	factoryManager *dataV1.FactoryManager
 }
 
 func newGoods(srv *service) *goodsService {
 	return &goodsService{
-		data:       srv.data,
-		searchData: srv.dataSearch,
+		factoryManager: srv.factoryManager,
 	}
-}
-
-// 遍历树结构
-func retrieveIDs(category *do.CategoryDO) []uint64 {
-	ids := []uint64{}
-	if category == nil || category.ID == 0 {
-		return ids
-	}
-	ids = append(ids, uint64(category.ID))
-	for _, child := range category.SubCategory {
-		subids := retrieveIDs(child)
-		ids = append(ids, subids...)
-	}
-	return ids
 }
 
 func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *proto.GoodsFilterRequest, orderby []string) (*dto.GoodsDTOList, error) {
-	searchReq := v12.GoodsFilterRequest{
-		GoodsFilterRequest: req,
+	dataFactory := gs.factoryManager.GetDataFactory()
+	
+	// 构建搜索请求
+	searchReq := &interfaces.GoodsFilterRequest{
+		KeyWords:    req.KeyWords,
+		BrandID:     req.Brand,
+		PriceMin:    float32(req.PriceMin),
+		PriceMax:    float32(req.PriceMax),
+		IsHot:       req.IsHot,
+		IsNew:       req.IsNew,
+		OnSale:      req.IsTab, // 根据业务逻辑调整
+		Pages:       req.Pages,
+		PagePerNums: req.PagePerNums,
 	}
+
 	if req.TopCategory > 0 {
-		category, err := gs.data.Categorys().Get(ctx, uint64(req.TopCategory))
+		category, err := dataFactory.Categorys().Get(ctx, uint64(req.TopCategory))
 		if err != nil {
 			log.Errorf("categoryData.Get err: %v", err)
 			return nil, err
@@ -81,10 +55,10 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 		searchReq.CategoryIDs = ids
 	}
 
-
-	goodsList, err := gs.searchData.Goods().Search(ctx, &searchReq)
+	// 通过搜索引擎查询
+	goodsList, err := dataFactory.Search().Goods().Search(ctx, searchReq)
 	if err != nil {
-		log.Errorf("serachData.Search err: %v", err)
+		log.Errorf("searchData.Search err: %v", err)
 		return nil, err
 	}
 
@@ -95,12 +69,13 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 		goodsIDs = append(goodsIDs, uint64(value.ID))
 	}
 
-	//通过id批量查询mysql数据
-	goods, err := gs.data.Goods().ListByIDs(ctx, goodsIDs, orderby)
+	// 通过id批量查询mysql数据
+	goods, err := dataFactory.Goods().ListByIDs(ctx, goodsIDs, orderby)
 	if err != nil {
 		log.Errorf("data.ListByIDs err: %v", err)
 		return nil, err
 	}
+	
 	var ret dto.GoodsDTOList
 	ret.TotalCount = int(goodsList.TotalCount)
 	for _, value := range goods.Items {
@@ -112,7 +87,8 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 }
 
 func (gs *goodsService) Get(ctx context.Context, ID uint64) (*dto.GoodsDTO, error) {
-	goods, err := gs.data.Goods().Get(ctx, ID)
+	dataFactory := gs.factoryManager.GetDataFactory()
+	goods, err := dataFactory.Goods().Get(ctx, ID)
 	if err != nil {
 		log.Errorf("data.Get err: %v", err)
 		return nil, err
@@ -123,28 +99,22 @@ func (gs *goodsService) Get(ctx context.Context, ID uint64) (*dto.GoodsDTO, erro
 }
 
 func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) error {
-	/*
-		数据先写mysql，然后写es
-	*/
-	_, err := gs.data.Brands().Get(ctx, uint64(goods.BrandsID))
+	dataFactory := gs.factoryManager.GetDataFactory()
+	
+	// 验证品牌和分类是否存在
+	_, err := dataFactory.Brands().Get(ctx, uint64(goods.BrandsID))
 	if err != nil {
 		return err
 	}
 
-	_, err = gs.data.Categorys().Get(ctx, uint64(goods.CategoryID))
+	_, err = dataFactory.Categorys().Get(ctx, uint64(goods.CategoryID))
 	if err != nil {
 		return err
 	}
 
-	//之前的入es的方案是给gorm添加aftercreate
-	//分布式事务， 异构数据库的事务， 基于可靠消息最终一致性
-	//比较重的方案： 每次都要发送一个事务消息
-
-	//非常小心， 这种方案是不是就没有问题了呢
-	txn := gs.data.Begin() 	//开启一个事务
-
-	//很重要
-	defer func() { 
+	// 开启事务
+	txn := dataFactory.Begin()
+	defer func() {
 		if err := recover(); err != nil {
 			txn.Rollback()
 			log.Errorf("goodsService.Create panic: %v", err)
@@ -152,12 +122,14 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) error {
 		}
 	}()
 
-	err = gs.data.Goods().CreateInTxn(ctx, txn, &goods.GoodsDO)
+	err = dataFactory.Goods().CreateInTxn(ctx, txn, &goods.GoodsDO)
 	if err != nil {
 		log.Errorf("data.CreateInTxn err: %v", err)
 		txn.Rollback()
 		return err
 	}
+	
+	// 构建搜索对象
 	searchDO := do.GoodsSearchDO{
 		ID:          goods.ID,
 		CategoryID:  goods.CategoryID,
@@ -175,40 +147,116 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) error {
 		ShopPrice:   goods.ShopPrice,
 	}
 
-	err = gs.searchData.Goods().Create(ctx, &searchDO) 
-	// 如果es超时了, 回滚事务
+	err = dataFactory.Search().Goods().Create(ctx, &searchDO)
 	if err != nil {
 		txn.Rollback()
 		return err
 	}
-	// 事务提交
-	txn.Commit()	
+	
+	txn.Commit()
 	return nil
 }
 
 func (gs *goodsService) Update(ctx context.Context, goods *dto.GoodsDTO) error {
-	//TODO implement me
+	dataFactory := gs.factoryManager.GetDataFactory()
+	
+	// 验证品牌和分类是否存在
+	_, err := dataFactory.Brands().Get(ctx, uint64(goods.BrandsID))
+	if err != nil {
+		return err
+	}
 
-	// todo 另外采用基于可靠消息的最终一致性
-	panic("implement me")
+	_, err = dataFactory.Categorys().Get(ctx, uint64(goods.CategoryID))
+	if err != nil {
+		return err
+	}
+
+	// 开启事务
+	txn := dataFactory.Begin()
+	defer func() {
+		if err := recover(); err != nil {
+			txn.Rollback()
+			log.Errorf("goodsService.Update panic: %v", err)
+			return
+		}
+	}()
+
+	// 更新MySQL数据
+	err = dataFactory.Goods().UpdateInTxn(ctx, txn, &goods.GoodsDO)
+	if err != nil {
+		log.Errorf("data.UpdateInTxn err: %v", err)
+		txn.Rollback()
+		return err
+	}
+
+	// 更新ES数据
+	searchDO := do.GoodsSearchDO{
+		ID:          goods.ID,
+		CategoryID:  goods.CategoryID,
+		BrandsID:    goods.BrandsID,
+		OnSale:      goods.OnSale,
+		ShipFree:    goods.ShipFree,
+		IsNew:       goods.IsNew,
+		IsHot:       goods.IsHot,
+		Name:        goods.Name,
+		ClickNum:    goods.ClickNum,
+		SoldNum:     goods.SoldNum,
+		FavNum:      goods.FavNum,
+		MarketPrice: goods.MarketPrice,
+		GoodsBrief:  goods.GoodsBrief,
+		ShopPrice:   goods.ShopPrice,
+	}
+
+	err = dataFactory.Search().Goods().Update(ctx, &searchDO)
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+
+	txn.Commit()
+	return nil
 }
 
 func (gs *goodsService) Delete(ctx context.Context, ID uint64) error {
-	//TODO implement me
-	panic("implement me")
+	dataFactory := gs.factoryManager.GetDataFactory()
+	
+	// 开启事务
+	txn := dataFactory.Begin()
+	defer func() {
+		if err := recover(); err != nil {
+			txn.Rollback()
+			log.Errorf("goodsService.Delete panic: %v", err)
+			return
+		}
+	}()
+
+	// 删除MySQL数据
+	err := dataFactory.Goods().DeleteInTxn(ctx, txn, ID)
+	if err != nil {
+		log.Errorf("data.DeleteInTxn err: %v", err)
+		txn.Rollback()
+		return err
+	}
+
+	// 删除ES数据
+	err = dataFactory.Search().Goods().Delete(ctx, ID)
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+
+	txn.Commit()
+	return nil
 }
 
 func (gs *goodsService) BatchGet(ctx context.Context, ids []uint64) ([]*dto.GoodsDTO, error) {
-	//go-zero内部的包非常好用， 但是自己去做并发的话 -> 一次性启动多个goroutine 细节繁琐
 	var ret []*dto.GoodsDTO
 	var callFuncs []func() error
 	var mu sync.Mutex
 	for _, value := range ids {
-		//大坑
 		tmp := value
 		callFuncs = append(callFuncs, func() error {
 			goodsDTO, err := gs.Get(ctx, tmp)
-			// 保证并发安全
 			mu.Lock()
 			ret = append(ret, goodsDTO)
 			mu.Unlock()
@@ -219,16 +267,20 @@ func (gs *goodsService) BatchGet(ctx context.Context, ids []uint64) ([]*dto.Good
 	if err != nil {
 		return nil, err
 	}
-	//ds, err := gs.data.ListByIDs(ctx, ids, []string{})
-	//if err != nil {
-	//	return nil, err
-	//}
-	//for _, value := range ds.Items {
-	//	ret = append(ret, &dto.GoodsDTO{
-	//		GoodsDO: *value,
-	//	})
-	//}
 	return ret, nil
 }
 
 var _ GoodsSrv = &goodsService{}
+
+func retrieveIDs(category *do.CategoryDO) []uint64 {
+	ids := []uint64{}
+	if category == nil || category.ID == 0 {
+		return ids
+	}
+	ids = append(ids, uint64(category.ID))
+	for _, child := range category.SubCategory {
+		subids := retrieveIDs(child)
+		ids = append(ids, subids...)
+	}
+	return ids
+}

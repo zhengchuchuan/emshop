@@ -1,4 +1,4 @@
-package db
+package mysql
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"emshop/pkg/errors"
 
 	"gorm.io/gorm"
-	v1 "emshop/internal/app/goods/srv/data/v1"
+	"emshop/internal/app/goods/srv/data/v1/interfaces"
 	"emshop/internal/app/goods/srv/domain/do"
 )
 
@@ -16,15 +16,10 @@ type goods struct {
 	db *gorm.DB
 }
 
-func (g *goods) Begin() *gorm.DB {
-	return g.db.Begin()
-}
-
 func newGoods(factory *mysqlFactory) *goods {
-	goods := &goods{
+	return &goods{
 		db: factory.db,
 	}
-	return goods
 }
 
 func (g *goods) CreateInTxn(ctx context.Context, txn *gorm.DB, goods *do.GoodsDO) error {
@@ -47,17 +42,10 @@ func (g *goods) DeleteInTxn(ctx context.Context, txn *gorm.DB, ID uint64) error 
 	return txn.Where("id = ?", ID).Delete(&do.GoodsDO{}).Error
 }
 
-//func NewGoods(db *gorm.DB) *goods {
-//	return &goods{
-//		db: db,
-//	}
-//}
-
 func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.GoodsDOList, error) {
-	//实现gorm查询
 	ret := &do.GoodsDOList{}
 
-	//分页
+	// 分页
 	var limit, offset int
 	if opts.PageSize == 0 {
 		limit = 10
@@ -69,10 +57,9 @@ func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 		offset = (opts.Page - 1) * limit
 	}
 
-	//排序
+	// 排序
 	query := g.db.Preload("Category").Preload("Brands")
 	for _, value := range orderby {
-		//坑
 		query = query.Order(value)
 	}
 
@@ -96,10 +83,9 @@ func (g *goods) Get(ctx context.Context, ID uint64) (*do.GoodsDO, error) {
 }
 
 func (g *goods) ListByIDs(ctx context.Context, ids []uint64, orderby []string) (*do.GoodsDOList, error) {
-	//实现gorm查询
 	ret := &do.GoodsDOList{}
 
-	//排序
+	// 排序
 	query := g.db.Preload("Category").Preload("Brands")
 	for _, value := range orderby {
 		query = query.Order(value)
@@ -132,4 +118,4 @@ func (g *goods) Delete(ctx context.Context, ID uint64) error {
 	return g.db.Where("id = ?", ID).Delete(&do.GoodsDO{}).Error
 }
 
-var _ v1.GoodsStore = &goods{}
+var _ interfaces.GoodsStore = &goods{}

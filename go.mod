@@ -8,7 +8,6 @@ require (
 	github.com/alibaba/sentinel-golang/pkg/adapters/grpc v0.0.0-20250513022732-368e01c4a4a2
 	github.com/alibaba/sentinel-golang/pkg/datasource/nacos v0.0.0-20250513022732-368e01c4a4a2
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
-	github.com/anaskhan96/go-password-encoder v0.0.0-20201010210601-c765b799fd72
 	github.com/appleboy/gin-jwt/v2 v2.10.3
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/bitly/go-simplejson v0.5.1
