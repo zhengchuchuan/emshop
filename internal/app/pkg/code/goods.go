@@ -21,4 +21,7 @@ const (
 
 	// ErrEsUnmarshal - 500: Es unmarshal error.
 	ErrEsUnmarshal
+
+	// ErrCategoryHasChildren - 400: Category has children.
+	ErrCategoryHasChildren
 )

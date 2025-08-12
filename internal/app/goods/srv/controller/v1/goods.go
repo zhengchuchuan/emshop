@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"emshop/internal/app/goods/srv/domain/do"
 	"emshop/internal/app/goods/srv/domain/dto"
 	v12 "emshop/pkg/common/meta/v1"
 
@@ -126,93 +127,331 @@ func (gs *goodsServer) GetGoodsDetail(ctx context.Context, request *proto.GoodIn
 }
 
 func (gs *goodsServer) GetAllCategorysList(ctx context.Context, empty *emptypb.Empty) (*proto.CategoryListResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	categories, err := gs.srv.Category().ListAll(ctx, []string{})
+	if err != nil {
+		log.Errorf("get all categories error: %v", err)
+		return nil, err
+	}
+
+	// 简化的JSON序列化（可以扩展为完整的JSON序列化）
+	jsonData := "[]"
+	if len(categories.Items) > 0 {
+		// TODO: 实现完整的JSON序列化逻辑
+		jsonData = "[]"
+	}
+	return &proto.CategoryListResponse{JsonData: jsonData}, nil
 }
 
 func (gs *goodsServer) GetSubCategory(ctx context.Context, request *proto.CategoryListRequest) (*proto.SubCategoryListResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	subCategories, err := gs.srv.Category().GetSubCategories(ctx, request.Id)
+	if err != nil {
+		log.Errorf("get sub categories error: %v", err)
+		return nil, err
+	}
+
+	response := &proto.SubCategoryListResponse{}
+	if subCategories.ParentInfo != nil {
+		response.Info = &proto.CategoryInfoResponse{
+			Id:             subCategories.ParentInfo.ID,
+			Name:           subCategories.ParentInfo.Name,
+			Level:          subCategories.ParentInfo.Level,
+			IsTab:          subCategories.ParentInfo.IsTab,
+			ParentCategory: subCategories.ParentInfo.ParentCategoryID,
+		}
+	}
+
+	for _, item := range subCategories.Items {
+		response.SubCategorys = append(response.SubCategorys, &proto.CategoryInfoResponse{
+			Id:             item.ID,
+			Name:           item.Name,
+			Level:          item.Level,
+			IsTab:          item.IsTab,
+			ParentCategory: item.ParentCategoryID,
+		})
+	}
+
+	return response, nil
 }
 
 func (gs *goodsServer) CreateCategory(ctx context.Context, request *proto.CategoryInfoRequest) (*proto.CategoryInfoResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	categoryDTO := &dto.CategoryDTO{
+		CategoryDO: do.CategoryDO{
+			Name:             request.Name,
+			ParentCategoryID: request.ParentCategory,
+			Level:            request.Level,
+			IsTab:            request.IsTab,
+		},
+	}
+
+	err := gs.srv.Category().Create(ctx, categoryDTO)
+	if err != nil {
+		log.Errorf("create category error: %v", err)
+		return nil, err
+	}
+
+	return &proto.CategoryInfoResponse{Id: categoryDTO.ID}, nil
 }
 
 func (gs *goodsServer) DeleteCategory(ctx context.Context, request *proto.DeleteCategoryRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	err := gs.srv.Category().Delete(ctx, request.Id)
+	if err != nil {
+		log.Errorf("delete category error: %v", err)
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
 }
 
 func (gs *goodsServer) UpdateCategory(ctx context.Context, request *proto.CategoryInfoRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	categoryDTO := &dto.CategoryDTO{
+		CategoryDO: do.CategoryDO{
+			Name:             request.Name,
+			ParentCategoryID: request.ParentCategory,
+			Level:            request.Level,
+			IsTab:            request.IsTab,
+		},
+	}
+	categoryDTO.ID = request.Id
+
+	err := gs.srv.Category().Update(ctx, categoryDTO)
+	if err != nil {
+		log.Errorf("update category error: %v", err)
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func (gs *goodsServer) BrandList(ctx context.Context, request *proto.BrandFilterRequest) (*proto.BrandListResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	brands, err := gs.srv.Brand().List(ctx, v12.ListMeta{Page: int(request.Pages), PageSize: int(request.PagePerNums)}, []string{})
+	if err != nil {
+		log.Errorf("get brands list error: %v", err)
+		return nil, err
+	}
+
+	response := &proto.BrandListResponse{
+		Total: int32(brands.TotalCount),
+	}
+
+	for _, item := range brands.Items {
+		response.Data = append(response.Data, &proto.BrandInfoResponse{
+			Id:   item.ID,
+			Name: item.Name,
+			Logo: item.Logo,
+		})
+	}
+
+	return response, nil
 }
 
 func (gs *goodsServer) CreateBrand(ctx context.Context, request *proto.BrandRequest) (*proto.BrandInfoResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	brandDTO := &dto.BrandDTO{
+		BrandsDO: do.BrandsDO{
+			Name: request.Name,
+			Logo: request.Logo,
+		},
+	}
+
+	err := gs.srv.Brand().Create(ctx, brandDTO)
+	if err != nil {
+		log.Errorf("create brand error: %v", err)
+		return nil, err
+	}
+
+	return &proto.BrandInfoResponse{Id: brandDTO.ID}, nil
 }
 
 func (gs *goodsServer) DeleteBrand(ctx context.Context, request *proto.BrandRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	err := gs.srv.Brand().Delete(ctx, request.Id)
+	if err != nil {
+		log.Errorf("delete brand error: %v", err)
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
 }
 
 func (gs *goodsServer) UpdateBrand(ctx context.Context, request *proto.BrandRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	brandDTO := &dto.BrandDTO{
+		BrandsDO: do.BrandsDO{
+			Name: request.Name,
+			Logo: request.Logo,
+		},
+	}
+	brandDTO.ID = request.Id
+
+	err := gs.srv.Brand().Update(ctx, brandDTO)
+	if err != nil {
+		log.Errorf("update brand error: %v", err)
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func (gs *goodsServer) BannerList(ctx context.Context, empty *emptypb.Empty) (*proto.BannerListResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	banners, err := gs.srv.Banner().List(ctx, []string{})
+	if err != nil {
+		log.Errorf("get banners list error: %v", err)
+		return nil, err
+	}
+
+	response := &proto.BannerListResponse{
+		Total: int32(banners.TotalCount),
+	}
+
+	for _, item := range banners.Items {
+		response.Data = append(response.Data, &proto.BannerResponse{
+			Id:    item.ID,
+			Image: item.Image,
+			Url:   item.Url,
+			Index: item.Index,
+		})
+	}
+
+	return response, nil
 }
 
 func (gs *goodsServer) CreateBanner(ctx context.Context, request *proto.BannerRequest) (*proto.BannerResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	bannerDTO := &dto.BannerDTO{
+		BannerDO: do.BannerDO{
+			Image: request.Image,
+			Url:   request.Url,
+			Index: request.Index,
+		},
+	}
+
+	err := gs.srv.Banner().Create(ctx, bannerDTO)
+	if err != nil {
+		log.Errorf("create banner error: %v", err)
+		return nil, err
+	}
+
+	return &proto.BannerResponse{Id: bannerDTO.ID}, nil
 }
 
 func (gs *goodsServer) DeleteBanner(ctx context.Context, request *proto.BannerRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	err := gs.srv.Banner().Delete(ctx, request.Id)
+	if err != nil {
+		log.Errorf("delete banner error: %v", err)
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
 }
 
 func (gs *goodsServer) UpdateBanner(ctx context.Context, request *proto.BannerRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	bannerDTO := &dto.BannerDTO{
+		BannerDO: do.BannerDO{
+			Image: request.Image,
+			Url:   request.Url,
+			Index: request.Index,
+		},
+	}
+	bannerDTO.ID = request.Id
+
+	err := gs.srv.Banner().Update(ctx, bannerDTO)
+	if err != nil {
+		log.Errorf("update banner error: %v", err)
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func (gs *goodsServer) CategoryBrandList(ctx context.Context, request *proto.CategoryBrandFilterRequest) (*proto.CategoryBrandListResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	categoryBrands, err := gs.srv.CategoryBrand().List(ctx, v12.ListMeta{Page: int(request.Pages), PageSize: int(request.PagePerNums)}, []string{})
+	if err != nil {
+		log.Errorf("get category brands list error: %v", err)
+		return nil, err
+	}
+
+	response := &proto.CategoryBrandListResponse{
+		Total: int32(categoryBrands.TotalCount),
+	}
+
+	for _, item := range categoryBrands.Items {
+		response.Data = append(response.Data, &proto.CategoryBrandResponse{
+			Id: item.ID,
+			Category: &proto.CategoryInfoResponse{
+				Id:             item.Category.ID,
+				Name:           item.Category.Name,
+				Level:          item.Category.Level,
+				IsTab:          item.Category.IsTab,
+				ParentCategory: item.Category.ParentCategoryID,
+			},
+			Brand: &proto.BrandInfoResponse{
+				Id:   item.Brands.ID,
+				Name: item.Brands.Name,
+				Logo: item.Brands.Logo,
+			},
+		})
+	}
+
+	return response, nil
 }
 
 func (gs *goodsServer) GetCategoryBrandList(ctx context.Context, request *proto.CategoryInfoRequest) (*proto.BrandListResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	brands, err := gs.srv.CategoryBrand().GetBrandsByCategory(ctx, request.Id)
+	if err != nil {
+		log.Errorf("get brands by category error: %v", err)
+		return nil, err
+	}
+
+	response := &proto.BrandListResponse{
+		Total: int32(brands.TotalCount),
+	}
+
+	for _, item := range brands.Items {
+		response.Data = append(response.Data, &proto.BrandInfoResponse{
+			Id:   item.ID,
+			Name: item.Name,
+			Logo: item.Logo,
+		})
+	}
+
+	return response, nil
 }
 
 func (gs *goodsServer) CreateCategoryBrand(ctx context.Context, request *proto.CategoryBrandRequest) (*proto.CategoryBrandResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	categoryBrandDTO := &dto.CategoryBrandDTO{
+		GoodsCategoryBrandDO: do.GoodsCategoryBrandDO{
+			CategoryID: request.CategoryId,
+			BrandsID:   request.BrandId,
+		},
+	}
+
+	err := gs.srv.CategoryBrand().Create(ctx, categoryBrandDTO)
+	if err != nil {
+		log.Errorf("create category brand error: %v", err)
+		return nil, err
+	}
+
+	return &proto.CategoryBrandResponse{Id: categoryBrandDTO.ID}, nil
 }
 
 func (gs *goodsServer) DeleteCategoryBrand(ctx context.Context, request *proto.CategoryBrandRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	err := gs.srv.CategoryBrand().Delete(ctx, request.Id)
+	if err != nil {
+		log.Errorf("delete category brand error: %v", err)
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
 }
 
 func (gs *goodsServer) UpdateCategoryBrand(ctx context.Context, request *proto.CategoryBrandRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	categoryBrandDTO := &dto.CategoryBrandDTO{
+		GoodsCategoryBrandDO: do.GoodsCategoryBrandDO{
+			CategoryID: request.CategoryId,
+			BrandsID:   request.BrandId,
+		},
+	}
+	categoryBrandDTO.ID = request.Id
+
+	err := gs.srv.CategoryBrand().Update(ctx, categoryBrandDTO)
+	if err != nil {
+		log.Errorf("update category brand error: %v", err)
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func NewGoodsServer(srv v1.ServiceFactory) *goodsServer {

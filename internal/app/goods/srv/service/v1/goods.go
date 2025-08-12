@@ -77,7 +77,7 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 	}
 	
 	var ret dto.GoodsDTOList
-	ret.TotalCount = int(goodsList.TotalCount)
+	ret.TotalCount = int64(goodsList.TotalCount)
 	for _, value := range goods.Items {
 		ret.Items = append(ret.Items, &dto.GoodsDTO{
 			GoodsDO: *value,
