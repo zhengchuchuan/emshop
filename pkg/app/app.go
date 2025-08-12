@@ -198,15 +198,17 @@ func (a *App) buildCommand() {
 		cmd.RunE = a.runCommand  // 绑定运行函数到 Cobra 命令
 	}
 
-	// 5. 处理应用程序选项和标志
+	// 5. 处理应用程序选项和标志（pflag与Cobra的集成核心）
 	var namedFlagSets cliflag.NamedFlagSets
 	if a.options != nil {
 		// 从应用程序选项中获取命令行标志定义
+		// 这里调用Config.Flags()方法，它会聚合所有子选项的pflag定义
 		namedFlagSets = a.options.Flags()
-		fs := cmd.Flags()
-		// 将所有标志集合添加到命令的标志系统中
+		fs := cmd.Flags() // 获取Cobra命令的pflag.FlagSet
+		// 将所有标志集合添加到Cobra命令的标志系统中
+		// 这是pflag与Cobra集成的关键步骤：Cobra接收pflag定义的标志
 		for _, f := range namedFlagSets.FlagSets {
-			fs.AddFlagSet(f)
+			fs.AddFlagSet(f) // Cobra内部使用pflag.FlagSet.AddFlagSet()
 		}
 
 		// 6. 自定义帮助和使用说明格式
@@ -258,19 +260,26 @@ func (a *App) Command() *cobra.Command {
 	return a.cmd
 }
 
+// runCommand 是Cobra命令的实际执行函数
+// 当用户运行CLI命令时，Cobra会调用这个函数
 func (a *App) runCommand(cmd *cobra.Command, args []string) error {
 	printWorkingDir()
-	cliflag.PrintFlags(cmd.Flags())
+	cliflag.PrintFlags(cmd.Flags()) // 打印所有pflag标志的调试信息
 	if !a.noVersion {
-		// display application version information
+		// 检查是否请求版本信息并退出
 		verflag.PrintAndExitIfRequested()
 	}
 
+	// 配置文件与命令行参数的绑定和合并（Viper的核心功能）
 	if !a.noConfig {
+		// 步骤1: 将pflag标志绑定到Viper
+		// 这使得Viper可以从pflag获取命令行参数值
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			return err
 		}
 
+		// 步骤2: 将Viper中的配置（文件+环境变量+命令行参数）反序列化到Go结构体
+		// 这是配置系统的最终步骤：将所有配置源合并后绑定到应用程序的配置结构体
 		if err := viper.Unmarshal(a.options); err != nil {
 			return err
 		}
