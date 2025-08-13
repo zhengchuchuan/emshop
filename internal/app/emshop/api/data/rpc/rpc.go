@@ -17,10 +17,11 @@ import (
 type grpcData struct {
 	gc gpb.GoodsClient
 	uc upb.UserClient
+	gd data.GoodsData
 }
 
-func (g grpcData) Goods() gpb.GoodsClient {
-	return g.gc
+func (g grpcData) Goods() data.GoodsData {
+	return g.gd
 }
 
 func (g grpcData) Users() data.UserData {
@@ -55,9 +56,11 @@ func GetDataFactoryOr(options *options.RegistryOptions) (data.DataFactory, error
 		discovery := NewDiscovery(options)
 		userClient := NewUserServiceClient(discovery)
 		goodsClient := NewGoodsServiceClient(discovery)
+		goodsData := NewGoods(goodsClient)
 		dbFactory = &grpcData{
 			gc: goodsClient,
 			uc: userClient,
+			gd: goodsData,
 		}
 	})
 

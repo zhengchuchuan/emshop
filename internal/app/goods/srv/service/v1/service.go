@@ -4,6 +4,7 @@ import (
 	"context"
 	proto "emshop/api/goods/v1"
 	dataV1 "emshop/internal/app/goods/srv/data/v1"
+	"emshop/internal/app/goods/srv/data/v1/sync"
 	"emshop/internal/app/goods/srv/domain/dto"
 	metav1 "emshop/pkg/common/meta/v1"
 )
@@ -105,12 +106,18 @@ type CategoryBrandSrv interface {
 	Delete(ctx context.Context, ID int32) error
 }
 
+type DataSyncSrv interface {
+	// 同步商品数据到搜索引擎
+	SyncGoodsData(ctx context.Context, forceSync bool, goodsIds []uint64) (*sync.SyncResult, error)
+}
+
 type ServiceFactory interface {
 	Goods() GoodsSrv
 	Category() CategorySrv
 	Brand() BrandSrv
 	Banner() BannerSrv
 	CategoryBrand() CategoryBrandSrv
+	DataSync() DataSyncSrv
 }
 
 type service struct {
@@ -141,4 +148,8 @@ func (s *service) Banner() BannerSrv {
 
 func (s *service) CategoryBrand() CategoryBrandSrv {
 	return newCategoryBrand(s)
+}
+
+func (s *service) DataSync() DataSyncSrv {
+	return newDataSync(s)
 }

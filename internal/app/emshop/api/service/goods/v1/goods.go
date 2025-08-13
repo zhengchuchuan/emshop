@@ -11,6 +11,7 @@ import (
 type GoodsSrv interface {
 	List(ctx context.Context, request *gpb.GoodsFilterRequest) (*gpb.GoodsListResponse, error)
 	Create(ctx context.Context, info *gpb.CreateGoodsInfo) (*gpb.GoodsInfoResponse, error)
+	SyncData(ctx context.Context, request *gpb.SyncDataRequest) (*gpb.SyncDataResponse, error)
 }
 
 type goodsService struct {
@@ -23,6 +24,10 @@ func (gs *goodsService) List(ctx context.Context, request *gpb.GoodsFilterReques
 
 func (gs *goodsService) Create(ctx context.Context, info *gpb.CreateGoodsInfo) (*gpb.GoodsInfoResponse, error) {
 	return gs.data.Goods().CreateGoods(ctx, info)
+}
+
+func (gs *goodsService) SyncData(ctx context.Context, request *gpb.SyncDataRequest) (*gpb.SyncDataResponse, error) {
+	return gs.data.Goods().SyncGoodsData(ctx, request)
 }
 
 

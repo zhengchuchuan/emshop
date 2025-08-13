@@ -148,3 +148,35 @@ func (gc *goodsController) New(ctx *gin.Context) {
 
 	core.WriteResponse(ctx, nil, response)
 }
+
+func (gc *goodsController) Sync(ctx *gin.Context) {
+	log.Info("goods sync function called ...")
+
+	var r request.SyncData
+
+	if err := ctx.ShouldBindJSON(&r); err != nil {
+		gin2.HandleValidatorError(ctx, err, gc.trans)
+		return
+	}
+
+	syncRequest := proto.SyncDataRequest{
+		ForceSync: r.ForceSync, // 是否强制全量同步
+		GoodsIds:  r.GoodsIds,	// 同步的商品id列表
+	}
+
+	syncResponse, err := gc.srv.Goods().SyncData(ctx, &syncRequest)
+	if err != nil {
+		core.WriteResponse(ctx, err, nil)
+		return
+	}
+
+	response := map[string]interface{}{
+		"success":      syncResponse.Success,
+		"message":      syncResponse.Message,
+		"synced_count": syncResponse.SyncedCount,
+		"failed_count": syncResponse.FailedCount,
+		"errors":       syncResponse.Errors,
+	}
+
+	core.WriteResponse(ctx, nil, response)
+}

@@ -31,3 +31,8 @@ type CreateGoods struct {
 	CategoryId      int32    `json:"category_id" binding:"required"`
 	BrandId         int32    `json:"brand_id" binding:"required"`
 }
+
+type SyncData struct {
+	ForceSync bool    `json:"force_sync"`
+	GoodsIds  []int32 `json:"goods_ids"`
+}

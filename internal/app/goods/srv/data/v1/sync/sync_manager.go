@@ -2,9 +2,11 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"emshop/internal/app/goods/srv/domain/do"
 	"emshop/internal/app/goods/srv/data/v1/mysql"
 	"emshop/internal/app/goods/srv/data/v1/elasticsearch"
+	metav1 "emshop/pkg/common/meta/v1"
 	"emshop/pkg/log"
 )
 
@@ -67,11 +69,19 @@ func (dsm *DataSyncManager) syncGoodsToSearch(ctx context.Context, goodsID uint6
 		ShopPrice:   goods.ShopPrice,
 	}
 
-	// 同步到搜索引擎
+	// 同步到搜索引擎 - 先尝试更新，如果失败则创建
 	err = dsm.searchFactory.Goods().Update(ctx, searchGoods)
 	if err != nil {
-		log.Errorf("failed to sync goods to search engine: %v", err)
-		return err
+		log.Debugf("update failed for goods %d, trying create: %v", goodsID, err)
+		// 如果更新失败（通常是文档不存在），尝试创建
+		err = dsm.searchFactory.Goods().Create(ctx, searchGoods)
+		if err != nil {
+			log.Errorf("failed to sync goods to search engine: %v", err)
+			return err
+		}
+		log.Debugf("created goods %d in search engine", goodsID)
+	} else {
+		log.Debugf("updated goods %d in search engine", goodsID)
 	}
 
 	log.Debugf("successfully synced goods %d to search engine", goodsID)
@@ -89,11 +99,62 @@ func (dsm *DataSyncManager) RemoveFromSearch(ctx context.Context, entityType str
 	}
 }
 
+// SyncResult 同步结果
+type SyncResult struct {
+	SyncedCount int
+	FailedCount int
+	Errors      []string
+}
+
+// SyncAllGoodsToSearch 同步所有商品数据到搜索引擎
+func (dsm *DataSyncManager) SyncAllGoodsToSearch(ctx context.Context, forceSync bool, goodsIds []uint64) (*SyncResult, error) {
+	result := &SyncResult{
+		Errors: make([]string, 0),
+	}
+
+	var goodsList []uint64
+
+	if len(goodsIds) > 0 {
+		// 指定商品ID同步
+		goodsList = goodsIds
+	} else {
+		// 获取所有商品ID
+		allGoods, err := dsm.dataFactory.Goods().List(ctx, []string{}, metav1.ListMeta{})
+		if err != nil {
+			log.Errorf("failed to get all goods: %v", err)
+			return nil, err
+		}
+		
+		for _, goods := range allGoods.Items {
+			goodsList = append(goodsList, uint64(goods.ID))
+		}
+	}
+
+	log.Infof("starting sync %d goods to search engine", len(goodsList))
+
+	// 批量同步
+	for _, goodsID := range goodsList {
+		err := dsm.syncGoodsToSearch(ctx, goodsID)
+		if err != nil {
+			result.FailedCount++
+			errorMsg := fmt.Sprintf("failed to sync goods %d: %v", goodsID, err)
+			result.Errors = append(result.Errors, errorMsg)
+			log.Errorf(errorMsg)
+			continue
+		}
+		result.SyncedCount++
+	}
+
+	log.Infof("sync completed: synced=%d, failed=%d", result.SyncedCount, result.FailedCount)
+	return result, nil
+}
+
 // 定义接口
 type DataSyncManagerInterface interface {
 	SyncToSearch(ctx context.Context, entityType string, entityID uint64) error
 	SyncToCache(ctx context.Context, entityType string, entityID uint64) error
 	RemoveFromSearch(ctx context.Context, entityType string, entityID uint64) error
+	SyncAllGoodsToSearch(ctx context.Context, forceSync bool, goodsIds []uint64) (*SyncResult, error)
 }
 
 var _ DataSyncManagerInterface = &DataSyncManager{}

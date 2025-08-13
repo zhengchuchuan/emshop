@@ -626,6 +626,33 @@ func (gs *goodsServer) UpdateCategoryBrand(ctx context.Context, request *proto.C
 	return &emptypb.Empty{}, nil
 }
 
+func (gs *goodsServer) SyncGoodsData(ctx context.Context, request *proto.SyncDataRequest) (*proto.SyncDataResponse, error) {
+	log.Infof("sync goods data request: forceSync=%v, goodsIds=%v", request.ForceSync, request.GoodsIds)
+
+	// 转换goodsIds到uint64
+	var goodsIds []uint64
+	for _, id := range request.GoodsIds {
+		goodsIds = append(goodsIds, uint64(id))
+	}
+
+	result, err := gs.srv.DataSync().SyncGoodsData(ctx, request.ForceSync, goodsIds)
+	if err != nil {
+		log.Errorf("sync goods data error: %v", err)
+		return &proto.SyncDataResponse{
+			Success: false,
+			Message: err.Error(),
+		}, err
+	}
+
+	return &proto.SyncDataResponse{
+		Success:     true,
+		Message:     "Data sync completed successfully",
+		SyncedCount: int32(result.SyncedCount),
+		FailedCount: int32(result.FailedCount),
+		Errors:      result.Errors,
+	}, nil
+}
+
 func NewGoodsServer(srv v1.ServiceFactory) *goodsServer {
 	return &goodsServer{srv: srv}
 }

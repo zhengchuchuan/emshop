@@ -39,6 +39,9 @@ service Goods{
   rpc CreateCategoryBrand(CategoryBrandRequest) returns(CategoryBrandResponse); //添加banner图
   rpc DeleteCategoryBrand(CategoryBrandRequest) returns(google.protobuf.Empty); //删除轮播图
   rpc UpdateCategoryBrand(CategoryBrandRequest) returns(google.protobuf.Empty); //修改轮播图
+
+  //数据同步
+  rpc SyncGoodsData(SyncDataRequest) returns(SyncDataResponse); //同步MySQL和ES商品数据
 }
 
 message CategoryListRequest {
@@ -247,4 +250,17 @@ message GoodsInfoResponse {
 message GoodsListResponse {
   int32 total = 1;
   repeated GoodsInfoResponse data = 2;
+}
+
+message SyncDataRequest {
+  bool forceSync = 1; // 是否强制全量同步
+  repeated int32 goodsIds = 2; // 指定同步的商品ID，为空则同步所有
+}
+
+message SyncDataResponse {
+  bool success = 1;
+  string message = 2;
+  int32 syncedCount = 3; // 同步的记录数
+  int32 failedCount = 4; // 失败的记录数
+  repeated string errors = 5; // 错误信息列表
 }
