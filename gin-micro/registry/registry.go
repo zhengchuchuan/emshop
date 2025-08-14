@@ -17,7 +17,7 @@ type Discovery interface {
 	//创建服务监听器
 	Watch(ctx context.Context, serviceName string) (Watcher, error)
 }
-
+// 服务监听器
 type Watcher interface {
 	//获取服务实例, next在下面的情况下会返回服务
 	//1. 第一次监听时，如果服务实例列表不为空，则返回服务实例列表
@@ -28,6 +28,7 @@ type Watcher interface {
 	Stop() error
 }
 
+// 服务器实例数据结构
 type ServiceInstance struct {
 	// 注册到服务中心的服务id
 	ID string `json:"id"`
@@ -37,6 +38,6 @@ type ServiceInstance struct {
 	Version string `json:"version"`
 	// 服务源数据
 	Metadata map[string]string `json:"metadata"`
-	// 服务地址 http://127.0.1:8080 grpc://127.0.1:8080
+	// 服务地址类似: http://127.0.1:8080 grpc://127.0.1:8080
 	Endpoints []string `json:"endpoints"`
 }

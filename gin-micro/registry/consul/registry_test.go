@@ -1,3 +1,4 @@
+// Package consul 实现了基于Consul的服务注册与发现的测试
 package consul
 
 import (
@@ -12,6 +13,7 @@ import (
 	"emshop/gin-micro/registry"
 )
 
+// tcpServer 模拟TCP服务器，用于测试健康检查
 func tcpServer(t *testing.T, lis net.Listener) {
 	for {
 		conn, err := lis.Accept()
@@ -23,17 +25,20 @@ func tcpServer(t *testing.T, lis net.Listener) {
 	}
 }
 
+// TestRegistry_Register 测试服务注册功能
 func TestRegistry_Register(t *testing.T) {
 	opts := []Option{
 		WithHealthCheck(false),
 	}
 
+	// 测试用例参数结构
 	type args struct {
 		ctx        context.Context
 		serverName string
 		server     []*registry.ServiceInstance
 	}
 
+	// 测试用例
 	test := []struct {
 		name    string
 		args    args
@@ -139,6 +144,7 @@ func TestRegistry_Register(t *testing.T) {
 	}
 }
 
+// TestRegistry_GetService 测试服务获取功能
 func TestRegistry_GetService(t *testing.T) {
 	addr := fmt.Sprintf("%s:9091", getIntranetIP())
 	lis, err := net.Listen("tcp", addr)
@@ -265,6 +271,7 @@ func TestRegistry_GetService(t *testing.T) {
 	}
 }
 
+// TestRegistry_Watch 测试服务监听功能
 func TestRegistry_Watch(t *testing.T) {
 	addr := fmt.Sprintf("%s:9091", getIntranetIP())
 
@@ -368,6 +375,7 @@ func TestRegistry_Watch(t *testing.T) {
 	}
 }
 
+// getIntranetIP 获取内网IP地址
 func getIntranetIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {

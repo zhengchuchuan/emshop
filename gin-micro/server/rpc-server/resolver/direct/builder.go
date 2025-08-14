@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc/resolver"
 )
 
+
 func init() {
 	resolver.Register(NewBuilder())
 }
@@ -20,11 +21,14 @@ func NewBuilder() *directBuilder {
 
 func (d *directBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 	addrs := make([]resolver.Address, 0)
+	// 1. 提取路径部分：/127.0.0.1:9000,127.0.0.1:9001  
+    // 2. 去掉前缀"/"：127.0.0.1:9000,127.0.0.1:9001
+    // 3. 按逗号分割：["127.0.0.1:9000", "127.0.0.1:9001"]
 	for _, addr := range strings.Split(strings.TrimPrefix(target.URL.Path, "/"), ",") {
 		addrs = append(addrs, resolver.Address{Addr: addr})
 	}
 
-	//grpc建立连接的逻辑都是这里UpdateState
+	// 直接更新gRPC连接状态，无需监听变化
 	err := cc.UpdateState(resolver.State{Addresses: addrs})
 	if err != nil {
 		return nil, err
