@@ -36,3 +36,28 @@ type SyncData struct {
 	ForceSync bool    `json:"force_sync"`
 	GoodsIds  []int32 `json:"goods_ids"`
 }
+
+type UpdateGoods struct {
+	Name            string   `json:"name" binding:"required,min=2,max=20"`
+	GoodsSn         string   `json:"goods_sn"`
+	Stocks          int32    `json:"stocks" binding:"required,min=1"`
+	MarketPrice     float32  `json:"market_price" binding:"required,min=0"`
+	ShopPrice       float32  `json:"shop_price" binding:"required,min=0"`
+	GoodsBrief      string   `json:"goods_brief" binding:"required,min=3"`
+	GoodsDesc       string   `json:"goods_desc"`
+	ShipFree        bool     `json:"ship_free"`
+	Images          []string `json:"images"`
+	DescImages      []string `json:"desc_images"`
+	GoodsFrontImage string   `json:"goods_front_image" binding:"required,url"`
+	IsNew           bool     `json:"is_new"`
+	IsHot           bool     `json:"is_hot"`
+	OnSale          bool     `json:"on_sale"`
+	CategoryId      int32    `json:"category_id" binding:"required"`
+	BrandId         int32    `json:"brand_id" binding:"required"`
+}
+
+type UpdateGoodsStatus struct {
+	IsNew  *bool `json:"is_new" binding:"required"`
+	IsHot  *bool `json:"is_hot" binding:"required"`
+	OnSale *bool `json:"on_sale" binding:"required"`
+}

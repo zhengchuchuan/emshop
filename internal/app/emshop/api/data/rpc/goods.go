@@ -74,4 +74,37 @@ func (g *goods) SyncGoodsData(ctx context.Context, request *gpbv1.SyncDataReques
 	return response, nil
 }
 
+func (g *goods) GetGoodsDetail(ctx context.Context, request *gpbv1.GoodInfoRequest) (*gpbv1.GoodsInfoResponse, error) {
+	log.Infof("Calling GetGoodsDetail gRPC for goods ID: %d", request.Id)
+	response, err := g.gc.GetGoodsDetail(ctx, request)
+	if err != nil {
+		log.Errorf("GetGoodsDetail gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("GetGoodsDetail gRPC call successful, goods name: %s", response.Name)
+	return response, nil
+}
+
+func (g *goods) DeleteGoods(ctx context.Context, info *gpbv1.DeleteGoodsInfo) (*gpbv1.GoodsInfoResponse, error) {
+	log.Infof("Calling DeleteGoods gRPC for goods ID: %d", info.Id)
+	_, err := g.gc.DeleteGoods(ctx, info)
+	if err != nil {
+		log.Errorf("DeleteGoods gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("DeleteGoods gRPC call successful, goods ID: %d", info.Id)
+	return &gpbv1.GoodsInfoResponse{}, nil
+}
+
+func (g *goods) UpdateGoods(ctx context.Context, info *gpbv1.CreateGoodsInfo) (*gpbv1.GoodsInfoResponse, error) {
+	log.Infof("Calling UpdateGoods gRPC for goods ID: %d", info.Id)
+	_, err := g.gc.UpdateGoods(ctx, info)
+	if err != nil {
+		log.Errorf("UpdateGoods gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("UpdateGoods gRPC call successful, goods ID: %d", info.Id)
+	return &gpbv1.GoodsInfoResponse{}, nil
+}
+
 var _ data.GoodsData = &goods{}

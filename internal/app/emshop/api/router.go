@@ -51,13 +51,12 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	{
 		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
 		goodsRouter.GET("", goodsController.List)                                                            //商品列表
-		// TODO: 待实现以下接口
 		goodsRouter.POST("", jwtAuth.AuthFunc(), goodsController.New)          //该接口需要管理员权限
 		goodsRouter.POST("/sync", jwtAuth.AuthFunc(), goodsController.Sync)    //数据同步接口，需要管理员权限
-		// goodsRouter.GET("/:id", goodsController.Detail)                                                      //获取商品的详情
-		// goodsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.Delete) //删除商品
-		// goodsRouter.GET("/:id/stocks", goodsController.Stocks)                                               //获取商品的库存
-		// goodsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.Update)
-		// goodsRouter.PATCH("/:id", jwtAuth.AuthFunc(), goodsController.UpdateStatus)
+		goodsRouter.GET("/:id", goodsController.Detail)                                                      //获取商品的详情
+		goodsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.Delete) //删除商品
+		goodsRouter.GET("/:id/stocks", goodsController.Stocks)                                               //获取商品的库存
+		goodsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.Update)
+		goodsRouter.PATCH("/:id", jwtAuth.AuthFunc(), goodsController.UpdateStatus)
 	}
 }
