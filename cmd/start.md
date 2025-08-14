@@ -2,9 +2,10 @@
 
 go run cmd/user/user.go -c configs/user/srv.yaml
 go run cmd/goods/goods.go -c configs/goods/srv.yaml
-
-go run cmd/inventory/inventory.go -c configs/inventory/srv.yaml
 go run cmd/order/order.go -c configs/order/srv.yaml
+go run cmd/inventory/inventory.go -c configs/inventory/srv.yaml
+go run cmd/userop/userop.go -c configs/userop/srv.yaml
+
 
 
 go run cmd/admin/admin.go -c configs/admin/admin.yaml

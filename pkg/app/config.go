@@ -20,7 +20,6 @@ const configFlagName = "config"
 var cfgFile string
 
 // init函数在包初始化时自动调用，定义全局配置文件标志
-// nolint: gochecknoinits
 func init() {
 	// 使用pflag定义配置文件标志：--config/-c
 	// StringVarP: 支持长标志(--config)和短标志(-c)

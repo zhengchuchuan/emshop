@@ -4,8 +4,10 @@ import (
 	restserver "emshop/gin-micro/server/rest-server"
 	"emshop/internal/app/emshop/api/config"
 	"emshop/internal/app/emshop/api/controller/goods/v1"
+	"emshop/internal/app/emshop/api/controller/order/v1"
 	v12 "emshop/internal/app/emshop/api/controller/sms/v1"
 	"emshop/internal/app/emshop/api/controller/user/v1"
+	"emshop/internal/app/emshop/api/controller/userop/v1"
 	"emshop/internal/app/emshop/api/data/rpc"
 	"emshop/internal/app/emshop/api/service"
 )
@@ -58,5 +60,83 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		goodsRouter.GET("/:id/stocks", goodsController.Stocks)                                               //获取商品的库存
 		goodsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.Update)
 		goodsRouter.PATCH("/:id", jwtAuth.AuthFunc(), goodsController.UpdateStatus)
+	}
+
+	//商品分类api
+	categorysRouter := v1.Group("categorys")
+	{
+		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
+		categorysRouter.GET("", goodsController.CategoryList)                                    // 商品类别列表页
+		categorysRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteCategory)      // 删除分类
+		categorysRouter.GET("/:id", goodsController.CategoryDetail)                              // 获取分类详情
+		categorysRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateCategory)            //新建分类
+		categorysRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateCategory)         //修改分类信息
+	}
+
+	//品牌管理api
+	brandsRouter := v1.Group("brands")
+	{
+		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
+		brandsRouter.GET("", goodsController.BrandList)                                         // 品牌列表
+		brandsRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateBrand)                 // 新建品牌
+		brandsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateBrand)              // 修改品牌
+		brandsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteBrand)           // 删除品牌
+	}
+
+	//轮播图管理api
+	bannersRouter := v1.Group("banners")
+	{
+		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
+		bannersRouter.GET("", goodsController.BannerList)                                       // 轮播图列表
+		bannersRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateBanner)               // 新建轮播图
+		bannersRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateBanner)            // 修改轮播图
+		bannersRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteBanner)         // 删除轮播图
+	}
+
+	//订单管理api
+	ordersRouter := v1.Group("orders")
+	{
+		orderController := order.NewOrderController(serviceFactory, g.Translator())
+		ordersRouter.GET("", jwtAuth.AuthFunc(), orderController.OrderList)                    // 订单列表
+		ordersRouter.POST("", jwtAuth.AuthFunc(), orderController.CreateOrder)                 // 创建订单
+		ordersRouter.GET("/:id", jwtAuth.AuthFunc(), orderController.OrderDetail)              // 订单详情
+	}
+
+	//购物车管理api
+	cartRouter := v1.Group("shopcarts")
+	{
+		orderController := order.NewOrderController(serviceFactory, g.Translator())
+		cartRouter.GET("", jwtAuth.AuthFunc(), orderController.CartList)                       // 购物车列表
+		cartRouter.POST("", jwtAuth.AuthFunc(), orderController.AddToCart)                     // 添加到购物车
+		cartRouter.PATCH("/:id", jwtAuth.AuthFunc(), orderController.UpdateCartItem)           // 更新购物车商品
+		cartRouter.DELETE("/:id", jwtAuth.AuthFunc(), orderController.DeleteCartItem)          // 删除购物车商品
+	}
+
+	//用户收藏管理api
+	favRouter := v1.Group("userfavs")
+	{
+		userOpController := userop.NewUserOpController(serviceFactory, g.Translator())
+		favRouter.GET("", jwtAuth.AuthFunc(), userOpController.UserFavList)                    // 收藏列表
+		favRouter.POST("", jwtAuth.AuthFunc(), userOpController.CreateUserFav)                 // 添加收藏
+		favRouter.DELETE("/:id", jwtAuth.AuthFunc(), userOpController.DeleteUserFav)           // 删除收藏
+		favRouter.GET("/:id", jwtAuth.AuthFunc(), userOpController.GetUserFavDetail)           // 查看是否收藏
+	}
+
+	//用户地址管理api
+	addressRouter := v1.Group("address")
+	{
+		userOpController := userop.NewUserOpController(serviceFactory, g.Translator())
+		addressRouter.GET("", jwtAuth.AuthFunc(), userOpController.GetAddressList)             // 地址列表
+		addressRouter.POST("", jwtAuth.AuthFunc(), userOpController.CreateAddress)             // 创建地址
+		addressRouter.PUT("/:id", jwtAuth.AuthFunc(), userOpController.UpdateAddress)          // 更新地址
+		addressRouter.DELETE("/:id", jwtAuth.AuthFunc(), userOpController.DeleteAddress)       // 删除地址
+	}
+
+	//用户留言管理api
+	messageRouter := v1.Group("message")
+	{
+		userOpController := userop.NewUserOpController(serviceFactory, g.Translator())
+		messageRouter.GET("", jwtAuth.AuthFunc(), userOpController.MessageList)                // 留言列表
+		messageRouter.POST("", jwtAuth.AuthFunc(), userOpController.CreateMessage)             // 创建留言
 	}
 }

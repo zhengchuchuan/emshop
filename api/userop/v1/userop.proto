@@ -1,0 +1,95 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+option go_package = ".;proto";
+
+service UserOp {
+    // 用户收藏
+    rpc UserFavList(UserFavListRequest) returns(UserFavListResponse); //获取用户收藏列表
+    rpc CreateUserFav(UserFavRequest) returns(UserFavResponse); //添加收藏
+    rpc DeleteUserFav(UserFavRequest) returns(google.protobuf.Empty); //删除收藏
+    rpc GetUserFavDetail(UserFavRequest) returns(UserFavResponse); //查询某个商品是否被收藏
+
+    // 用户地址
+    rpc GetAddressList(AddressRequest) returns(AddressListResponse); //获取用户地址
+    rpc CreateAddress(AddressRequest) returns(AddressResponse); //新建地址
+    rpc UpdateAddress(AddressRequest) returns(google.protobuf.Empty); //更新地址
+    rpc DeleteAddress(DeleteAddressRequest) returns(google.protobuf.Empty); //删除地址
+
+    // 用户留言
+    rpc MessageList(MessageRequest) returns(MessageListResponse); //获取留言
+    rpc CreateMessage(MessageRequest) returns(MessageResponse); //添加留言
+}
+
+message UserFavRequest {
+    int32 userId = 1;
+    int32 goodsId = 2;
+}
+
+message UserFavResponse {
+    int32 userId = 1;
+    int32 goodsId = 2;
+}
+
+message UserFavListRequest {
+    int32 userId = 1;
+}
+
+message UserFavListResponse {
+    int32 total = 1;
+    repeated UserFavResponse data = 2;
+}
+
+message AddressRequest {
+    int32 id = 1;
+    int32 userId = 2;
+    string province = 3;
+    string city = 4;
+    string district = 5;
+    string address = 6;
+    string signerName = 7;
+    string signerMobile = 8;
+}
+
+message AddressResponse {
+    int32 id = 1;
+    int32 userId = 2;
+    string province = 3;
+    string city = 4;
+    string district = 5;
+    string address = 6;
+    string signerName = 7;
+    string signerMobile = 8;
+}
+
+message DeleteAddressRequest {
+    int32 id = 1;
+    int32 userId = 2;
+}
+
+message AddressListResponse {
+    int32 total = 1;
+    repeated AddressResponse data = 2;
+}
+
+message MessageRequest {
+    int32 id = 1;
+    int32 userId = 2;
+    int32 messageType = 3;
+    string subject = 4;
+    string message = 5;
+    string file = 6;
+}
+
+message MessageResponse {
+    int32 id = 1;
+    int32 userId = 2;
+    int32 messageType = 3;
+    string subject = 4;
+    string message = 5;
+    string file = 6;
+}
+
+message MessageListResponse {
+    int32 total = 1;
+    repeated MessageResponse data = 2;
+}

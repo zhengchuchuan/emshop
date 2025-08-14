@@ -10,6 +10,7 @@ import (
 	"emshop/gin-micro/registry"
 	"emshop/pkg/log"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const goodsserviceName = "discovery:///emshop-goods-srv"
@@ -105,6 +106,155 @@ func (g *goods) UpdateGoods(ctx context.Context, info *gpbv1.CreateGoodsInfo) (*
 	}
 	log.Infof("UpdateGoods gRPC call successful, goods ID: %d", info.Id)
 	return &gpbv1.GoodsInfoResponse{}, nil
+}
+
+// ==================== 分类管理 ====================
+
+func (g *goods) GetAllCategorysList(ctx context.Context) (*gpbv1.CategoryListResponse, error) {
+	log.Infof("Calling GetAllCategorysList gRPC")
+	response, err := g.gc.GetAllCategorysList(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.Errorf("GetAllCategorysList gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("GetAllCategorysList gRPC call successful, total: %d", response.Total)
+	return response, nil
+}
+
+func (g *goods) GetSubCategory(ctx context.Context, request *gpbv1.CategoryListRequest) (*gpbv1.SubCategoryListResponse, error) {
+	log.Infof("Calling GetSubCategory gRPC for category ID: %d", request.Id)
+	response, err := g.gc.GetSubCategory(ctx, request)
+	if err != nil {
+		log.Errorf("GetSubCategory gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("GetSubCategory gRPC call successful")
+	return response, nil
+}
+
+func (g *goods) CreateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error) {
+	log.Infof("Calling CreateCategory gRPC: %s", request.Name)
+	response, err := g.gc.CreateCategory(ctx, request)
+	if err != nil {
+		log.Errorf("CreateCategory gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("CreateCategory gRPC call successful, category ID: %d", response.Id)
+	return response, nil
+}
+
+func (g *goods) UpdateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error) {
+	log.Infof("Calling UpdateCategory gRPC for category ID: %d", request.Id)
+	_, err := g.gc.UpdateCategory(ctx, request)
+	if err != nil {
+		log.Errorf("UpdateCategory gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("UpdateCategory gRPC call successful, category ID: %d", request.Id)
+	return &gpbv1.CategoryInfoResponse{}, nil
+}
+
+func (g *goods) DeleteCategory(ctx context.Context, request *gpbv1.DeleteCategoryRequest) (*gpbv1.CategoryInfoResponse, error) {
+	log.Infof("Calling DeleteCategory gRPC for category ID: %d", request.Id)
+	_, err := g.gc.DeleteCategory(ctx, request)
+	if err != nil {
+		log.Errorf("DeleteCategory gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("DeleteCategory gRPC call successful, category ID: %d", request.Id)
+	return &gpbv1.CategoryInfoResponse{}, nil
+}
+
+// ==================== 品牌管理 ====================
+
+func (g *goods) BrandList(ctx context.Context, request *gpbv1.BrandFilterRequest) (*gpbv1.BrandListResponse, error) {
+	log.Infof("Calling BrandList gRPC with pages: %d", request.Pages)
+	response, err := g.gc.BrandList(ctx, request)
+	if err != nil {
+		log.Errorf("BrandList gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("BrandList gRPC call successful, total: %d", response.Total)
+	return response, nil
+}
+
+func (g *goods) CreateBrand(ctx context.Context, request *gpbv1.BrandRequest) (*gpbv1.BrandInfoResponse, error) {
+	log.Infof("Calling CreateBrand gRPC: %s", request.Name)
+	response, err := g.gc.CreateBrand(ctx, request)
+	if err != nil {
+		log.Errorf("CreateBrand gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("CreateBrand gRPC call successful, brand ID: %d", response.Id)
+	return response, nil
+}
+
+func (g *goods) UpdateBrand(ctx context.Context, request *gpbv1.BrandRequest) (*gpbv1.BrandInfoResponse, error) {
+	log.Infof("Calling UpdateBrand gRPC for brand ID: %d", request.Id)
+	_, err := g.gc.UpdateBrand(ctx, request)
+	if err != nil {
+		log.Errorf("UpdateBrand gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("UpdateBrand gRPC call successful, brand ID: %d", request.Id)
+	return &gpbv1.BrandInfoResponse{}, nil
+}
+
+func (g *goods) DeleteBrand(ctx context.Context, request *gpbv1.BrandRequest) (*gpbv1.BrandInfoResponse, error) {
+	log.Infof("Calling DeleteBrand gRPC for brand ID: %d", request.Id)
+	_, err := g.gc.DeleteBrand(ctx, request)
+	if err != nil {
+		log.Errorf("DeleteBrand gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("DeleteBrand gRPC call successful, brand ID: %d", request.Id)
+	return &gpbv1.BrandInfoResponse{}, nil
+}
+
+// ==================== 轮播图管理 ====================
+
+func (g *goods) BannerList(ctx context.Context) (*gpbv1.BannerListResponse, error) {
+	log.Infof("Calling BannerList gRPC")
+	response, err := g.gc.BannerList(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.Errorf("BannerList gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("BannerList gRPC call successful, total: %d", response.Total)
+	return response, nil
+}
+
+func (g *goods) CreateBanner(ctx context.Context, request *gpbv1.BannerRequest) (*gpbv1.BannerResponse, error) {
+	log.Infof("Calling CreateBanner gRPC: %s", request.Url)
+	response, err := g.gc.CreateBanner(ctx, request)
+	if err != nil {
+		log.Errorf("CreateBanner gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("CreateBanner gRPC call successful, banner ID: %d", response.Id)
+	return response, nil
+}
+
+func (g *goods) UpdateBanner(ctx context.Context, request *gpbv1.BannerRequest) (*gpbv1.BannerResponse, error) {
+	log.Infof("Calling UpdateBanner gRPC for banner ID: %d", request.Id)
+	_, err := g.gc.UpdateBanner(ctx, request)
+	if err != nil {
+		log.Errorf("UpdateBanner gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("UpdateBanner gRPC call successful, banner ID: %d", request.Id)
+	return &gpbv1.BannerResponse{}, nil
+}
+
+func (g *goods) DeleteBanner(ctx context.Context, request *gpbv1.BannerRequest) (*gpbv1.BannerResponse, error) {
+	log.Infof("Calling DeleteBanner gRPC for banner ID: %d", request.Id)
+	_, err := g.gc.DeleteBanner(ctx, request)
+	if err != nil {
+		log.Errorf("DeleteBanner gRPC call failed: %v", err)
+		return nil, err
+	}
+	log.Infof("DeleteBanner gRPC call successful, banner ID: %d", request.Id)
+	return &gpbv1.BannerResponse{}, nil
 }
 
 var _ data.GoodsData = &goods{}
