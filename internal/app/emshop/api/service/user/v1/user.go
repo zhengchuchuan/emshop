@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	upb "emshop/api/user/v1"
 	"emshop/gin-micro/server/rest-server/middlewares"
 	"emshop/internal/app/emshop/api/data"
 	"emshop/internal/app/pkg/code"
@@ -12,12 +13,23 @@ import (
 	"emshop/pkg/errors"
 	"emshop/pkg/log"
 	"emshop/pkg/storage"
+	itime "emshop/pkg/common/time"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
+type User struct {
+	ID       uint64    `json:"id"`
+	Mobile   string    `json:"mobile"`
+	NickName string    `json:"nick_name"`
+	Birthday itime.Time `json:"birthday"`
+	Gender   string    `json:"gender"`
+	Role     int32     `json:"role"`
+	PassWord string    `json:"password"`
+}
+
 type UserDTO struct {
-	data.User
+	User
 
 	Token     string `json:"token"`			// JWT Token
 	ExpiresAt int64  `json:"expires_at"`	// token过期时间
@@ -50,22 +62,38 @@ func NewUserService(data data.DataFactory, jwtOpts *options.JwtOptions) UserSrv 
 	return &userService{data: data, jwtOpts: jwtOpts}
 }
 
+// 辅助函数：将protobuf用户信息转换为本地User结构体
+func protoToUser(pb *upb.UserInfoResponse) User {
+	return User{
+		ID:       uint64(pb.Id),
+		Mobile:   pb.Mobile,
+		NickName: pb.NickName,
+		Birthday: itime.Time{Time: time.Unix(int64(pb.BirthDay), 0)},
+		Gender:   pb.Gender,
+		Role:     pb.Role,
+		PassWord: pb.PassWord,
+	}
+}
+
 
 func (us *userService) MobileLogin(ctx context.Context, mobile, password string) (*UserDTO, error) {
-	user, err := us.data.Users().GetByMobile(ctx, mobile)
+	userResp, err := us.data.Users().GetUserByMobile(ctx, &upb.MobileRequest{Mobile: mobile})
 	if err != nil {
 		return nil, err
 	}
 
+	user := protoToUser(userResp)
 
 	//检查密码是否正确
-	err = us.data.Users().CheckPassWord(ctx, password, user.PassWord)
+	checkResp, err := us.data.Users().CheckPassWord(ctx, &upb.PasswordCheckInfo{
+		Password:          password,
+		EncryptedPassword: user.PassWord,
+	})
 	if err != nil {
-		// 如果是密码错误，返回特定的错误码
-		if errors.IsCode(err, code.ErrUserPasswordIncorrect) {
-			return nil, errors.WithCode(code.ErrUserPasswordIncorrect, "密码错误")
-		}
 		return nil, err
+	}
+	if !checkResp.Success {
+		return nil, errors.WithCode(code.ErrUserPasswordIncorrect, "密码错误")
 	}
 
 	//生成token
@@ -106,15 +134,16 @@ func (us *userService) Register(ctx context.Context, mobile, password, codes str
 		return nil, errors.WithCode(code.ErrCodeInCorrect, "验证码错误")
 	}
 
-	var user = &data.User{
+	userResp, err := us.data.Users().CreateUser(ctx, &upb.CreateUserInfo{
 		Mobile:   mobile,
 		PassWord: password,
-	}
-	err = us.data.Users().Create(ctx, user)
+	})
 	if err != nil {
 		log.Errorf("user register failed: %v", err)
 		return nil, err
 	}
+
+	user := protoToUser(userResp)
 
 	// 直接生成token
 	j := middlewares.NewJWT(us.jwtOpts.Key)
@@ -134,62 +163,68 @@ func (us *userService) Register(ctx context.Context, mobile, password, codes str
 	}
 
 	return &UserDTO{
-		User:      *user,
+		User:      user,
 		Token:     token,	// 向上传递token
 		ExpiresAt: (time.Now().Local().Add(us.jwtOpts.Timeout)).Unix(),
 	}, nil
 }
 
 func (u *userService) Update(ctx context.Context, userDTO *UserDTO) error {
-	user := &data.User{
-		ID:       userDTO.ID,
-		Mobile:   userDTO.Mobile,
+	_, err := u.data.Users().UpdateUser(ctx, &upb.UpdateUserInfo{
+		Id:       int32(userDTO.ID),
 		NickName: userDTO.NickName,
-		Birthday: userDTO.Birthday,
 		Gender:   userDTO.Gender,
-		Role:     userDTO.Role,
-		PassWord: userDTO.PassWord,
-	}
-	return u.data.Users().Update(ctx, user)
+		BirthDay: uint64(userDTO.Birthday.Unix()),
+	})
+	return err
 }
 
 func (us *userService) Get(ctx context.Context, userID uint64) (*UserDTO, error) {
-	userDO, err := us.data.Users().Get(ctx, userID)
+	userResp, err := us.data.Users().GetUserById(ctx, &upb.IdRequest{Id: int32(userID)})
 	if err != nil {
 		return nil, err
 	}
-	return &UserDTO{User: userDO}, nil
+	user := protoToUser(userResp)
+	return &UserDTO{User: user}, nil
 }
 
 func (u *userService) GetByMobile(ctx context.Context, mobile string) (*UserDTO, error) {
-	user, err := u.data.Users().GetByMobile(ctx, mobile)
+	userResp, err := u.data.Users().GetUserByMobile(ctx, &upb.MobileRequest{Mobile: mobile})
 	if err != nil {
 		return nil, err
 	}
+	user := protoToUser(userResp)
 	return &UserDTO{User: user}, nil
 }
 
 func (u *userService) CheckPassWord(ctx context.Context, password, EncryptedPassword string) (bool, error) {
-	err := u.data.Users().CheckPassWord(ctx, password, EncryptedPassword)
+	checkResp, err := u.data.Users().CheckPassWord(ctx, &upb.PasswordCheckInfo{
+		Password:          password,
+		EncryptedPassword: EncryptedPassword,
+	})
 	if err != nil {
 		return false, err
 	}
-	return true, nil
+	return checkResp.Success, nil
 }
 
 func (u *userService) GetUserList(ctx context.Context, pn, pSize uint32) (*UserListDTO, error) {
-	userList, err := u.data.Users().List(ctx, pn, pSize)
+	userListResp, err := u.data.Users().GetUserList(ctx, &upb.PageInfo{
+		Pn:    pn,
+		PSize: pSize,
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	var userDTOs []*UserDTO
-	for _, user := range userList.Items {
-		userDTOs = append(userDTOs, &UserDTO{User: *user})
+	for _, userResp := range userListResp.Data {
+		user := protoToUser(userResp)
+		userDTOs = append(userDTOs, &UserDTO{User: user})
 	}
 
 	return &UserListDTO{
-		TotalCount: userList.TotalCount,
+		TotalCount: int64(userListResp.Total),
 		Items:      userDTOs,
 	}, nil
 }

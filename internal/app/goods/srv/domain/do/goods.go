@@ -37,9 +37,9 @@ type GoodsSearchDOList struct {
 type GoodsDO struct {
 	gorm2.BaseModel
 
-	CategoryID int32      `gorm:"type:int;not null"`
+	CategoryID int32      `gorm:"column:category_id;type:int;not null"`
 	Category   CategoryDO `gorm:"foreignKey:CategoryID;references:ID" json:"category"`
-	BrandsID   int32      `gorm:"type:int;not null"`
+	BrandsID   int32      `gorm:"column:brand_id;type:int;not null"`
 	Brands     BrandsDO   `gorm:"foreignKey:BrandsID;references:ID" json:"Brands"`
 
 	OnSale   bool `gorm:"default:false;not null"`
@@ -52,9 +52,11 @@ type GoodsDO struct {
 	ClickNum        int32    `gorm:"type:int;default:0;not null"`
 	SoldNum         int32    `gorm:"type:int;default:0;not null"`
 	FavNum          int32    `gorm:"type:int;default:0;not null"`
+	Stocks          int32    `gorm:"type:int;default:0;not null"`
 	MarketPrice     float32  `gorm:"not null"`
 	ShopPrice       float32  `gorm:"not null"`
 	GoodsBrief      string   `gorm:"type:varchar(100);not null"`
+	GoodsDesc       string   `gorm:"type:text"`
 	Images          GormList `gorm:"type:varchar(1000);not null"`
 	DescImages      GormList `gorm:"type:varchar(1000);not null"`
 	GoodsFrontImage string   `gorm:"type:varchar(200);not null"`

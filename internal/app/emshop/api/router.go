@@ -19,6 +19,7 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 
 	// 用户服务api
 	ugroup := v1.Group("/user")
+	// 创建数据工厂
 	data, err := rpc.GetDataFactoryOr(cfg.Registry)
 	if err != nil {
 		panic(err)

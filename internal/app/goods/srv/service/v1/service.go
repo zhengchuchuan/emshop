@@ -17,7 +17,7 @@ type GoodsSrv interface {
 	Get(ctx context.Context, ID uint64) (*dto.GoodsDTO, error)
 
 	// 创建商品
-	Create(ctx context.Context, goods *dto.GoodsDTO) error
+	Create(ctx context.Context, goods *dto.GoodsDTO) (*dto.GoodsDTO, error)
 
 	// 更新商品
 	Update(ctx context.Context, goods *dto.GoodsDTO) error

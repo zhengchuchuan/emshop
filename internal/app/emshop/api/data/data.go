@@ -4,6 +4,7 @@ import (
 	"context"
 	gpb "emshop/api/goods/v1"
 	opb "emshop/api/order/v1"
+	upb "emshop/api/user/v1"
 	uoppb "emshop/api/userop/v1"
 )
 
@@ -65,6 +66,16 @@ type UserOpData interface {
 	// 用户留言管理
 	MessageList(ctx context.Context, request *uoppb.MessageRequest) (*uoppb.MessageListResponse, error)
 	CreateMessage(ctx context.Context, request *uoppb.MessageRequest) (*uoppb.MessageResponse, error)
+}
+
+type UserData interface {
+	// 用户管理
+	GetUserList(ctx context.Context, request *upb.PageInfo) (*upb.UserListResponse, error)
+	GetUserByMobile(ctx context.Context, request *upb.MobileRequest) (*upb.UserInfoResponse, error)
+	GetUserById(ctx context.Context, request *upb.IdRequest) (*upb.UserInfoResponse, error)
+	CreateUser(ctx context.Context, request *upb.CreateUserInfo) (*upb.UserInfoResponse, error)
+	UpdateUser(ctx context.Context, request *upb.UpdateUserInfo) (*upb.UserInfoResponse, error)
+	CheckPassWord(ctx context.Context, request *upb.PasswordCheckInfo) (*upb.CheckResponse, error)
 }
 
 type DataFactory interface {

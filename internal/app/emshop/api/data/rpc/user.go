@@ -2,18 +2,14 @@ package rpc
 
 import (
 	"context"
-	"fmt"
-	"emshop/internal/app/pkg/code"
 	"emshop/gin-micro/server/rpc-server"
 	"emshop/gin-micro/server/rpc-server/client-interceptors"
-	"emshop/pkg/errors"
 	"emshop/pkg/log"
 	"time"
 
 	upbv1 "emshop/api/user/v1"
 	"emshop/internal/app/emshop/api/data"
 	"emshop/gin-micro/registry"
-	itime "emshop/pkg/common/time"
 	"google.golang.org/grpc"
 )
 
@@ -46,116 +42,33 @@ func NewUserServiceClient(r registry.Discovery) upbv1.UserClient {
 	return c
 }
 
-func (u *users) CheckPassWord(ctx context.Context, password, encryptedPwd string) error {
-	cres, err := u.uc.CheckPassWord(ctx, &upbv1.PasswordCheckInfo{
-		Password:          password,
-		EncryptedPassword: encryptedPwd,
-	})
-	if err != nil {
-		return err
-	}
-	if cres.Success {
-		return nil
-	}
-	return errors.WithCode(code.ErrUserPasswordIncorrect, "密码错误")
+func (u *users) CheckPassWord(ctx context.Context, request *upbv1.PasswordCheckInfo) (*upbv1.CheckResponse, error) {
+	return u.uc.CheckPassWord(ctx, request)
 }
 
-func (u *users) Create(ctx context.Context, user *data.User) error {
-	protoUser := &upbv1.CreateUserInfo{
-		Mobile:   user.Mobile,
-		NickName: user.NickName,
-		PassWord: user.PassWord,
-	}
-	log.Infof("Calling CreateUser gRPC for mobile: %s", user.Mobile)
-	userRsp, err := u.uc.CreateUser(ctx, protoUser)
-	if err != nil {
-		log.Errorf("CreateUser gRPC call failed: %v", err)
-		return err
-	}
-	log.Infof("CreateUser gRPC call successful, user ID: %d", userRsp.Id)
-	user.ID = uint64(userRsp.Id)
-	return nil
+func (u *users) CreateUser(ctx context.Context, request *upbv1.CreateUserInfo) (*upbv1.UserInfoResponse, error) {
+	return u.uc.CreateUser(ctx, request)
 }
 
-func (u *users) Update(ctx context.Context, user *data.User) error {
-	protoUser := &upbv1.UpdateUserInfo{
-		Id:       int32(user.ID),
-		NickName: user.NickName,
-		Gender:   user.Gender,
-		BirthDay: uint64(user.Birthday.Unix()),
-	}
-	_, err := u.uc.UpdateUser(ctx, protoUser)
+func (u *users) UpdateUser(ctx context.Context, request *upbv1.UpdateUserInfo) (*upbv1.UserInfoResponse, error) {
+	_, err := u.uc.UpdateUser(ctx, request)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	// UpdateUser 返回 Empty，所以我们需要重新获取用户信息
+	return u.uc.GetUserById(ctx, &upbv1.IdRequest{Id: request.Id})
 }
 
-func (u *users) Get(ctx context.Context, userID uint64) (data.User, error) {
-	user, err := u.uc.GetUserById(ctx, &upbv1.IdRequest{
-		Id: int32(userID),
-	})
-	if err != nil {
-		return data.User{}, err
-	}
-
-	return data.User{
-		ID:       uint64(user.Id),
-		Mobile:   user.Mobile,
-		NickName: user.NickName,
-		Birthday: itime.Time{time.Unix(int64(user.BirthDay), 0)},
-		Gender:   user.Gender,
-		Role:     user.Role,
-		PassWord: user.PassWord,
-	}, nil
+func (u *users) GetUserById(ctx context.Context, request *upbv1.IdRequest) (*upbv1.UserInfoResponse, error) {
+	return u.uc.GetUserById(ctx, request)
 }
 
-func (u *users) GetByMobile(ctx context.Context, mobile string) (data.User, error) {
-	user, err := u.uc.GetUserByMobile(ctx, &upbv1.MobileRequest{
-		Mobile: mobile,
-	})
-	if err != nil {
-		return data.User{}, err
-	}
-
-	return data.User{
-		ID:       uint64(user.Id),
-		Mobile:   user.Mobile,
-		NickName: user.NickName,
-		Birthday: itime.Time{time.Unix(int64(user.BirthDay), 0)},
-		Gender:   user.Gender,
-		Role:     user.Role,
-		PassWord: user.PassWord,
-	}, nil
+func (u *users) GetUserByMobile(ctx context.Context, request *upbv1.MobileRequest) (*upbv1.UserInfoResponse, error) {
+	return u.uc.GetUserByMobile(ctx, request)
 }
 
-func (u *users) List(ctx context.Context, pn, pSize uint32) (data.UserList, error) {
-	userListResponse, err := u.uc.GetUserList(ctx, &upbv1.PageInfo{
-		Pn:    pn,
-		PSize: pSize,
-	})
-	if err != nil {
-		return data.UserList{}, err
-	}
-
-	var users []*data.User
-	for _, user := range userListResponse.Data {
-		users = append(users, &data.User{
-			ID:       uint64(user.Id),
-			Mobile:   user.Mobile,
-			NickName: user.NickName,
-			Birthday: itime.Time{Time: time.Unix(int64(user.BirthDay), 0)},
-			Gender:   user.Gender,
-			Role:     user.Role,
-			PassWord: user.PassWord,
-		})
-	}
-
-	fmt.Printf("gRPC response Total: %d\n", userListResponse.Total)
-	return data.UserList{
-		TotalCount: int64(userListResponse.Total),
-		Items:      users,
-	}, nil
+func (u *users) GetUserList(ctx context.Context, request *upbv1.PageInfo) (*upbv1.UserListResponse, error) {
+	return u.uc.GetUserList(ctx, request)
 }
 
 var _ data.UserData = &users{}

@@ -21,6 +21,8 @@ type grpcData struct {
 	uc upb.UserClient
 	oc opb.OrderClient
 	uopc uoppb.UserOpClient
+	
+	ud data.UserData
 	gd data.GoodsData
 	od data.OrderData
 	uopd data.UserOpData
@@ -31,7 +33,7 @@ func (g grpcData) Goods() data.GoodsData {
 }
 
 func (g grpcData) Users() data.UserData {
-	return NewUsers(g.uc)
+	return g.ud
 }
 
 func (g grpcData) Order() data.OrderData {
@@ -72,6 +74,7 @@ func GetDataFactoryOr(options *options.RegistryOptions) (data.DataFactory, error
 		goodsClient := NewGoodsServiceClient(discovery)
 		orderClient := NewOrderServiceClient(discovery)
 		userOpClient := NewUserOpServiceClient(discovery)
+		userData := NewUsers(userClient)
 		goodsData := NewGoods(goodsClient)
 		orderData := NewOrder(orderClient)
 		userOpData := NewUserOp(userOpClient)
@@ -80,6 +83,7 @@ func GetDataFactoryOr(options *options.RegistryOptions) (data.DataFactory, error
 			uc: userClient,
 			oc: orderClient,
 			uopc: userOpClient,
+			ud: userData,
 			gd: goodsData,
 			od: orderData,
 			uopd: userOpData,

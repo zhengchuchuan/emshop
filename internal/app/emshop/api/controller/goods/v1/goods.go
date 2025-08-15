@@ -136,18 +136,26 @@ func (gc *goodsController) New(ctx *gin.Context) {
 		"desc_images": goodsDTO.DescImages,
 		"front_image": goodsDTO.GoodsFrontImage,
 		"shop_price":  goodsDTO.ShopPrice,
-		"category": map[string]interface{}{
+		"is_hot":      goodsDTO.IsHot,
+		"is_new":      goodsDTO.IsNew,
+		"on_sale":     goodsDTO.OnSale,
+	}
+
+	// 添加分类信息（如果存在）
+	if goodsDTO.Category != nil {
+		response["category"] = map[string]interface{}{
 			"id":   goodsDTO.Category.Id,
 			"name": goodsDTO.Category.Name,
-		},
-		"brand": map[string]interface{}{
+		}
+	}
+
+	// 添加品牌信息（如果存在）
+	if goodsDTO.Brand != nil {
+		response["brand"] = map[string]interface{}{
 			"id":   goodsDTO.Brand.Id,
 			"name": goodsDTO.Brand.Name,
 			"logo": goodsDTO.Brand.Logo,
-		},
-		"is_hot":  goodsDTO.IsHot,
-		"is_new":  goodsDTO.IsNew,
-		"on_sale": goodsDTO.OnSale,
+		}
 	}
 
 	core.WriteResponse(ctx, nil, response)

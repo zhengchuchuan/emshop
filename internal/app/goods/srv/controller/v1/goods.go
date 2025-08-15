@@ -167,14 +167,14 @@ func (gs *goodsServer) CreateGoods(ctx context.Context, info *proto.CreateGoodsI
 	goodsDTO.OnSale = info.OnSale
 
 	// 创建商品（业务层会验证分类和品牌）
-	err := gs.srv.Goods().Create(ctx, goodsDTO)
+	createdGoods, err := gs.srv.Goods().Create(ctx, goodsDTO)
 	if err != nil {
 		log.Errorf("create goods error: %v", err)
 		return nil, err
 	}
 
 	return &proto.GoodsInfoResponse{
-		Id: goodsDTO.ID,
+		Id: createdGoods.ID,
 	}, nil
 }
 

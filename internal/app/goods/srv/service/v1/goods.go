@@ -98,18 +98,18 @@ func (gs *goodsService) Get(ctx context.Context, ID uint64) (*dto.GoodsDTO, erro
 	}, nil
 }
 
-func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) error {
+func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) (*dto.GoodsDTO, error) {
 	dataFactory := gs.factoryManager.GetDataFactory()
 	
 	// 验证品牌和分类是否存在
 	_, err := dataFactory.Brands().Get(ctx, uint64(goods.BrandsID))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = dataFactory.Categorys().Get(ctx, uint64(goods.CategoryID))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// 开启事务
@@ -126,7 +126,7 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) error {
 	if err != nil {
 		log.Errorf("data.CreateInTxn err: %v", err)
 		txn.Rollback()
-		return err
+		return nil, err
 	}
 	
 	// 构建搜索对象
@@ -150,11 +150,18 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) error {
 	err = dataFactory.Search().Goods().Create(ctx, &searchDO)
 	if err != nil {
 		txn.Rollback()
-		return err
+		return nil, err
 	}
 	
 	txn.Commit()
-	return nil
+	
+	// 获取完整的商品信息（包含关联数据）
+	createdGoods, err := gs.Get(ctx, uint64(goods.ID))
+	if err != nil {
+		return nil, err
+	}
+	
+	return createdGoods, nil
 }
 
 func (gs *goodsService) Update(ctx context.Context, goods *dto.GoodsDTO) error {

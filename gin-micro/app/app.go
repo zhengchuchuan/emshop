@@ -183,6 +183,8 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 	// 4. 初始化缓存连接
 	// 5. 初始化服务注册中心连接
 	// 6. 初始化其他组件
+
+	
 	endpoints := make([]string, 0)
 	for _, e := range a.opts.endpoints {
 		endpoints = append(endpoints, e.String())
