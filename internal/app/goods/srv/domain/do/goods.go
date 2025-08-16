@@ -52,7 +52,6 @@ type GoodsDO struct {
 	ClickNum        int32    `gorm:"type:int;default:0;not null"`
 	SoldNum         int32    `gorm:"type:int;default:0;not null"`
 	FavNum          int32    `gorm:"type:int;default:0;not null"`
-	Stocks          int32    `gorm:"type:int;default:0;not null"`
 	MarketPrice     float32  `gorm:"not null"`
 	ShopPrice       float32  `gorm:"not null"`
 	GoodsBrief      string   `gorm:"type:varchar(100);not null"`

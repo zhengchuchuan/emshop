@@ -104,7 +104,6 @@ func (gc *goodsController) New(ctx *gin.Context) {
 	createGoodsInfo := proto.CreateGoodsInfo{
 		Name:            r.Name,
 		GoodsSn:         r.GoodsSn,
-		Stocks:          r.Stocks,
 		MarketPrice:     r.MarketPrice,
 		ShopPrice:       r.ShopPrice,
 		GoodsBrief:      r.GoodsBrief,
@@ -301,7 +300,6 @@ func (gc *goodsController) Update(ctx *gin.Context) {
 		Id:              int32(i),
 		Name:            r.Name,
 		GoodsSn:         r.GoodsSn,
-		Stocks:          r.Stocks,
 		MarketPrice:     r.MarketPrice,
 		ShopPrice:       r.ShopPrice,
 		GoodsBrief:      r.GoodsBrief,

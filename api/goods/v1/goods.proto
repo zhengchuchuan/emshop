@@ -182,7 +182,6 @@ message CreateGoodsInfo {
   int32 id = 1;
   string name = 2;
   string goodsSn = 3;
-  int32 stocks = 7; //库存，
   float marketPrice = 8;
   float shopPrice = 9;
   string goodsBrief = 10;

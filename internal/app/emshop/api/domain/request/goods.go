@@ -16,7 +16,6 @@ type GoodsFilter struct {
 type CreateGoods struct {
 	Name            string   `json:"name" binding:"required,min=2,max=20"`
 	GoodsSn         string   `json:"goods_sn"`
-	Stocks          int32    `json:"stocks" binding:"required,min=1"`
 	MarketPrice     float32  `json:"market_price" binding:"required,min=0"`
 	ShopPrice       float32  `json:"shop_price" binding:"required,min=0"`
 	GoodsBrief      string   `json:"goods_brief" binding:"required,min=3"`
@@ -40,7 +39,6 @@ type SyncData struct {
 type UpdateGoods struct {
 	Name            string   `json:"name" binding:"required,min=2,max=20"`
 	GoodsSn         string   `json:"goods_sn"`
-	Stocks          int32    `json:"stocks" binding:"required,min=1"`
 	MarketPrice     float32  `json:"market_price" binding:"required,min=0"`
 	ShopPrice       float32  `json:"shop_price" binding:"required,min=0"`
 	GoodsBrief      string   `json:"goods_brief" binding:"required,min=3"`
