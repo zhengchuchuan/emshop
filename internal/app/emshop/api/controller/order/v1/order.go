@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"github.com/gin-gonic/gin"
 	"emshop/gin-micro/server/rest-server"
+	"emshop/gin-micro/server/rest-server/middlewares"
 	proto "emshop/api/order/v1"
 	"emshop/internal/app/emshop/api/domain/request"
 	"emshop/internal/app/emshop/api/service"
@@ -41,7 +42,7 @@ func (oc *orderController) OrderList(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get("user_id")
+	userId, exists := ctx.Get(middlewares.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -93,7 +94,7 @@ func (oc *orderController) CreateOrder(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get("user_id")
+	userId, exists := ctx.Get(middlewares.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -134,7 +135,7 @@ func (oc *orderController) OrderDetail(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get("user_id")
+	userId, exists := ctx.Get(middlewares.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -186,7 +187,7 @@ func (oc *orderController) CartList(ctx *gin.Context) {
 	log.Info("cart list function called ...")
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get("user_id")
+	userId, exists := ctx.Get(middlewares.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -231,7 +232,7 @@ func (oc *orderController) AddToCart(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get("user_id")
+	userId, exists := ctx.Get(middlewares.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -283,7 +284,7 @@ func (oc *orderController) UpdateCartItem(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get("user_id")
+	userId, exists := ctx.Get(middlewares.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -325,15 +326,42 @@ func (oc *orderController) DeleteCartItem(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get("user_id")
+	userId, exists := ctx.Get(middlewares.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 	
+	// 先获取购物车列表，找到对应的商品ID
+	userRequest := proto.UserInfo{
+		Id: int32(userId.(int)),
+	}
+	
+	cartResponse, err := oc.srv.Order().CartItemList(ctx, &userRequest)
+	if err != nil {
+		core.WriteResponse(ctx, err, nil)
+		return
+	}
+	
+	// 找到对应的购物车条目
+	var goodsId int32
+	found := false
+	for _, item := range cartResponse.Data {
+		if item.Id == int32(i) {
+			goodsId = item.GoodsId
+			found = true
+			break
+		}
+	}
+	
+	if !found {
+		core.WriteResponse(ctx, errors.WithCode(code.ErrBind, "购物车条目不存在"), nil)
+		return
+	}
+	
 	cartRequest := proto.CartItemRequest{
-		Id:     int32(i),
-		UserId: int32(userId.(int)),
+		UserId:  int32(userId.(int)),
+		GoodsId: goodsId,
 	}
 	
 	err = oc.srv.Order().DeleteCartItem(ctx, &cartRequest)

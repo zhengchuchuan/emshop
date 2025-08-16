@@ -36,7 +36,7 @@ func (c *customJWTAuth) AuthFunc() gin.HandlerFunc {
 			return
 		}
 
-		ctx.Set(middlewares.KeyUserID, float64(claims.ID))
+		ctx.Set(middlewares.KeyUserID, int(claims.ID))
 		ctx.Next()
 	}
 }
