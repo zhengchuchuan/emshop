@@ -3,6 +3,7 @@ package service
 import (
 	"emshop/internal/app/emshop/api/data"
 	gv1 "emshop/internal/app/emshop/api/service/goods/v1"
+	iv1 "emshop/internal/app/emshop/api/service/inventory/v1"
 	ov1 "emshop/internal/app/emshop/api/service/order/v1"
 	sv1 "emshop/internal/app/emshop/api/service/sms/v1"
 	uv1 "emshop/internal/app/emshop/api/service/user/v1"
@@ -14,6 +15,7 @@ type ServiceFactory interface {
 	Goods() gv1.GoodsSrv
 	Users() uv1.UserSrv
 	Sms() sv1.SmsSrv
+	Inventory() iv1.InventorySrv
 	Order() ov1.OrderSrv
 	UserOp() uopv1.UserOpSrv
 }
@@ -36,6 +38,10 @@ func (s *service) Goods() gv1.GoodsSrv {
 
 func (s *service) Users() uv1.UserSrv {
 	return uv1.NewUserService(s.data, s.jwtOpts)
+}
+
+func (s *service) Inventory() iv1.InventorySrv {
+	return iv1.NewInventory(s.data)
 }
 
 func (s *service) Order() ov1.OrderSrv {

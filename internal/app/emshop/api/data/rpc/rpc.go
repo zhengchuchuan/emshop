@@ -4,6 +4,7 @@ import (
 	"fmt"
 	cosulAPI "github.com/hashicorp/consul/api"
 	gpb "emshop/api/goods/v1"
+	ipb "emshop/api/inventory/v1"
 	opb "emshop/api/order/v1"
 	upb "emshop/api/user/v1"
 	uoppb "emshop/api/userop/v1"
@@ -18,12 +19,14 @@ import (
 
 type grpcData struct {
 	gc gpb.GoodsClient
+	ic ipb.InventoryClient
 	uc upb.UserClient
 	oc opb.OrderClient
 	uopc uoppb.UserOpClient
 	
 	ud data.UserData
 	gd data.GoodsData
+	id data.InventoryData
 	od data.OrderData
 	uopd data.UserOpData
 }
@@ -34,6 +37,10 @@ func (g grpcData) Goods() data.GoodsData {
 
 func (g grpcData) Users() data.UserData {
 	return g.ud
+}
+
+func (g grpcData) Inventory() data.InventoryData {
+	return g.id
 }
 
 func (g grpcData) Order() data.OrderData {
@@ -72,19 +79,23 @@ func GetDataFactoryOr(options *options.RegistryOptions) (data.DataFactory, error
 		discovery := NewDiscovery(options)
 		userClient := NewUserServiceClient(discovery)
 		goodsClient := NewGoodsServiceClient(discovery)
+		inventoryClient := NewInventoryServiceClient(discovery)
 		orderClient := NewOrderServiceClient(discovery)
 		userOpClient := NewUserOpServiceClient(discovery)
 		userData := NewUsers(userClient)
 		goodsData := NewGoods(goodsClient)
+		inventoryData := NewInventory(inventoryClient)
 		orderData := NewOrder(orderClient)
 		userOpData := NewUserOp(userOpClient)
 		dbFactory = &grpcData{
 			gc: goodsClient,
+			ic: inventoryClient,
 			uc: userClient,
 			oc: orderClient,
 			uopc: userOpClient,
 			ud: userData,
 			gd: goodsData,
+			id: inventoryData,
 			od: orderData,
 			uopd: userOpData,
 		}

@@ -96,8 +96,7 @@ func (sc *shoppingCarts) Delete(ctx context.Context, ID uint64) error {
 
 // 清空check状态
 func (sc *shoppingCarts) ClearCheck(ctx context.Context, userID uint64) error {
-	// TODO implement me
-	panic("implement me")
+	return sc.factory.db.WithContext(ctx).Model(&do.ShoppingCartDO{}).Where("user = ?", userID).Update("checked", false).Error
 }
 
 var _ interfaces.ShopCartStore = &shoppingCarts{}

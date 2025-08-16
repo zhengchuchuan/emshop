@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	gpb "emshop/api/goods/v1"
+	ipb "emshop/api/inventory/v1"
 	opb "emshop/api/order/v1"
 	upb "emshop/api/user/v1"
 	uoppb "emshop/api/userop/v1"
@@ -78,9 +79,15 @@ type UserData interface {
 	CheckPassWord(ctx context.Context, request *upb.PasswordCheckInfo) (*upb.CheckResponse, error)
 }
 
+type InventoryData interface {
+	// 库存管理
+	InvDetail(ctx context.Context, request *ipb.GoodsInvInfo) (*ipb.GoodsInvInfo, error)
+}
+
 type DataFactory interface {
 	Goods() GoodsData
 	Users() UserData
 	Order() OrderData
 	UserOp() UserOpData
+	Inventory() InventoryData
 }

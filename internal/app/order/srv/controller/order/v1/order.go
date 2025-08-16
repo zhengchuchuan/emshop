@@ -7,6 +7,7 @@ import (
 	"emshop/internal/app/order/srv/domain/do"
 	"emshop/internal/app/order/srv/domain/dto"
 	"emshop/internal/app/order/srv/service/v1"
+	v1 "emshop/pkg/common/meta/v1"
 	"emshop/pkg/log"
 )
 
@@ -21,23 +22,78 @@ func NewOrderServer(srv service.ServiceFactory) *orderServer {
 }
 
 func (os *orderServer) CartItemList(ctx context.Context, info *pb.UserInfo) (*pb.CartItemListResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	cartList, err := os.srv.Orders().CartItemList(ctx, uint64(info.Id), v1.ListMeta{})
+	if err != nil {
+		return nil, err
+	}
+	
+	response := &pb.CartItemListResponse{
+		Total: int32(cartList.TotalCount),
+		Data:  make([]*pb.ShopCartInfoResponse, len(cartList.Items)),
+	}
+	
+	for i, item := range cartList.Items {
+		response.Data[i] = &pb.ShopCartInfoResponse{
+			Id:      int32(item.ID),
+			UserId:  item.User,
+			GoodsId: item.Goods,
+			Nums:    item.Nums,
+			Checked: item.Checked,
+		}
+	}
+	
+	return response, nil
 }
 
 func (os *orderServer) CreateCartItem(ctx context.Context, request *pb.CartItemRequest) (*pb.ShopCartInfoResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	cartItem := &dto.ShopCartDTO{
+		ShoppingCartDO: do.ShoppingCartDO{
+			User:    request.UserId,
+			Goods:   request.GoodsId,
+			Nums:    request.Nums,
+			Checked: request.Checked,
+		},
+	}
+	
+	err := os.srv.Orders().CreateCartItem(ctx, cartItem)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &pb.ShopCartInfoResponse{
+		Id:      int32(cartItem.ID),
+		UserId:  cartItem.User,
+		GoodsId: cartItem.Goods,
+		Nums:    cartItem.Nums,
+		Checked: cartItem.Checked,
+	}, nil
 }
 
 func (os *orderServer) UpdateCartItem(ctx context.Context, request *pb.CartItemRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	cartItem := &dto.ShopCartDTO{
+		ShoppingCartDO: do.ShoppingCartDO{
+			User:    request.UserId,
+			Goods:   request.GoodsId,
+			Nums:    request.Nums,
+			Checked: request.Checked,
+		},
+	}
+	
+	err := os.srv.Orders().UpdateCartItem(ctx, cartItem)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &emptypb.Empty{}, nil
 }
 
 func (os *orderServer) DeleteCartItem(ctx context.Context, request *pb.CartItemRequest) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	err := os.srv.Orders().DeleteCartItem(ctx, uint64(request.UserId), uint64(request.GoodsId))
+	if err != nil {
+		return nil, err
+	}
+	
+	return &emptypb.Empty{}, nil
 }
 
 // 这个是给分布式事务saga调用的，目前没为api提供的目的
@@ -112,18 +168,84 @@ func (os *orderServer) SubmitOrder(ctx context.Context, request *pb.OrderRequest
 }
 
 func (os *orderServer) OrderList(ctx context.Context, request *pb.OrderFilterRequest) (*pb.OrderListResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	orderList, err := os.srv.Orders().List(ctx, uint64(request.UserId), v1.ListMeta{
+		Page:     int(request.Pages),
+		PageSize: int(request.PagePerNums),
+	}, []string{})
+	if err != nil {
+		return nil, err
+	}
+	
+	response := &pb.OrderListResponse{
+		Total: int32(orderList.TotalCount),
+		Data:  make([]*pb.OrderInfoResponse, len(orderList.Items)),
+	}
+	
+	for i, order := range orderList.Items {
+		response.Data[i] = &pb.OrderInfoResponse{
+			Id:      int32(order.ID),
+			UserId:  order.User,
+			OrderSn: order.OrderSn,
+			PayType: order.PayType,
+			Status:  order.Status,
+			Post:    order.Post,
+			Total:   order.OrderMount,
+			Address: order.Address,
+			Name:    order.SignerName,
+			Mobile:  order.SingerMobile,
+			AddTime: order.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+	}
+	
+	return response, nil
 }
 
 func (os *orderServer) OrderDetail(ctx context.Context, request *pb.OrderRequest) (*pb.OrderInfoDetailResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	order, err := os.srv.Orders().Get(ctx, request.OrderSn)
+	if err != nil {
+		return nil, err
+	}
+	
+	orderGoods := make([]*pb.OrderItemResponse, len(order.OrderGoods))
+	for i, item := range order.OrderGoods {
+		orderGoods[i] = &pb.OrderItemResponse{
+			GoodsId: item.Goods,
+			Nums:    item.Nums,
+		}
+	}
+	
+	return &pb.OrderInfoDetailResponse{
+		OrderInfo: &pb.OrderInfoResponse{
+			Id:      int32(order.ID),
+			UserId:  order.User,
+			OrderSn: order.OrderSn,
+			PayType: order.PayType,
+			Status:  order.Status,
+			Post:    order.Post,
+			Total:   order.OrderMount,
+			Address: order.Address,
+			Name:    order.SignerName,
+			Mobile:  order.SingerMobile,
+			AddTime: order.CreatedAt.Format("2006-01-02 15:04:05"),
+		},
+		Goods: orderGoods,
+	}, nil
 }
 
 func (os *orderServer) UpdateOrderStatus(ctx context.Context, status *pb.OrderStatus) (*emptypb.Empty, error) {
-	//TODO implement me
-	panic("implement me")
+	order, err := os.srv.Orders().Get(ctx, status.OrderSn)
+	if err != nil {
+		return nil, err
+	}
+	
+	order.Status = status.Status
+	
+	err = os.srv.Orders().Update(ctx, order)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &emptypb.Empty{}, nil
 }
 
 var _ pb.OrderServer = &orderServer{}

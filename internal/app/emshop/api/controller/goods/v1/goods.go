@@ -377,14 +377,21 @@ func (gc *goodsController) Stocks(ctx *gin.Context) {
 		return
 	}
 
-	// TODO: 实现商品库存查询逻辑
-	// 这里需要调用库存服务或者商品服务获取库存信息
+	// 调用库存服务获取库存信息
+	stockInfo, err := gc.srv.Inventory().GetStocks(ctx, id)
+	if err != nil {
+		core.WriteResponse(ctx, errors.WithCode(code.ErrBind, "获取商品库存失败: %v", err), nil)
+		return
+	}
 	
-	core.WriteResponse(ctx, nil, map[string]interface{}{
-		"stocks": 0,
-		"msg":    "TODO: 商品库存功能待实现",
-	})
+	response := map[string]interface{}{
+		"stocks":  stockInfo.Num,
+		"goodsId": stockInfo.GoodsId,
+	}
+	
+	core.WriteResponse(ctx, nil, response)
 }
+
 
 // ==================== 分类管理 ====================
 

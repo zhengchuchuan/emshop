@@ -24,6 +24,12 @@ type OrderSrv interface {
 	Create(ctx context.Context, order *dto.OrderDTO) error
 	CreateCom(ctx context.Context, order *dto.OrderDTO) error //这是create的补偿
 	Update(ctx context.Context, order *dto.OrderDTO) error
+	
+	// Cart operations
+	CartItemList(ctx context.Context, userID uint64, meta v1.ListMeta) (*dto.ShopCartDTOList, error)
+	CreateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error
+	UpdateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error
+	DeleteCartItem(ctx context.Context, userID, goodsID uint64) error
 }
 
 type orderService struct {
@@ -197,8 +203,53 @@ func (os *orderService) Submit(ctx context.Context, order *dto.OrderDTO) error {
 }
 
 func (os *orderService) Update(ctx context.Context, order *dto.OrderDTO) error {
-	//TODO implement me
-	panic("implement me")
+	return os.data.Orders().Update(ctx, nil, &order.OrderInfoDO)
+}
+
+// Cart operations implementation
+func (os *orderService) CartItemList(ctx context.Context, userID uint64, meta v1.ListMeta) (*dto.ShopCartDTOList, error) {
+	shopCartDOList, err := os.data.ShoppingCarts().List(ctx, userID, false, meta, []string{})
+	if err != nil {
+		return nil, err
+	}
+	
+	result := &dto.ShopCartDTOList{
+		TotalCount: shopCartDOList.TotalCount,
+		Items:      make([]*dto.ShopCartDTO, len(shopCartDOList.Items)),
+	}
+	
+	for i, item := range shopCartDOList.Items {
+		result.Items[i] = &dto.ShopCartDTO{
+			ShoppingCartDO: *item,
+		}
+	}
+	
+	return result, nil
+}
+
+func (os *orderService) CreateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error {
+	// Check if the cart item already exists
+	existingItem, err := os.data.ShoppingCarts().Get(ctx, uint64(cartItem.User), uint64(cartItem.Goods))
+	if err == nil {
+		// Item exists, update the quantity
+		existingItem.Nums += cartItem.Nums
+		return os.data.ShoppingCarts().UpdateNum(ctx, existingItem)
+	}
+	
+	// Item doesn't exist, create new
+	return os.data.ShoppingCarts().Create(ctx, &cartItem.ShoppingCartDO)
+}
+
+func (os *orderService) UpdateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error {
+	return os.data.ShoppingCarts().UpdateNum(ctx, &cartItem.ShoppingCartDO)
+}
+
+func (os *orderService) DeleteCartItem(ctx context.Context, userID, goodsID uint64) error {
+	cartItem, err := os.data.ShoppingCarts().Get(ctx, userID, goodsID)
+	if err != nil {
+		return err
+	}
+	return os.data.ShoppingCarts().Delete(ctx, uint64(cartItem.ID))
 }
 
 func newOrderService(sv *service) *orderService {

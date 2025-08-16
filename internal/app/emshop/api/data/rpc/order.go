@@ -133,4 +133,5 @@ func (o *order) DeleteCartItem(ctx context.Context, request *opbv1.CartItemReque
 	return &opbv1.ShopCartInfoResponse{}, nil
 }
 
+// 编译期接口实现检查。意思是：order类型必须实现data.OrderData接口，否则编译会报错。
 var _ data.OrderData = &order{}
