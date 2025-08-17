@@ -3,7 +3,7 @@ package admin
 import (
 	"github.com/hashicorp/consul/api"
 	"emshop/internal/app/pkg/options"
-	"emshop/internal/app/user/srv/config"
+	"emshop/internal/app/emshop/admin/config"
 	gapp "emshop/gin-micro/app"
 	"emshop/pkg/app"
 	"emshop/pkg/log"
@@ -43,7 +43,7 @@ func NewUserApp(cfg *config.Config) (*gapp.App, error) {
 	register := NewRegistrar(cfg.Registry)
 
 	//生成rpc服务
-	rpcServer, err := NewUserHTTPServer(cfg)
+	rpcServer, err := NewAdminHTTPServer(cfg)
 	if err != nil {
 		return nil, err
 	}

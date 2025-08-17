@@ -16,7 +16,7 @@ registry:
 server:
   name: emshop-amdin #服务名，注册到consul使用的名称
   host: "127.0.0.1" #host, 默认使用 0.0.0.0
-  port: 8016 # grpc 安全模式的端口号，默认 8081
+  port: 28050 # grpc 安全模式的端口号，默认 8081
   http-port: 8050
   healthz: true # 是否开启健康检查，如果开启会安装 /healthz 路由，默认 true
   enable-metrics: true # 开启 metrics, router:  /metrics

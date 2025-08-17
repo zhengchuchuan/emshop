@@ -24,7 +24,7 @@ func newOrders(factory *mysqlFactory) *orders {
 
 func (o *orders) Get(ctx context.Context, orderSn string) (*do.OrderInfoDO, error) {
 	var order do.OrderInfoDO
-	err := o.factory.db.WithContext(ctx).Preload("OrderGoods").Where("order_sn = ?", orderSn).First(&order).Error
+	err := o.factory.db.WithContext(ctx).Preload("OrderGoods").Where("order_sn = ? AND deleted_at IS NULL", orderSn).First(&order).Error
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +45,11 @@ func (o *orders) List(ctx context.Context, userID uint64, meta metav1.ListMeta, 
 		offset = (meta.Page - 1) * limit
 	}
 
-	// 排序
-	query := o.factory.db.Preload("OrderGoods")
+	// 排序和过滤
+	query := o.factory.db.WithContext(ctx).Preload("OrderGoods").Where("deleted_at IS NULL")
+	if userID > 0 {
+		query = query.Where("user = ?", userID)
+	}
 	for _, value := range orderby {
 		query = query.Order(value)
 	}

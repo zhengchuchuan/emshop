@@ -348,11 +348,33 @@ func (gc *goodsController) UpdateStatus(ctx *gin.Context) {
 		return
 	}
 
+	// 先获取现有商品信息
+	existingGoods, err := gc.srv.Goods().Detail(ctx, &proto.GoodInfoRequest{
+		Id: int32(i),
+	})
+	if err != nil {
+		core.WriteResponse(ctx, err, nil)
+		return
+	}
+
+	// 构建完整的更新信息，只修改状态字段
 	updateGoodsInfo := proto.CreateGoodsInfo{
-		Id:     int32(i),
-		IsHot:  *r.IsHot,
-		IsNew:  *r.IsNew,
-		OnSale: *r.OnSale,
+		Id:              int32(i),
+		Name:            existingGoods.Name,
+		GoodsSn:         existingGoods.GoodsSn,
+		CategoryId:      existingGoods.CategoryId,
+		BrandId:         existingGoods.Brand.Id,
+		MarketPrice:     existingGoods.MarketPrice,
+		ShopPrice:       existingGoods.ShopPrice,
+		GoodsBrief:      existingGoods.GoodsBrief,
+		GoodsDesc:       existingGoods.GoodsDesc,
+		ShipFree:        existingGoods.ShipFree,
+		Images:          existingGoods.Images,
+		DescImages:      existingGoods.DescImages,
+		GoodsFrontImage: existingGoods.GoodsFrontImage,
+		IsHot:           *r.IsHot,
+		IsNew:           *r.IsNew,
+		OnSale:          *r.OnSale,
 	}
 
 	_, err = gc.srv.Goods().Update(ctx, &updateGoodsInfo)

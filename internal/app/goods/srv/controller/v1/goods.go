@@ -158,6 +158,7 @@ func (gs *goodsServer) CreateGoods(ctx context.Context, info *proto.CreateGoodsI
 	goodsDTO.MarketPrice = info.MarketPrice
 	goodsDTO.ShopPrice = info.ShopPrice
 	goodsDTO.GoodsBrief = info.GoodsBrief
+	goodsDTO.GoodsDesc = info.GoodsDesc
 	goodsDTO.ShipFree = info.ShipFree
 	goodsDTO.Images = info.Images
 	goodsDTO.DescImages = info.DescImages
@@ -213,6 +214,7 @@ func (gs *goodsServer) UpdateGoods(ctx context.Context, info *proto.CreateGoodsI
 	goodsDTO.MarketPrice = info.MarketPrice
 	goodsDTO.ShopPrice = info.ShopPrice
 	goodsDTO.GoodsBrief = info.GoodsBrief
+	goodsDTO.GoodsDesc = info.GoodsDesc
 	goodsDTO.ShipFree = info.ShipFree
 	goodsDTO.Images = info.Images
 	goodsDTO.DescImages = info.DescImages
@@ -362,17 +364,26 @@ func (gs *goodsServer) DeleteCategory(ctx context.Context, request *proto.Delete
 }
 
 func (gs *goodsServer) UpdateCategory(ctx context.Context, request *proto.CategoryInfoRequest) (*emptypb.Empty, error) {
+	// 先获取现有分类信息
+	existing, err := gs.srv.Category().Get(ctx, request.Id)
+	if err != nil {
+		log.Errorf("get existing category error: %v", err)
+		return nil, err
+	}
+
+	// 只更新提供的字段，保留原有的ParentCategoryID和Level
 	categoryDTO := &dto.CategoryDTO{
 		CategoryDO: do.CategoryDO{
 			Name:             request.Name,
-			ParentCategoryID: request.ParentCategory,
-			Level:            request.Level,
+			ParentCategoryID: existing.ParentCategoryID, // 保持原有值
+			Level:            existing.Level,            // 保持原有值
 			IsTab:            request.IsTab,
+			Url:              existing.Url, // 保持原有值
 		},
 	}
 	categoryDTO.ID = request.Id
 
-	err := gs.srv.Category().Update(ctx, categoryDTO)
+	err = gs.srv.Category().Update(ctx, categoryDTO)
 	if err != nil {
 		log.Errorf("update category error: %v", err)
 		return nil, err

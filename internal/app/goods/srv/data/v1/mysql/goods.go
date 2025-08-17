@@ -31,7 +31,7 @@ func (g *goods) CreateInTxn(ctx context.Context, txn *gorm.DB, goods *do.GoodsDO
 }
 
 func (g *goods) UpdateInTxn(ctx context.Context, txn *gorm.DB, goods *do.GoodsDO) error {
-	tx := txn.Save(goods)
+	tx := txn.Model(goods).Omit("add_time", "created_at").Updates(goods)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
@@ -57,8 +57,8 @@ func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 		offset = (opts.Page - 1) * limit
 	}
 
-	// 排序
-	query := g.db.Preload("Category").Preload("Brands")
+	// 排序和过滤
+	query := g.db.WithContext(ctx).Preload("Category").Preload("Brands").Where("deleted_at IS NULL")
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
@@ -72,7 +72,7 @@ func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 
 func (g *goods) Get(ctx context.Context, ID uint64) (*do.GoodsDO, error) {
 	good := &do.GoodsDO{}
-	err := g.db.Preload("Category").Preload("Brands").First(good, ID).Error
+	err := g.db.WithContext(ctx).Preload("Category").Preload("Brands").Where("id = ? AND deleted_at IS NULL", ID).First(good).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.WithCode(code.ErrGoodsNotFound, "%s", err.Error())
@@ -85,8 +85,8 @@ func (g *goods) Get(ctx context.Context, ID uint64) (*do.GoodsDO, error) {
 func (g *goods) ListByIDs(ctx context.Context, ids []uint64, orderby []string) (*do.GoodsDOList, error) {
 	ret := &do.GoodsDOList{}
 
-	// 排序
-	query := g.db.Preload("Category").Preload("Brands")
+	// 排序和过滤
+	query := g.db.WithContext(ctx).Preload("Category").Preload("Brands").Where("deleted_at IS NULL")
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
@@ -107,7 +107,7 @@ func (g *goods) Create(ctx context.Context, goods *do.GoodsDO) error {
 }
 
 func (g *goods) Update(ctx context.Context, goods *do.GoodsDO) error {
-	tx := g.db.Save(goods)
+	tx := g.db.Model(goods).Omit("add_time", "created_at").Updates(goods)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}

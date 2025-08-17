@@ -41,7 +41,10 @@ func (g *goods) Delete(ctx context.Context, ID uint64) error {
 func (g *goods) Update(ctx context.Context, goods *do.GoodsSearchDO) error {
 	err := g.Delete(ctx, uint64(goods.ID))
 	if err != nil {
-		return err
+		// 忽略404错误，因为文档可能不存在
+		if !elastic.IsNotFound(err) {
+			return err
+		}
 	}
 	err = g.Create(ctx, goods)
 	if err != nil {

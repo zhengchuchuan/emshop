@@ -59,8 +59,8 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		goodsRouter.GET("/:id", goodsController.Detail)                                 //获取商品的详情
 		goodsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.Delete) 			//删除商品
 		goodsRouter.GET("/:id/stocks", goodsController.Stocks)                          //获取商品的库存
-		goodsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.Update)
-		goodsRouter.PATCH("/:id", jwtAuth.AuthFunc(), goodsController.UpdateStatus)
+		goodsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.Update)				// 更新商品
+		goodsRouter.PATCH("/:id", jwtAuth.AuthFunc(), goodsController.UpdateStatus)		// 更新商品(部分字段)
 	}
 
 	//商品分类api

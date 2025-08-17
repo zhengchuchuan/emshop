@@ -26,7 +26,7 @@ func (r *userFavRepository) GetUserFavList(ctx context.Context, userID int32, go
 	var userFavs []do.UserFav
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&do.UserFav{})
+	query := r.db.WithContext(ctx).Model(&do.UserFav{}).Where("deleted_at IS NULL")
 	
 	// 根据条件查询
 	if userID > 0 {
@@ -66,7 +66,7 @@ func (r *userFavRepository) GetUserFavList(ctx context.Context, userID int32, go
 func (r *userFavRepository) CreateUserFav(ctx context.Context, userFav *do.UserFav) (*do.UserFav, error) {
 	// 检查是否已收藏
 	var existingFav do.UserFav
-	result := r.db.WithContext(ctx).Where("user = ? AND goods = ?", userFav.User, userFav.Goods).First(&existingFav)
+	result := r.db.WithContext(ctx).Where("user = ? AND goods = ? AND deleted_at IS NULL", userFav.User, userFav.Goods).First(&existingFav)
 	if result.Error == nil {
 		log.Warnf("user %d already favorited goods %d", userFav.User, userFav.Goods)
 		return &existingFav, nil // 已存在，返回现有记录
@@ -101,7 +101,7 @@ func (r *userFavRepository) DeleteUserFav(ctx context.Context, userID int32, goo
 // GetUserFavDetail 获取用户收藏详情（检查是否收藏）
 func (r *userFavRepository) GetUserFavDetail(ctx context.Context, userID int32, goodsID int32) (*do.UserFav, error) {
 	var userFav do.UserFav
-	result := r.db.WithContext(ctx).Where("goods = ? AND user = ?", goodsID, userID).First(&userFav)
+	result := r.db.WithContext(ctx).Where("goods = ? AND user = ? AND deleted_at IS NULL", goodsID, userID).First(&userFav)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, status.Errorf(codes.NotFound, "收藏记录不存在")

@@ -34,7 +34,7 @@ func (sc *shoppingCarts) DeleteByGoodsIDs(ctx context.Context, txn *gorm.DB, use
 
 func (sc *shoppingCarts) List(ctx context.Context, userID uint64, checked bool, meta metav1.ListMeta, orderby []string) (*do.ShoppingCartDOList, error) {
 	ret := &do.ShoppingCartDOList{}
-	query := sc.factory.db
+	query := sc.factory.db.WithContext(ctx)
 	// 分页
 	var limit, offset int
 	if meta.PageSize == 0 {
@@ -53,6 +53,9 @@ func (sc *shoppingCarts) List(ctx context.Context, userID uint64, checked bool, 
 	if checked {
 		query = query.Where("checked = ?", true)
 	}
+	
+	// 过滤已删除的记录
+	query = query.Where("deleted_at IS NULL")
 
 	// 排序
 	for _, value := range orderby {
@@ -76,7 +79,7 @@ func (sc *shoppingCarts) Create(ctx context.Context, cartItem *do.ShoppingCartDO
 
 func (sc *shoppingCarts) Get(ctx context.Context, userID, goodsID uint64) (*do.ShoppingCartDO, error) {
 	var shopCart do.ShoppingCartDO
-	err := sc.factory.db.WithContext(ctx).Where("user = ? AND goods = ?", userID, goodsID).First(&shopCart).Error
+	err := sc.factory.db.WithContext(ctx).Where("user = ? AND goods = ? AND deleted_at IS NULL", userID, goodsID).First(&shopCart).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.WithCode(code.ErrShopCartItemNotFound, "%s", err.Error())
