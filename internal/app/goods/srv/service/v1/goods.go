@@ -27,7 +27,56 @@ func newGoods(srv *service) *goodsService {
 func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *proto.GoodsFilterRequest, orderby []string) (*dto.GoodsDTOList, error) {
 	dataFactory := gs.factoryManager.GetDataFactory()
 	
-	// 构建搜索请求
+	// 检查是否有搜索条件
+	hasSearchConditions := false
+	var categoryIDs []interface{}
+	
+	// 检查各种搜索条件
+	if req.KeyWords != "" {
+		hasSearchConditions = true
+	}
+	if req.Brand > 0 {
+		hasSearchConditions = true
+	}
+	if req.PriceMin > 0 || req.PriceMax > 0 {
+		hasSearchConditions = true
+	}
+	if req.IsHot || req.IsNew || req.IsTab {
+		hasSearchConditions = true
+	}
+	if req.TopCategory > 0 {
+		hasSearchConditions = true
+		category, err := dataFactory.Categorys().Get(ctx, uint64(req.TopCategory))
+		if err != nil {
+			log.Errorf("categoryData.Get err: %v", err)
+			return nil, err
+		}
+		// 树形结构遍历
+		for _, value := range retrieveIDs(category) {
+			categoryIDs = append(categoryIDs, value)
+		}
+	}
+
+	// 如果没有搜索条件，直接查询MySQL
+	if !hasSearchConditions {
+		log.Debugf("No search conditions, querying MySQL directly")
+		goods, err := dataFactory.Goods().List(ctx, orderby, opts)
+		if err != nil {
+			log.Errorf("data.List err: %v", err)
+			return nil, err
+		}
+		
+		var ret dto.GoodsDTOList
+		ret.TotalCount = goods.TotalCount
+		for _, value := range goods.Items {
+			ret.Items = append(ret.Items, &dto.GoodsDTO{
+				GoodsDO: *value,
+			})
+		}
+		return &ret, nil
+	}
+
+	// 有搜索条件时，构建ES搜索请求
 	searchReq := &interfaces.GoodsFilterRequest{
 		KeyWords:    req.KeyWords,
 		BrandID:     req.Brand,
@@ -35,24 +84,18 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 		PriceMax:    float32(req.PriceMax),
 		IsHot:       req.IsHot,
 		IsNew:       req.IsNew,
-		OnSale:      req.IsTab, // 根据业务逻辑调整
+		OnSale:      req.IsTab,
+		CategoryIDs: categoryIDs,
 		Pages:       req.Pages,
 		PagePerNums: req.PagePerNums,
 	}
 
-	if req.TopCategory > 0 {
-		category, err := dataFactory.Categorys().Get(ctx, uint64(req.TopCategory))
-		if err != nil {
-			log.Errorf("categoryData.Get err: %v", err)
-			return nil, err
-		}
-
-		var ids []interface{}
-		// 树形结构遍历
-		for _, value := range retrieveIDs(category) {
-			ids = append(ids, value)
-		}
-		searchReq.CategoryIDs = ids
+	// 确保分页参数有效
+	if searchReq.Pages <= 0 {
+		searchReq.Pages = int32(opts.Page)
+	}
+	if searchReq.PagePerNums <= 0 {
+		searchReq.PagePerNums = int32(opts.PageSize)
 	}
 
 	// 通过搜索引擎查询

@@ -63,8 +63,8 @@ func (us *userServer) Login(ctx *gin.Context) {
 	// 返回
 	ctx.JSON(http.StatusOK, gin.H{
 		"id":         userDTO.ID,
-		"nick_name":  userDTO.NickName,
+		"nickName":  userDTO.NickName,
 		"token":      userDTO.Token,
-		"expired_at": userDTO.ExpiresAt,
+		"expiredAt": userDTO.ExpiresAt,
 	})
 }

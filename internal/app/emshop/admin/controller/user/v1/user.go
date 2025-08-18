@@ -207,11 +207,11 @@ func (uc *userController) AdminLogin(ctx *gin.Context) {
 	// 返回管理员登录结果
 	core.WriteResponse(ctx, nil, gin.H{
 		"id":         loginResult.ID,
-		"nick_name":  loginResult.NickName,
+		"nickName":  loginResult.NickName,
 		"mobile":     loginResult.Mobile,
 		"role":       loginResult.Role,
 		"token":      loginResult.Token,
-		"expires_at": loginResult.ExpiresAt,
+		"expiresAt": loginResult.ExpiresAt,
 		"message":    "管理员登录成功",
 	})
 }

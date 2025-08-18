@@ -92,15 +92,15 @@ func (gc *goodsController) List(ctx *gin.Context) {
 	goodsList := make([]interface{}, 0)
 	for _, value := range goodsDTOList.Data {
 		goodsList = append(goodsList, map[string]interface{}{
-			"id":          value.Id,
-			"name":        value.Name,
-			"goods_brief": value.GoodsBrief,
-			"desc":        value.GoodsDesc,
-			"ship_free":   value.ShipFree,
-			"images":      value.Images,
-			"desc_images": value.DescImages,
-			"front_image": value.GoodsFrontImage,
-			"shop_price":  value.ShopPrice,
+			"id":         value.Id,
+			"name":       value.Name,
+			"goodsBrief": value.GoodsBrief,
+			"desc":       value.GoodsDesc,
+			"shipFree":   value.ShipFree,
+			"images":     value.Images,
+			"descImages": value.DescImages,
+			"frontImage": value.GoodsFrontImage,
+			"shopPrice":  value.ShopPrice,
 			"category": map[string]interface{}{
 				"id":   value.Category.Id,
 				"name": value.Category.Name,
@@ -110,9 +110,9 @@ func (gc *goodsController) List(ctx *gin.Context) {
 				"name": value.Brand.Name,
 				"logo": value.Brand.Logo,
 			},
-			"is_hot":  value.IsHot,
-			"is_new":  value.IsNew,
-			"on_sale": value.OnSale,
+			"isHot":  value.IsHot,
+			"isNew":  value.IsNew,
+			"onSale": value.OnSale,
 		})
 	}
 	reMap["data"] = goodsList
@@ -155,18 +155,18 @@ func (gc *goodsController) New(ctx *gin.Context) {
 	}
 
 	response := map[string]interface{}{
-		"id":          goodsDTO.Id,
-		"name":        goodsDTO.Name,
-		"goods_brief": goodsDTO.GoodsBrief,
-		"desc":        goodsDTO.GoodsDesc,
-		"ship_free":   goodsDTO.ShipFree,
-		"images":      goodsDTO.Images,
-		"desc_images": goodsDTO.DescImages,
-		"front_image": goodsDTO.GoodsFrontImage,
-		"shop_price":  goodsDTO.ShopPrice,
-		"is_hot":      goodsDTO.IsHot,
-		"is_new":      goodsDTO.IsNew,
-		"on_sale":     goodsDTO.OnSale,
+		"id":         goodsDTO.Id,
+		"name":       goodsDTO.Name,
+		"goodsBrief": goodsDTO.GoodsBrief,
+		"desc":       goodsDTO.GoodsDesc,
+		"shipFree":   goodsDTO.ShipFree,
+		"images":     goodsDTO.Images,
+		"descImages": goodsDTO.DescImages,
+		"frontImage": goodsDTO.GoodsFrontImage,
+		"shopPrice":  goodsDTO.ShopPrice,
+		"isHot":      goodsDTO.IsHot,
+		"isNew":      goodsDTO.IsNew,
+		"onSale":     goodsDTO.OnSale,
 	}
 
 	// 添加分类信息（如果存在）
@@ -213,8 +213,8 @@ func (gc *goodsController) Sync(ctx *gin.Context) {
 	response := map[string]interface{}{
 		"success":      syncResponse.Success,
 		"message":      syncResponse.Message,
-		"synced_count": syncResponse.SyncedCount,
-		"failed_count": syncResponse.FailedCount,
+		"syncedCount": syncResponse.SyncedCount,
+		"failedCount": syncResponse.FailedCount,
 		"errors":       syncResponse.Errors,
 	}
 
@@ -247,15 +247,15 @@ func (gc *goodsController) Detail(ctx *gin.Context) {
 	}
 
 	response := map[string]interface{}{
-		"id":          goodsDTO.Id,
-		"name":        goodsDTO.Name,
-		"goods_brief": goodsDTO.GoodsBrief,
-		"desc":        goodsDTO.GoodsDesc,
-		"ship_free":   goodsDTO.ShipFree,
-		"images":      goodsDTO.Images,
-		"desc_images": goodsDTO.DescImages,
-		"front_image": goodsDTO.GoodsFrontImage,
-		"shop_price":  goodsDTO.ShopPrice,
+		"id":         goodsDTO.Id,
+		"name":       goodsDTO.Name,
+		"goodsBrief": goodsDTO.GoodsBrief,
+		"desc":       goodsDTO.GoodsDesc,
+		"shipFree":   goodsDTO.ShipFree,
+		"images":     goodsDTO.Images,
+		"descImages": goodsDTO.DescImages,
+		"frontImage": goodsDTO.GoodsFrontImage,
+		"shopPrice":  goodsDTO.ShopPrice,
 		"category": map[string]interface{}{
 			"id":   goodsDTO.Category.Id,
 			"name": goodsDTO.Category.Name,
@@ -265,9 +265,9 @@ func (gc *goodsController) Detail(ctx *gin.Context) {
 			"name": goodsDTO.Brand.Name,
 			"logo": goodsDTO.Brand.Logo,
 		},
-		"is_hot":  goodsDTO.IsHot,
-		"is_new":  goodsDTO.IsNew,
-		"on_sale": goodsDTO.OnSale,
+		"isHot":  goodsDTO.IsHot,
+		"isNew":  goodsDTO.IsNew,
+		"onSale": goodsDTO.OnSale,
 	}
 
 	core.WriteResponse(ctx, nil, response)
@@ -498,8 +498,8 @@ func (gc *goodsController) CategoryDetail(ctx *gin.Context) {
 			"id":              subCategory.Id,
 			"name":            subCategory.Name,
 			"level":           subCategory.Level,
-			"parent_category": subCategory.ParentCategory,
-			"is_tab":          subCategory.IsTab,
+			"parentCategory": subCategory.ParentCategory,
+			"isTab":          subCategory.IsTab,
 		})
 	}
 
@@ -507,9 +507,9 @@ func (gc *goodsController) CategoryDetail(ctx *gin.Context) {
 		"id":              subCategoriesResponse.Info.Id,
 		"name":            subCategoriesResponse.Info.Name,
 		"level":           subCategoriesResponse.Info.Level,
-		"parent_category": subCategoriesResponse.Info.ParentCategory,
-		"is_tab":          subCategoriesResponse.Info.IsTab,
-		"sub_categorys":   subCategories,
+		"parentCategory": subCategoriesResponse.Info.ParentCategory,
+		"isTab":          subCategoriesResponse.Info.IsTab,
+		"subCategories":   subCategories,
 	}
 
 	core.WriteResponse(ctx, nil, response)
@@ -543,7 +543,7 @@ func (gc *goodsController) CreateCategory(ctx *gin.Context) {
 		"name":   categoryResponse.Name,
 		"parent": categoryResponse.ParentCategory,
 		"level":  categoryResponse.Level,
-		"is_tab": categoryResponse.IsTab,
+		"isTab": categoryResponse.IsTab,
 	}
 
 	core.WriteResponse(ctx, nil, response)

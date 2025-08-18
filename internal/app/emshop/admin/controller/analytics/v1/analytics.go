@@ -41,17 +41,17 @@ func (ac *analyticsController) GetGoodsOverview(ctx *gin.Context) {
 
 	// 统计数据
 	overview := map[string]interface{}{
-		"total_goods":    len(response.Data),
-		"on_sale_goods":  0,
-		"off_sale_goods": 0,
-		"new_goods":      0,
-		"hot_goods":      0,
-		"low_stock_goods": 0, // 库存小于10的商品
-		"out_of_stock_goods": 0, // 库存为0的商品
-		"total_value":    float32(0), // 总价值（库存 * 销售价）
-		"avg_price":      float32(0),
-		"max_price":      float32(0),
-		"min_price":      float32(0),
+		"totalGoods":    len(response.Data),
+		"onSaleGoods":  0,
+		"offSaleGoods": 0,
+		"newGoods":      0,
+		"hotGoods":      0,
+		"lowStockGoods": 0, // 库存小于10的商品
+		"outOfStockGoods": 0, // 库存为0的商品
+		"totalValue":    float32(0), // 总价值（库存 * 销售价）
+		"avgPrice":      float32(0),
+		"maxPrice":      float32(0),
+		"minPrice":      float32(0),
 	}
 
 	var totalPrice float32
@@ -141,9 +141,9 @@ func (ac *analyticsController) GetTopSellingGoods(ctx *gin.Context) {
 	for i, goods := range response.Data {
 		result = append(result, map[string]interface{}{
 			"rank":       i + 1,
-			"goods_id":   goods.Id,
+			"goodsId":   goods.Id,
 			"name":       goods.Name,
-			"sold_num":   goods.SoldNum,
+			"soldNum":   goods.SoldNum,
 			"price":      goods.ShopPrice,
 			"stocks":     goods.Stocks,
 			"category":   goods.Category.Name,
@@ -153,8 +153,8 @@ func (ac *analyticsController) GetTopSellingGoods(ctx *gin.Context) {
 	}
 
 	core.WriteResponse(ctx, nil, map[string]interface{}{
-		"top_selling_goods": result,
-		"total_found":       len(response.Data),
+		"topSellingGoods": result,
+		"totalFound":       len(response.Data),
 	})
 }
 
@@ -184,15 +184,15 @@ func (ac *analyticsController) GetCategoryStats(ctx *gin.Context) {
 
 		if _, exists := categoryStats[categoryName]; !exists {
 			categoryStats[categoryName] = map[string]interface{}{
-				"category_id":     goods.CategoryId,
-				"category_name":   categoryName,
-				"goods_count":     0,
-				"on_sale_count":   0,
-				"off_sale_count":  0,
-				"total_sold":      int32(0),
-				"total_revenue":   float32(0),
-				"avg_price":       float32(0),
-				"total_stocks":    int32(0),
+				"categoryId":     goods.CategoryId,
+				"categoryName":   categoryName,
+				"goodsCount":     0,
+				"onSaleCount":   0,
+				"offSaleCount":  0,
+				"totalSold":      int32(0),
+				"totalRevenue":   float32(0),
+				"avgPrice":       float32(0),
+				"totalStocks":    int32(0),
 			}
 		}
 
@@ -236,8 +236,8 @@ func (ac *analyticsController) GetCategoryStats(ctx *gin.Context) {
 	})
 
 	core.WriteResponse(ctx, nil, map[string]interface{}{
-		"category_stats": result,
-		"total_categories": len(result),
+		"categoryStats": result,
+		"totalCategories": len(result),
 	})
 }
 
@@ -268,15 +268,15 @@ func (ac *analyticsController) GetInventoryAlerts(ctx *gin.Context) {
 
 	for _, goods := range response.Data {
 		goodsInfo := map[string]interface{}{
-			"goods_id":   goods.Id,
+			"goodsId":   goods.Id,
 			"name":       goods.Name,
-			"goods_sn":   goods.GoodsSn,
+			"goodsSn":   goods.GoodsSn,
 			"stocks":     goods.Stocks,
 			"price":      goods.ShopPrice,
 			"category":   goods.Category.Name,
 			"brand":      goods.Brand.Name,
-			"on_sale":    goods.OnSale,
-			"sold_num":   goods.SoldNum,
+			"onSale":    goods.OnSale,
+			"soldNum":   goods.SoldNum,
 		}
 
 		if goods.Stocks == 0 {
@@ -299,13 +299,13 @@ func (ac *analyticsController) GetInventoryAlerts(ctx *gin.Context) {
 	})
 
 	result := map[string]interface{}{
-		"out_of_stock": outOfStock,
-		"low_stock":    lowStock,
+		"outOfStock": outOfStock,
+		"lowStock":    lowStock,
 		"summary": map[string]interface{}{
-			"out_of_stock_count": len(outOfStock),
-			"low_stock_count":    len(lowStock),
-			"total_alerts":       len(outOfStock) + len(lowStock),
-			"low_threshold":      lowThreshold,
+			"outOfStockCount": len(outOfStock),
+			"lowStockCount":    len(lowStock),
+			"totalAlerts":       len(outOfStock) + len(lowStock),
+			"lowThreshold":      lowThreshold,
 		},
 	}
 

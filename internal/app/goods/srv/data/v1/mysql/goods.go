@@ -57,16 +57,25 @@ func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 		offset = (opts.Page - 1) * limit
 	}
 
+	// 构建基础查询
+	baseQuery := g.db.WithContext(ctx).Where("deleted_at IS NULL")
+	
+	// 先获取总数
+	if err := baseQuery.Model(&do.GoodsDO{}).Count(&ret.TotalCount).Error; err != nil {
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
+	}
+
 	// 排序和过滤
 	query := g.db.WithContext(ctx).Preload("Category").Preload("Brands").Where("deleted_at IS NULL")
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
 
-	d := query.Offset(offset).Limit(limit).Find(&ret.Items).Count(&ret.TotalCount)
-	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
+	// 应用分页并查询数据
+	if err := query.Offset(offset).Limit(limit).Find(&ret.Items).Error; err != nil {
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
+	
 	return ret, nil
 }
 
@@ -85,15 +94,20 @@ func (g *goods) Get(ctx context.Context, ID uint64) (*do.GoodsDO, error) {
 func (g *goods) ListByIDs(ctx context.Context, ids []uint64, orderby []string) (*do.GoodsDOList, error) {
 	ret := &do.GoodsDOList{}
 
+	// 先获取总数
+	baseQuery := g.db.WithContext(ctx).Where("deleted_at IS NULL").Where("id in ?", ids)
+	if err := baseQuery.Model(&do.GoodsDO{}).Count(&ret.TotalCount).Error; err != nil {
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
+	}
+
 	// 排序和过滤
 	query := g.db.WithContext(ctx).Preload("Category").Preload("Brands").Where("deleted_at IS NULL")
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
 
-	d := query.Where("id in ?", ids).Find(&ret.Items).Count(&ret.TotalCount)
-	if d.Error != nil {
-		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
+	if err := query.Where("id in ?", ids).Find(&ret.Items).Error; err != nil {
+		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 	return ret, nil
 }

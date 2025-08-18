@@ -31,9 +31,9 @@ func (us *userServer) Register(ctx *gin.Context) {
 
 	core.WriteResponse(ctx, nil, gin.H{
 		"id":         userDTO.ID,
-		"nick_name":  userDTO.NickName,
+		"nickName":  userDTO.NickName,
 		"token":      userDTO.Token,
-		"expired_at": userDTO.ExpiresAt,
+		"expiredAt": userDTO.ExpiresAt,
 	})
 
 }

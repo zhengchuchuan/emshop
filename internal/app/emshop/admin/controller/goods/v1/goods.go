@@ -9,7 +9,7 @@ import (
 	proto "emshop/api/goods/v1"
 	ipbv1 "emshop/api/inventory/v1"
 	"emshop/internal/app/emshop/admin/service"
-	"emshop/internal/app/emshop/api/domain/request"
+	adminRequest "emshop/internal/app/emshop/admin/domain/request"
 	"emshop/pkg/common/core"
 )
 
@@ -29,7 +29,7 @@ func NewGoodsController(sf service.ServiceFactory, trans restserver.I18nTranslat
 
 // List 商品列表（管理员专用）
 func (gc *goodsController) List(ctx *gin.Context) {
-	var r request.GoodsFilter
+	var r adminRequest.AdminGoodsFilter
 	
 	if err := ctx.ShouldBindQuery(&r); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "invalid query parameters"})

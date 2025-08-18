@@ -15,62 +15,62 @@ type GoodsFilter struct {
 
 type CreateGoods struct {
 	Name            string   `json:"name" binding:"required,min=2,max=20"`
-	GoodsSn         string   `json:"goods_sn"`
-	MarketPrice     float32  `json:"market_price" binding:"required,min=0"`
-	ShopPrice       float32  `json:"shop_price" binding:"required,min=0"`
-	GoodsBrief      string   `json:"goods_brief" binding:"required,min=3"`
-	GoodsDesc       string   `json:"goods_desc"`
-	ShipFree        bool     `json:"ship_free"`
+	GoodsSn         string   `json:"goodsSn"`
+	MarketPrice     float32  `json:"marketPrice" binding:"required,min=0"`
+	ShopPrice       float32  `json:"shopPrice" binding:"required,min=0"`
+	GoodsBrief      string   `json:"goodsBrief" binding:"required,min=3"`
+	GoodsDesc       string   `json:"goodsDesc"`
+	ShipFree        bool     `json:"shipFree"`
 	Images          []string `json:"images"`
-	DescImages      []string `json:"desc_images"`
-	GoodsFrontImage string   `json:"goods_front_image" binding:"required,url"`
-	IsNew           bool     `json:"is_new"`
-	IsHot           bool     `json:"is_hot"`
-	OnSale          bool     `json:"on_sale"`
-	CategoryId      int32    `json:"category_id" binding:"required"`
-	BrandId         int32    `json:"brand_id" binding:"required"`
+	DescImages      []string `json:"descImages"`
+	GoodsFrontImage string   `json:"goodsFrontImage" binding:"required,url"`
+	IsNew           bool     `json:"isNew"`
+	IsHot           bool     `json:"isHot"`
+	OnSale          bool     `json:"onSale"`
+	CategoryId      int32    `json:"categoryId" binding:"required"`
+	BrandId         int32    `json:"brandId" binding:"required"`
 }
 
 type SyncData struct {
-	ForceSync bool    `json:"force_sync"`
-	GoodsIds  []int32 `json:"goods_ids"`
+	ForceSync bool    `json:"forceSync"`
+	GoodsIds  []int32 `json:"goodsIds"`
 }
 
 type UpdateGoods struct {
 	Name            string   `json:"name" binding:"required,min=2,max=20"`
-	GoodsSn         string   `json:"goods_sn"`
-	MarketPrice     float32  `json:"market_price" binding:"required,min=0"`
-	ShopPrice       float32  `json:"shop_price" binding:"required,min=0"`
-	GoodsBrief      string   `json:"goods_brief" binding:"required,min=3"`
-	GoodsDesc       string   `json:"goods_desc"`
-	ShipFree        bool     `json:"ship_free"`
+	GoodsSn         string   `json:"goodsSn"`
+	MarketPrice     float32  `json:"marketPrice" binding:"required,min=0"`
+	ShopPrice       float32  `json:"shopPrice" binding:"required,min=0"`
+	GoodsBrief      string   `json:"goodsBrief" binding:"required,min=3"`
+	GoodsDesc       string   `json:"goodsDesc"`
+	ShipFree        bool     `json:"shipFree"`
 	Images          []string `json:"images"`
-	DescImages      []string `json:"desc_images"`
-	GoodsFrontImage string   `json:"goods_front_image" binding:"required,url"`
-	IsNew           bool     `json:"is_new"`
-	IsHot           bool     `json:"is_hot"`
-	OnSale          bool     `json:"on_sale"`
-	CategoryId      int32    `json:"category_id" binding:"required"`
-	BrandId         int32    `json:"brand_id" binding:"required"`
+	DescImages      []string `json:"descImages"`
+	GoodsFrontImage string   `json:"goodsFrontImage" binding:"required,url"`
+	IsNew           bool     `json:"isNew"`
+	IsHot           bool     `json:"isHot"`
+	OnSale          bool     `json:"onSale"`
+	CategoryId      int32    `json:"categoryId" binding:"required"`
+	BrandId         int32    `json:"brandId" binding:"required"`
 }
 
 type UpdateGoodsStatus struct {
-	IsNew  *bool `json:"is_new" binding:"required"`
-	IsHot  *bool `json:"is_hot" binding:"required"`
-	OnSale *bool `json:"on_sale" binding:"required"`
+	IsNew  *bool `json:"isNew" binding:"required"`
+	IsHot  *bool `json:"isHot" binding:"required"`
+	OnSale *bool `json:"onSale" binding:"required"`
 }
 
 // 分类管理相关结构体
 type CreateCategory struct {
 	Name           string `json:"name" binding:"required,min=2,max=20"`
-	ParentCategory int32  `json:"parent_category"`
+	ParentCategory int32  `json:"parentCategory"`
 	Level          int32  `json:"level" binding:"required,min=1,max=3"`
-	IsTab          *bool  `json:"is_tab" binding:"required"`
+	IsTab          *bool  `json:"isTab" binding:"required"`
 }
 
 type UpdateCategory struct {
 	Name  string `json:"name" binding:"required,min=2,max=20"`
-	IsTab *bool  `json:"is_tab"`
+	IsTab *bool  `json:"isTab"`
 }
 
 // 品牌管理相关结构体
@@ -145,8 +145,8 @@ type CreateAddress struct {
 	City         string `json:"city" binding:"required"`
 	District     string `json:"district" binding:"required"`
 	Address      string `json:"address" binding:"required"`
-	SignerName   string `json:"signer_name" binding:"required"`
-	SignerMobile string `json:"signer_mobile" binding:"required"`
+	SignerName   string `json:"signerName" binding:"required"`
+	SignerMobile string `json:"signerMobile" binding:"required"`
 }
 
 type UpdateAddress struct {
@@ -154,8 +154,8 @@ type UpdateAddress struct {
 	City         string `json:"city" binding:"required"`
 	District     string `json:"district" binding:"required"`
 	Address      string `json:"address" binding:"required"`
-	SignerName   string `json:"signer_name" binding:"required"`
-	SignerMobile string `json:"signer_mobile" binding:"required"`
+	SignerName   string `json:"signerName" binding:"required"`
+	SignerMobile string `json:"signerMobile" binding:"required"`
 }
 
 // 用户留言

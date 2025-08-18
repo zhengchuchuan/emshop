@@ -57,8 +57,8 @@ func (uoc *userOpController) UserFavList(ctx *gin.Context) {
 	favsList := make([]interface{}, 0)
 	for _, fav := range favsResponse.Data {
 		favsList = append(favsList, map[string]interface{}{
-			"user_id":  fav.UserId,
-			"goods_id": fav.GoodsId,
+			"userId":  fav.UserId,
+			"goodsId": fav.GoodsId,
 		})
 	}
 	reMap["data"] = favsList
@@ -95,8 +95,8 @@ func (uoc *userOpController) CreateUserFav(ctx *gin.Context) {
 	}
 	
 	response := map[string]interface{}{
-		"user_id":  favResponse.UserId,
-		"goods_id": favResponse.GoodsId,
+		"userId":  favResponse.UserId,
+		"goodsId": favResponse.GoodsId,
 	}
 	
 	core.WriteResponse(ctx, nil, response)
@@ -174,8 +174,8 @@ func (uoc *userOpController) GetUserFavDetail(ctx *gin.Context) {
 	}
 	
 	response := map[string]interface{}{
-		"user_id":  favResponse.UserId,
-		"goods_id": favResponse.GoodsId,
+		"userId":  favResponse.UserId,
+		"goodsId": favResponse.GoodsId,
 	}
 	
 	core.WriteResponse(ctx, nil, response)
@@ -215,8 +215,8 @@ func (uoc *userOpController) GetAddressList(ctx *gin.Context) {
 			"city":         addr.City,
 			"district":     addr.District,
 			"address":      addr.Address,
-			"signer_name":  addr.SignerName,
-			"signer_mobile": addr.SignerMobile,
+			"signerName":  addr.SignerName,
+			"signerMobile": addr.SignerMobile,
 		})
 	}
 	reMap["data"] = addressList
@@ -263,8 +263,8 @@ func (uoc *userOpController) CreateAddress(ctx *gin.Context) {
 		"city":         addressResponse.City,
 		"district":     addressResponse.District,
 		"address":      addressResponse.Address,
-		"signer_name":  addressResponse.SignerName,
-		"signer_mobile": addressResponse.SignerMobile,
+		"signerName":  addressResponse.SignerName,
+		"signerMobile": addressResponse.SignerMobile,
 	}
 	
 	core.WriteResponse(ctx, nil, response)
@@ -389,7 +389,7 @@ func (uoc *userOpController) MessageList(ctx *gin.Context) {
 	for _, msg := range messageResponse.Data {
 		messageList = append(messageList, map[string]interface{}{
 			"id":           msg.Id,
-			"message_type": msg.MessageType,
+			"messageType": msg.MessageType,
 			"subject":      msg.Subject,
 			"message":      msg.Message,
 			"file":         msg.File,
@@ -433,7 +433,7 @@ func (uoc *userOpController) CreateMessage(ctx *gin.Context) {
 	
 	response := map[string]interface{}{
 		"id":           messageResponse.Id,
-		"message_type": messageResponse.MessageType,
+		"messageType": messageResponse.MessageType,
 		"subject":      messageResponse.Subject,
 		"message":      messageResponse.Message,
 		"file":         messageResponse.File,

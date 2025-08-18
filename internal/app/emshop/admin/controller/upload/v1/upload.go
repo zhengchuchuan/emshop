@@ -166,8 +166,8 @@ func (uc *uploadController) BatchUploadImages(ctx *gin.Context) {
 		"success": results,
 		"errors":  errors,
 		"total":   len(files),
-		"success_count": len(results),
-		"error_count": len(errors),
+		"successCount": len(results),
+		"errorCount": len(errors),
 	}
 
 	core.WriteResponse(ctx, nil, response)

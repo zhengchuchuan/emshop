@@ -69,15 +69,15 @@ func (oc *orderController) AdminOrderList(ctx *gin.Context) {
 	for _, order := range ordersResponse.Data {
 		ordersList = append(ordersList, map[string]interface{}{
 			"id":       order.Id,
-			"user_id":  order.UserId,
-			"order_sn": order.OrderSn,
+			"userId":  order.UserId,
+			"orderSn": order.OrderSn,
 			"status":   order.Status,
-			"pay_type": order.PayType,
+			"payType": order.PayType,
 			"total":    order.Total,
 			"address":  order.Address,
 			"name":     order.Name,
 			"mobile":   order.Mobile,
-			"add_time": order.AddTime,
+			"addTime": order.AddTime,
 		})
 	}
 	reMap["data"] = ordersList
@@ -116,25 +116,25 @@ func (oc *orderController) AdminOrderDetail(ctx *gin.Context) {
 	for _, item := range orderDetailResponse.Goods {
 		goodsList = append(goodsList, map[string]interface{}{
 			"id":          item.Id,
-			"goods_id":    item.GoodsId,
-			"goods_name":  item.GoodsName,
-			"goods_image": item.GoodsImage,
-			"goods_price": item.GoodsPrice,
+			"goodsId":    item.GoodsId,
+			"goodsName":  item.GoodsName,
+			"goodsImage": item.GoodsImage,
+			"goodsPrice": item.GoodsPrice,
 			"nums":        item.Nums,
 		})
 	}
 	
 	response := map[string]interface{}{
 		"id":       orderDetailResponse.OrderInfo.Id,
-		"user_id":  orderDetailResponse.OrderInfo.UserId,
-		"order_sn": orderDetailResponse.OrderInfo.OrderSn,
+		"userId":  orderDetailResponse.OrderInfo.UserId,
+		"orderSn": orderDetailResponse.OrderInfo.OrderSn,
 		"status":   orderDetailResponse.OrderInfo.Status,
-		"pay_type": orderDetailResponse.OrderInfo.PayType,
+		"payType": orderDetailResponse.OrderInfo.PayType,
 		"total":    orderDetailResponse.OrderInfo.Total,
 		"address":  orderDetailResponse.OrderInfo.Address,
 		"name":     orderDetailResponse.OrderInfo.Name,
 		"mobile":   orderDetailResponse.OrderInfo.Mobile,
-		"add_time": orderDetailResponse.OrderInfo.AddTime,
+		"addTime": orderDetailResponse.OrderInfo.AddTime,
 		"goods":    goodsList,
 	}
 	
@@ -215,25 +215,25 @@ func (oc *orderController) GetOrderByOrderSn(ctx *gin.Context) {
 	for _, item := range orderDetailResponse.Goods {
 		goodsList = append(goodsList, map[string]interface{}{
 			"id":          item.Id,
-			"goods_id":    item.GoodsId,
-			"goods_name":  item.GoodsName,
-			"goods_image": item.GoodsImage,
-			"goods_price": item.GoodsPrice,
+			"goodsId":    item.GoodsId,
+			"goodsName":  item.GoodsName,
+			"goodsImage": item.GoodsImage,
+			"goodsPrice": item.GoodsPrice,
 			"nums":        item.Nums,
 		})
 	}
 	
 	response := map[string]interface{}{
 		"id":       orderDetailResponse.OrderInfo.Id,
-		"user_id":  orderDetailResponse.OrderInfo.UserId,
-		"order_sn": orderDetailResponse.OrderInfo.OrderSn,
+		"userId":  orderDetailResponse.OrderInfo.UserId,
+		"orderSn": orderDetailResponse.OrderInfo.OrderSn,
 		"status":   orderDetailResponse.OrderInfo.Status,
-		"pay_type": orderDetailResponse.OrderInfo.PayType,
+		"payType": orderDetailResponse.OrderInfo.PayType,
 		"total":    orderDetailResponse.OrderInfo.Total,
 		"address":  orderDetailResponse.OrderInfo.Address,
 		"name":     orderDetailResponse.OrderInfo.Name,
 		"mobile":   orderDetailResponse.OrderInfo.Mobile,
-		"add_time": orderDetailResponse.OrderInfo.AddTime,
+		"addTime": orderDetailResponse.OrderInfo.AddTime,
 		"goods":    goodsList,
 	}
 	
@@ -284,15 +284,15 @@ func (oc *orderController) GetOrdersByUserId(ctx *gin.Context) {
 	for _, order := range ordersResponse.Data {
 		ordersList = append(ordersList, map[string]interface{}{
 			"id":       order.Id,
-			"user_id":  order.UserId,
-			"order_sn": order.OrderSn,
+			"userId":  order.UserId,
+			"orderSn": order.OrderSn,
 			"status":   order.Status,
-			"pay_type": order.PayType,
+			"payType": order.PayType,
 			"total":    order.Total,
 			"address":  order.Address,
 			"name":     order.Name,
 			"mobile":   order.Mobile,
-			"add_time": order.AddTime,
+			"addTime": order.AddTime,
 		})
 	}
 	reMap["data"] = ordersList

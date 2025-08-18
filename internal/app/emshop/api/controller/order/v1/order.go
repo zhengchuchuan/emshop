@@ -79,14 +79,14 @@ func (oc *orderController) OrderList(ctx *gin.Context) {
 	for _, order := range ordersResponse.Data {
 		ordersList = append(ordersList, map[string]interface{}{
 			"id":       order.Id,
-			"order_sn": order.OrderSn,
+			"orderSn": order.OrderSn,
 			"status":   order.Status,
-			"pay_type": order.PayType,
+			"payType": order.PayType,
 			"total":    order.Total,
 			"address":  order.Address,
 			"name":     order.Name,
 			"mobile":   order.Mobile,
-			"add_time": order.AddTime,
+			"addTime": order.AddTime,
 		})
 	}
 	reMap["data"] = ordersList
@@ -168,24 +168,24 @@ func (oc *orderController) OrderDetail(ctx *gin.Context) {
 	for _, item := range orderDetailResponse.Goods {
 		goodsList = append(goodsList, map[string]interface{}{
 			"id":          item.Id,
-			"goods_id":    item.GoodsId,
-			"goods_name":  item.GoodsName,
-			"goods_image": item.GoodsImage,
-			"goods_price": item.GoodsPrice,
+			"goodsId":    item.GoodsId,
+			"goodsName":  item.GoodsName,
+			"goodsImage": item.GoodsImage,
+			"goodsPrice": item.GoodsPrice,
 			"nums":        item.Nums,
 		})
 	}
 	
 	response := map[string]interface{}{
 		"id":       orderDetailResponse.OrderInfo.Id,
-		"order_sn": orderDetailResponse.OrderInfo.OrderSn,
+		"orderSn": orderDetailResponse.OrderInfo.OrderSn,
 		"status":   orderDetailResponse.OrderInfo.Status,
-		"pay_type": orderDetailResponse.OrderInfo.PayType,
+		"payType": orderDetailResponse.OrderInfo.PayType,
 		"total":    orderDetailResponse.OrderInfo.Total,
 		"address":  orderDetailResponse.OrderInfo.Address,
 		"name":     orderDetailResponse.OrderInfo.Name,
 		"mobile":   orderDetailResponse.OrderInfo.Mobile,
-		"add_time": orderDetailResponse.OrderInfo.AddTime,
+		"addTime": orderDetailResponse.OrderInfo.AddTime,
 		"goods":    goodsList,
 	}
 	
@@ -222,7 +222,7 @@ func (oc *orderController) CartList(ctx *gin.Context) {
 	for _, item := range cartResponse.Data {
 		cartList = append(cartList, map[string]interface{}{
 			"id":       item.Id,
-			"goods_id": item.GoodsId,
+			"goodsId": item.GoodsId,
 			"nums":     item.Nums,
 			"checked":  item.Checked,
 		})
@@ -264,7 +264,7 @@ func (oc *orderController) AddToCart(ctx *gin.Context) {
 	
 	response := map[string]interface{}{
 		"id":       cartResponse.Id,
-		"goods_id": cartResponse.GoodsId,
+		"goodsId": cartResponse.GoodsId,
 		"nums":     cartResponse.Nums,
 		"checked":  cartResponse.Checked,
 	}

@@ -107,7 +107,7 @@ func (ic *importController) ImportGoods(ctx *gin.Context) {
 
 		results = append(results, map[string]interface{}{
 			"row":      rowNum,
-			"goods_id": goodsResp.Id,
+			"goodsId": goodsResp.Id,
 			"name":     goodsInfo.Name,
 		})
 		successCount++
@@ -117,8 +117,8 @@ func (ic *importController) ImportGoods(ctx *gin.Context) {
 		"success":       results,
 		"errors":        errors,
 		"total":         len(records) - 1, // 减去表头行
-		"success_count": successCount,
-		"error_count":   len(errors),
+		"successCount": successCount,
+		"errorCount":   len(errors),
 	}
 
 	core.WriteResponse(ctx, nil, response)
@@ -267,12 +267,12 @@ func (ic *importController) ValidateImportFile(ctx *gin.Context) {
 
 	response := map[string]interface{}{
 		"valid":       len(errors) == 0,
-		"total_rows":  len(records) - 1,
-		"valid_rows":  validRows,
-		"error_rows":  len(errors),
+		"totalRows":  len(records) - 1,
+		"validRows":  validRows,
+		"errorRows":  len(errors),
 		"errors":      errors,
 		"filename":    header.Filename,
-		"file_size":   header.Size,
+		"fileSize":   header.Size,
 	}
 
 	core.WriteResponse(ctx, nil, response)
