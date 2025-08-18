@@ -12,7 +12,7 @@ func NewAdminHTTPServer(cfg *config.Config) (*restserver.Server, error) {
 	)
 
 	//配置好路由
-	initRouter(urestServer)
+	initRouter(urestServer, cfg)
 
 	return urestServer, nil
 }

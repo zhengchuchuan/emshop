@@ -17,7 +17,7 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	v1 := g.Group("/v1")
 
 
-	// 用户服务api
+	// 用户服务api（C端用户自助功能）
 	ugroup := v1.Group("/user")
 	// 创建数据工厂
 	data, err := rpc.GetDataFactoryOr(cfg.Registry)
@@ -35,9 +35,10 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		ugroup.GET("detail", jwtAuth.AuthFunc(), uController.GetUserDetail)
 		ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.GetUserDetail)
 
-		ugroup.GET("list", jwtAuth.AuthFunc(), uController.GetUserList) // GET /v1/user/list?pn=页码&psize=每页数量
-		ugroup.GET("mobile",jwtAuth.AuthFunc(), uController.GetByMobile)  // GET /v1/user/mobile?mobile=手机号
-  		ugroup.GET("id",jwtAuth.AuthFunc(), uController.GetById)          // GET /v1/user/id?id=用户ID
+		// 注意：管理员功能已迁移到Admin应用
+		// ugroup.GET("list", jwtAuth.AuthFunc(), uController.GetUserList) // 已迁移到 /v1/admin/users
+		// ugroup.GET("mobile",jwtAuth.AuthFunc(), uController.GetByMobile) // 已迁移到 /v1/admin/users/by-mobile  
+		// ugroup.GET("id",jwtAuth.AuthFunc(), uController.GetById)        // 已迁移到 /v1/admin/users/:id
 	}
 
 
@@ -49,49 +50,57 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		baseRouter.GET("captcha", user.GetCaptcha)
 	}
 
-	//商品服务api
+	//商品服务api（C端用户浏览功能）
 	goodsRouter := v1.Group("goods")
 	{
 		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
-		goodsRouter.GET("", goodsController.List)                                       //商品列表
-		goodsRouter.POST("", jwtAuth.AuthFunc(), goodsController.New)          			//该接口需要管理员权限
-		goodsRouter.POST("/sync", jwtAuth.AuthFunc(), goodsController.Sync)    			//数据同步接口，需要管理员权限
+		goodsRouter.GET("", goodsController.List)                                       //商品列表（前端展示）
 		goodsRouter.GET("/:id", goodsController.Detail)                                 //获取商品的详情
-		goodsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.Delete) 			//删除商品
 		goodsRouter.GET("/:id/stocks", goodsController.Stocks)                          //获取商品的库存
-		goodsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.Update)				// 更新商品
-		goodsRouter.PATCH("/:id", jwtAuth.AuthFunc(), goodsController.UpdateStatus)		// 更新商品(部分字段)
+		
+		// 注意：管理员功能已迁移到Admin应用
+		// goodsRouter.POST("", jwtAuth.AuthFunc(), goodsController.New)          		// 已迁移到 /v1/admin/goods
+		// goodsRouter.POST("/sync", jwtAuth.AuthFunc(), goodsController.Sync)    		// 已迁移到 /v1/admin/goods/sync
+		// goodsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.Delete) 		// 已迁移到 /v1/admin/goods/:id
+		// goodsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.Update)			// 已迁移到 /v1/admin/goods/:id
+		// goodsRouter.PATCH("/:id", jwtAuth.AuthFunc(), goodsController.UpdateStatus)	// 已迁移到 /v1/admin/goods/:id/status
 	}
 
-	//商品分类api
+	//商品分类api（C端用户浏览功能）
 	categorysRouter := v1.Group("categorys")
 	{
 		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
-		categorysRouter.GET("", goodsController.CategoryList)                                    // 商品类别列表页
-		categorysRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteCategory)      // 删除分类
+		categorysRouter.GET("", goodsController.CategoryList)                                    // 分类列表（前端展示）
 		categorysRouter.GET("/:id", goodsController.CategoryDetail)                              // 获取分类详情
-		categorysRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateCategory)            //新建分类
-		categorysRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateCategory)         //修改分类信息
+		
+		// 注意：管理员功能已迁移到Admin应用
+		// categorysRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteCategory)   // 已迁移到 /v1/admin/categories/:id
+		// categorysRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateCategory)         // 已迁移到 /v1/admin/categories
+		// categorysRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateCategory)      // 已迁移到 /v1/admin/categories/:id
 	}
 
-	//品牌管理api
+	//品牌api（C端用户浏览功能）
 	brandsRouter := v1.Group("brands")
 	{
 		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
-		brandsRouter.GET("", goodsController.BrandList)                                         // 品牌列表
-		brandsRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateBrand)                 // 新建品牌
-		brandsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateBrand)              // 修改品牌
-		brandsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteBrand)           // 删除品牌
+		brandsRouter.GET("", goodsController.BrandList)                                         // 品牌列表（前端展示）
+		
+		// 注意：管理员功能已迁移到Admin应用
+		// brandsRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateBrand)              // 已迁移到 /v1/admin/brands
+		// brandsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateBrand)           // 已迁移到 /v1/admin/brands/:id
+		// brandsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteBrand)        // 已迁移到 /v1/admin/brands/:id
 	}
 
-	//轮播图管理api
+	//轮播图api（C端用户浏览功能）
 	bannersRouter := v1.Group("banners")
 	{
 		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
-		bannersRouter.GET("", goodsController.BannerList)                                       // 轮播图列表
-		bannersRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateBanner)               // 新建轮播图
-		bannersRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateBanner)            // 修改轮播图
-		bannersRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteBanner)         // 删除轮播图
+		bannersRouter.GET("", goodsController.BannerList)                                       // 轮播图列表（前端展示）
+		
+		// 注意：管理员功能已迁移到Admin应用
+		// bannersRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateBanner)            // 已迁移到 /v1/admin/banners
+		// bannersRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateBanner)         // 已迁移到 /v1/admin/banners/:id
+		// bannersRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteBanner)      // 已迁移到 /v1/admin/banners/:id
 	}
 
 	//订单管理api
