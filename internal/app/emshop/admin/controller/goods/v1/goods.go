@@ -9,7 +9,7 @@ import (
 	proto "emshop/api/goods/v1"
 	ipbv1 "emshop/api/inventory/v1"
 	"emshop/internal/app/emshop/admin/service"
-	adminRequest "emshop/internal/app/emshop/admin/domain/request"
+	adminRequest "emshop/internal/app/emshop/admin/domain/dto/request"
 	"emshop/pkg/common/core"
 )
 

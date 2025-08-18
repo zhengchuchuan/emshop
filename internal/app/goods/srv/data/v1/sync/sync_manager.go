@@ -6,7 +6,6 @@ import (
 	"emshop/internal/app/goods/srv/domain/do"
 	"emshop/internal/app/goods/srv/data/v1/mysql"
 	"emshop/internal/app/goods/srv/data/v1/elasticsearch"
-	metav1 "emshop/pkg/common/meta/v1"
 	"emshop/pkg/log"
 )
 
@@ -118,16 +117,13 @@ func (dsm *DataSyncManager) SyncAllGoodsToSearch(ctx context.Context, forceSync 
 		// 指定商品ID同步
 		goodsList = goodsIds
 	} else {
-		// 获取所有商品ID
-		allGoods, err := dsm.dataFactory.Goods().List(ctx, []string{}, metav1.ListMeta{})
+		// 获取所有商品ID - 使用专用方法
+		goodsIds, err := dsm.dataFactory.Goods().GetAllGoodsIDs(ctx)
 		if err != nil {
-			log.Errorf("failed to get all goods: %v", err)
+			log.Errorf("failed to get all goods IDs: %v", err)
 			return nil, err
 		}
-		
-		for _, goods := range allGoods.Items {
-			goodsList = append(goodsList, uint64(goods.ID))
-		}
+		goodsList = goodsIds
 	}
 
 	log.Infof("starting sync %d goods to search engine", len(goodsList))

@@ -132,4 +132,15 @@ func (g *goods) Delete(ctx context.Context, ID uint64) error {
 	return g.db.Where("id = ?", ID).Delete(&do.GoodsDO{}).Error
 }
 
+func (g *goods) GetAllGoodsIDs(ctx context.Context) ([]uint64, error) {
+	var ids []uint64
+	
+	// 只查询ID字段，避免加载完整对象
+	err := g.db.WithContext(ctx).Model(&do.GoodsDO{}).
+		Where("deleted_at IS NULL").
+		Pluck("id", &ids).Error
+		
+	return ids, err
+}
+
 var _ interfaces.GoodsStore = &goods{}

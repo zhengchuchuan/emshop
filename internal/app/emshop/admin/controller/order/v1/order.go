@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	restserver "emshop/gin-micro/server/rest-server"
 	proto "emshop/api/order/v1"
-	"emshop/internal/app/emshop/admin/domain/request"
+	"emshop/internal/app/emshop/admin/domain/dto/request"
 	"emshop/internal/app/emshop/admin/service"
 	v1 "emshop/internal/app/emshop/admin/service/order/v1"
 	gin2 "emshop/internal/app/pkg/translator/gin"

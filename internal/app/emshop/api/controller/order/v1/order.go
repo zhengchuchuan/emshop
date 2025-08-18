@@ -6,7 +6,7 @@ import (
 	"emshop/gin-micro/server/rest-server"
 	"emshop/gin-micro/server/rest-server/middlewares"
 	proto "emshop/api/order/v1"
-	"emshop/internal/app/emshop/api/domain/request"
+	"emshop/internal/app/emshop/api/domain/dto/request"
 	"emshop/internal/app/emshop/api/service"
 	v1 "emshop/internal/app/emshop/api/service/order/v1"
 	gin2 "emshop/internal/app/pkg/translator/gin"
