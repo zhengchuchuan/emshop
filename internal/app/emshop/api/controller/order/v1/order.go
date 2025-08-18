@@ -49,9 +49,20 @@ func (oc *orderController) OrderList(ctx *gin.Context) {
 	}
 	
 	orderRequest := proto.OrderFilterRequest{
-		UserId:      int32(userId.(int)),
-		Pages:       r.Pages,
-		PagePerNums: r.PagePerNums,
+		UserId: int32(userId.(int)),
+	}
+	
+	// 分页参数 - 设置默认值
+	if r.Pages != nil {
+		orderRequest.Pages = *r.Pages
+	} else {
+		orderRequest.Pages = 1 // 默认第1页
+	}
+	
+	if r.PagePerNums != nil {
+		orderRequest.PagePerNums = *r.PagePerNums
+	} else {
+		orderRequest.PagePerNums = 10 // 默认每页10条
 	}
 	
 	ordersResponse, err := oc.srv.Order().OrderList(ctx, &orderRequest)

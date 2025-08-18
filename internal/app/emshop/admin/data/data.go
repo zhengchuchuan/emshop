@@ -4,6 +4,7 @@ import (
 	"context"
 	upbv1 "emshop/api/user/v1"
 	gpbv1 "emshop/api/goods/v1"
+	ipbv1 "emshop/api/inventory/v1"
 	opbv1 "emshop/api/order/v1"
 )
 
@@ -54,11 +55,22 @@ type GoodsData interface {
 	CreateBanner(ctx context.Context, request *gpbv1.BannerRequest) (*gpbv1.BannerResponse, error)
 	UpdateBanner(ctx context.Context, request *gpbv1.BannerRequest) (*gpbv1.BannerResponse, error)
 	DeleteBanner(ctx context.Context, request *gpbv1.BannerRequest) (*gpbv1.BannerResponse, error)
+	
+	// 批量操作
+	BatchDeleteGoods(ctx context.Context, request *gpbv1.BatchDeleteGoodsRequest) (*gpbv1.BatchOperationResponse, error)
+	BatchUpdateGoodsStatus(ctx context.Context, request *gpbv1.BatchUpdateGoodsStatusRequest) (*gpbv1.BatchOperationResponse, error)
 }
 
 // InventoryData 库存数据访问接口
 type InventoryData interface {
-	// 管理员管理库存相关方法
+	// 获取商品库存信息
+	GetInventory(ctx context.Context, goodsId int32) (*ipbv1.GoodsInvInfo, error)
+	// 批量获取商品库存信息
+	BatchGetInventory(ctx context.Context, goodsIds []int32) (map[int32]*ipbv1.GoodsInvInfo, error)
+	// 设置商品库存
+	SetInventory(ctx context.Context, request *ipbv1.GoodsInvInfo) error
+	// 批量设置商品库存
+	BatchSetInventory(ctx context.Context, inventories []*ipbv1.GoodsInvInfo) error
 }
 
 // OrderData 订单数据访问接口

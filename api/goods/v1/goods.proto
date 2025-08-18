@@ -42,6 +42,10 @@ service Goods{
 
   //数据同步
   rpc SyncGoodsData(SyncDataRequest) returns(SyncDataResponse); //同步MySQL和ES商品数据
+
+  //批量操作
+  rpc BatchDeleteGoods(BatchDeleteGoodsRequest) returns(BatchOperationResponse); //批量删除商品
+  rpc BatchUpdateGoodsStatus(BatchUpdateGoodsStatusRequest) returns(BatchOperationResponse); //批量更新商品状态
 }
 
 message CategoryListRequest {
@@ -244,6 +248,7 @@ message GoodsInfoResponse {
   int64 addTime = 20;
   CategoryBriefInfoResponse category = 21;
   BrandInfoResponse brand = 22;
+  int32 stocks = 23; // 库存数量
 }
 
 message GoodsListResponse {
@@ -261,5 +266,27 @@ message SyncDataResponse {
   string message = 2;
   int32 syncedCount = 3; // 同步的记录数
   int32 failedCount = 4; // 失败的记录数
+  repeated string errors = 5; // 错误信息列表
+}
+
+message BatchDeleteGoodsRequest {
+  repeated int32 ids = 1; // 要删除的商品ID列表
+}
+
+message BatchUpdateGoodsStatusRequest {
+  repeated int32 ids = 1; // 要更新状态的商品ID列表
+  bool onSale = 2; // 上架状态
+  bool isHot = 3; // 热销状态
+  bool isNew = 4; // 新品状态
+  bool updateOnSale = 5; // 是否更新上架状态
+  bool updateIsHot = 6; // 是否更新热销状态
+  bool updateIsNew = 7; // 是否更新新品状态
+}
+
+message BatchOperationResponse {
+  bool success = 1;
+  string message = 2;
+  int32 successCount = 3; // 成功操作的数量
+  int32 failedCount = 4; // 失败的数量
   repeated string errors = 5; // 错误信息列表
 }

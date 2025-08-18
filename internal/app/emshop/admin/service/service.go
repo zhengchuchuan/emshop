@@ -28,7 +28,7 @@ func NewService(data data.DataFactory, jwt *options.JwtOptions) ServiceFactory {
 }
 
 func (s *serviceFactory) Users() user.UserSrv {
-	return user.NewUserService(s.data)
+	return user.NewUserService(s.data, s.jwt)
 }
 
 func (s *serviceFactory) Goods() goods.GoodsSrv {

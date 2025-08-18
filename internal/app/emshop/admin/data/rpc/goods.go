@@ -257,4 +257,16 @@ func (g *goods) DeleteBanner(ctx context.Context, request *gpbv1.BannerRequest) 
 	return &gpbv1.BannerResponse{}, nil
 }
 
+// ==================== 批量操作 ====================
+
+func (g *goods) BatchDeleteGoods(ctx context.Context, request *gpbv1.BatchDeleteGoodsRequest) (*gpbv1.BatchOperationResponse, error) {
+	log.Infof("Calling BatchDeleteGoods gRPC for %d items", len(request.Ids))
+	return g.gc.BatchDeleteGoods(ctx, request)
+}
+
+func (g *goods) BatchUpdateGoodsStatus(ctx context.Context, request *gpbv1.BatchUpdateGoodsStatusRequest) (*gpbv1.BatchOperationResponse, error) {
+	log.Infof("Calling BatchUpdateGoodsStatus gRPC for %d items", len(request.Ids))
+	return g.gc.BatchUpdateGoodsStatus(ctx, request)
+}
+
 var _ data.GoodsData = &goods{}

@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: api/goods/v1/goods.proto
+// source: goods.proto
 
 package proto
 
@@ -20,31 +20,33 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Goods_GoodsList_FullMethodName            = "/Goods/GoodsList"
-	Goods_BatchGetGoods_FullMethodName        = "/Goods/BatchGetGoods"
-	Goods_CreateGoods_FullMethodName          = "/Goods/CreateGoods"
-	Goods_DeleteGoods_FullMethodName          = "/Goods/DeleteGoods"
-	Goods_UpdateGoods_FullMethodName          = "/Goods/UpdateGoods"
-	Goods_GetGoodsDetail_FullMethodName       = "/Goods/GetGoodsDetail"
-	Goods_GetAllCategorysList_FullMethodName  = "/Goods/GetAllCategorysList"
-	Goods_GetSubCategory_FullMethodName       = "/Goods/GetSubCategory"
-	Goods_CreateCategory_FullMethodName       = "/Goods/CreateCategory"
-	Goods_DeleteCategory_FullMethodName       = "/Goods/DeleteCategory"
-	Goods_UpdateCategory_FullMethodName       = "/Goods/UpdateCategory"
-	Goods_BrandList_FullMethodName            = "/Goods/BrandList"
-	Goods_CreateBrand_FullMethodName          = "/Goods/CreateBrand"
-	Goods_DeleteBrand_FullMethodName          = "/Goods/DeleteBrand"
-	Goods_UpdateBrand_FullMethodName          = "/Goods/UpdateBrand"
-	Goods_BannerList_FullMethodName           = "/Goods/BannerList"
-	Goods_CreateBanner_FullMethodName         = "/Goods/CreateBanner"
-	Goods_DeleteBanner_FullMethodName         = "/Goods/DeleteBanner"
-	Goods_UpdateBanner_FullMethodName         = "/Goods/UpdateBanner"
-	Goods_CategoryBrandList_FullMethodName    = "/Goods/CategoryBrandList"
-	Goods_GetCategoryBrandList_FullMethodName = "/Goods/GetCategoryBrandList"
-	Goods_CreateCategoryBrand_FullMethodName  = "/Goods/CreateCategoryBrand"
-	Goods_DeleteCategoryBrand_FullMethodName  = "/Goods/DeleteCategoryBrand"
-	Goods_UpdateCategoryBrand_FullMethodName  = "/Goods/UpdateCategoryBrand"
-	Goods_SyncGoodsData_FullMethodName        = "/Goods/SyncGoodsData"
+	Goods_GoodsList_FullMethodName              = "/Goods/GoodsList"
+	Goods_BatchGetGoods_FullMethodName          = "/Goods/BatchGetGoods"
+	Goods_CreateGoods_FullMethodName            = "/Goods/CreateGoods"
+	Goods_DeleteGoods_FullMethodName            = "/Goods/DeleteGoods"
+	Goods_UpdateGoods_FullMethodName            = "/Goods/UpdateGoods"
+	Goods_GetGoodsDetail_FullMethodName         = "/Goods/GetGoodsDetail"
+	Goods_GetAllCategorysList_FullMethodName    = "/Goods/GetAllCategorysList"
+	Goods_GetSubCategory_FullMethodName         = "/Goods/GetSubCategory"
+	Goods_CreateCategory_FullMethodName         = "/Goods/CreateCategory"
+	Goods_DeleteCategory_FullMethodName         = "/Goods/DeleteCategory"
+	Goods_UpdateCategory_FullMethodName         = "/Goods/UpdateCategory"
+	Goods_BrandList_FullMethodName              = "/Goods/BrandList"
+	Goods_CreateBrand_FullMethodName            = "/Goods/CreateBrand"
+	Goods_DeleteBrand_FullMethodName            = "/Goods/DeleteBrand"
+	Goods_UpdateBrand_FullMethodName            = "/Goods/UpdateBrand"
+	Goods_BannerList_FullMethodName             = "/Goods/BannerList"
+	Goods_CreateBanner_FullMethodName           = "/Goods/CreateBanner"
+	Goods_DeleteBanner_FullMethodName           = "/Goods/DeleteBanner"
+	Goods_UpdateBanner_FullMethodName           = "/Goods/UpdateBanner"
+	Goods_CategoryBrandList_FullMethodName      = "/Goods/CategoryBrandList"
+	Goods_GetCategoryBrandList_FullMethodName   = "/Goods/GetCategoryBrandList"
+	Goods_CreateCategoryBrand_FullMethodName    = "/Goods/CreateCategoryBrand"
+	Goods_DeleteCategoryBrand_FullMethodName    = "/Goods/DeleteCategoryBrand"
+	Goods_UpdateCategoryBrand_FullMethodName    = "/Goods/UpdateCategoryBrand"
+	Goods_SyncGoodsData_FullMethodName          = "/Goods/SyncGoodsData"
+	Goods_BatchDeleteGoods_FullMethodName       = "/Goods/BatchDeleteGoods"
+	Goods_BatchUpdateGoodsStatus_FullMethodName = "/Goods/BatchUpdateGoodsStatus"
 )
 
 // GoodsClient is the client API for Goods service.
@@ -85,6 +87,9 @@ type GoodsClient interface {
 	UpdateCategoryBrand(ctx context.Context, in *CategoryBrandRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// 数据同步
 	SyncGoodsData(ctx context.Context, in *SyncDataRequest, opts ...grpc.CallOption) (*SyncDataResponse, error)
+	// 批量操作
+	BatchDeleteGoods(ctx context.Context, in *BatchDeleteGoodsRequest, opts ...grpc.CallOption) (*BatchOperationResponse, error)
+	BatchUpdateGoodsStatus(ctx context.Context, in *BatchUpdateGoodsStatusRequest, opts ...grpc.CallOption) (*BatchOperationResponse, error)
 }
 
 type goodsClient struct {
@@ -345,6 +350,26 @@ func (c *goodsClient) SyncGoodsData(ctx context.Context, in *SyncDataRequest, op
 	return out, nil
 }
 
+func (c *goodsClient) BatchDeleteGoods(ctx context.Context, in *BatchDeleteGoodsRequest, opts ...grpc.CallOption) (*BatchOperationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchOperationResponse)
+	err := c.cc.Invoke(ctx, Goods_BatchDeleteGoods_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *goodsClient) BatchUpdateGoodsStatus(ctx context.Context, in *BatchUpdateGoodsStatusRequest, opts ...grpc.CallOption) (*BatchOperationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchOperationResponse)
+	err := c.cc.Invoke(ctx, Goods_BatchUpdateGoodsStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GoodsServer is the server API for Goods service.
 // All implementations must embed UnimplementedGoodsServer
 // for forward compatibility.
@@ -383,6 +408,9 @@ type GoodsServer interface {
 	UpdateCategoryBrand(context.Context, *CategoryBrandRequest) (*emptypb.Empty, error)
 	// 数据同步
 	SyncGoodsData(context.Context, *SyncDataRequest) (*SyncDataResponse, error)
+	// 批量操作
+	BatchDeleteGoods(context.Context, *BatchDeleteGoodsRequest) (*BatchOperationResponse, error)
+	BatchUpdateGoodsStatus(context.Context, *BatchUpdateGoodsStatusRequest) (*BatchOperationResponse, error)
 	mustEmbedUnimplementedGoodsServer()
 }
 
@@ -467,6 +495,12 @@ func (UnimplementedGoodsServer) UpdateCategoryBrand(context.Context, *CategoryBr
 }
 func (UnimplementedGoodsServer) SyncGoodsData(context.Context, *SyncDataRequest) (*SyncDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SyncGoodsData not implemented")
+}
+func (UnimplementedGoodsServer) BatchDeleteGoods(context.Context, *BatchDeleteGoodsRequest) (*BatchOperationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchDeleteGoods not implemented")
+}
+func (UnimplementedGoodsServer) BatchUpdateGoodsStatus(context.Context, *BatchUpdateGoodsStatusRequest) (*BatchOperationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchUpdateGoodsStatus not implemented")
 }
 func (UnimplementedGoodsServer) mustEmbedUnimplementedGoodsServer() {}
 func (UnimplementedGoodsServer) testEmbeddedByValue()               {}
@@ -939,6 +973,42 @@ func _Goods_SyncGoodsData_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Goods_BatchDeleteGoods_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchDeleteGoodsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GoodsServer).BatchDeleteGoods(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Goods_BatchDeleteGoods_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GoodsServer).BatchDeleteGoods(ctx, req.(*BatchDeleteGoodsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Goods_BatchUpdateGoodsStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchUpdateGoodsStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GoodsServer).BatchUpdateGoodsStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Goods_BatchUpdateGoodsStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GoodsServer).BatchUpdateGoodsStatus(ctx, req.(*BatchUpdateGoodsStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Goods_ServiceDesc is the grpc.ServiceDesc for Goods service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1046,7 +1116,15 @@ var Goods_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "SyncGoodsData",
 			Handler:    _Goods_SyncGoodsData_Handler,
 		},
+		{
+			MethodName: "BatchDeleteGoods",
+			Handler:    _Goods_BatchDeleteGoods_Handler,
+		},
+		{
+			MethodName: "BatchUpdateGoodsStatus",
+			Handler:    _Goods_BatchUpdateGoodsStatus_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/goods/v1/goods.proto",
+	Metadata: "goods.proto",
 }

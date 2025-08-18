@@ -39,16 +39,45 @@ func (gc *goodsController) List(ctx *gin.Context) {
 		return
 	}
 
-	gfr := proto.GoodsFilterRequest{
-		IsNew:       r.IsNew,
-		IsHot:       r.IsHot,
-		PriceMax:    r.PriceMax,
-		PriceMin:    r.PriceMin,
-		TopCategory: r.TopCategory,
-		Brand:       r.Brand,
-		KeyWords:    r.KeyWords,
-		Pages:       r.Pages,
-		PagePerNums: r.PagePerNums,
+	gfr := proto.GoodsFilterRequest{}
+	
+	// 条件参数 - 只有非空时才设置
+	if r.IsNew != nil {
+		gfr.IsNew = *r.IsNew
+	}
+	if r.IsHot != nil {
+		gfr.IsHot = *r.IsHot
+	}
+	if r.IsTab != nil {
+		gfr.IsTab = *r.IsTab
+	}
+	if r.PriceMax != nil {
+		gfr.PriceMax = *r.PriceMax
+	}
+	if r.PriceMin != nil {
+		gfr.PriceMin = *r.PriceMin
+	}
+	if r.TopCategory != nil {
+		gfr.TopCategory = *r.TopCategory
+	}
+	if r.Brand != nil {
+		gfr.Brand = *r.Brand
+	}
+	if r.KeyWords != nil {
+		gfr.KeyWords = *r.KeyWords
+	}
+	
+	// 分页参数 - 设置默认值
+	if r.Pages != nil {
+		gfr.Pages = *r.Pages
+	} else {
+		gfr.Pages = 1 // 默认第1页
+	}
+	
+	if r.PagePerNums != nil {
+		gfr.PagePerNums = *r.PagePerNums
+	} else {
+		gfr.PagePerNums = 10 // 默认每页10条
 	}
 
 	goodsDTOList, err := gc.srv.Goods().List(ctx, &gfr)
@@ -603,9 +632,19 @@ func (gc *goodsController) BrandList(ctx *gin.Context) {
 		return
 	}
 
-	brandRequest := proto.BrandFilterRequest{
-		Pages:       r.Pages,
-		PagePerNums: r.PagePerNums,
+	brandRequest := proto.BrandFilterRequest{}
+	
+	// 分页参数 - 设置默认值
+	if r.Pages != nil {
+		brandRequest.Pages = *r.Pages
+	} else {
+		brandRequest.Pages = 1 // 默认第1页
+	}
+	
+	if r.PagePerNums != nil {
+		brandRequest.PagePerNums = *r.PagePerNums
+	} else {
+		brandRequest.PagePerNums = 10 // 默认每页10条
 	}
 
 	brandsResponse, err := gc.srv.Goods().BrandList(ctx, &brandRequest)

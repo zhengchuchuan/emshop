@@ -8,6 +8,11 @@ import (
 	restserver "emshop/gin-micro/server/rest-server"
 	"emshop/internal/app/emshop/admin/service"
 	"emshop/pkg/common/core"
+	gin2 "emshop/internal/app/pkg/translator/gin"
+	"emshop/pkg/errors"
+	"emshop/gin-micro/code"
+	appcode "emshop/internal/app/pkg/code"
+	"emshop/pkg/log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -156,5 +161,57 @@ func (uc *userController) UpdateUserStatus(ctx *gin.Context) {
 
 	core.WriteResponse(ctx, nil, gin.H{
 		"msg": "User status updated successfully",
+	})
+}
+
+// AdminLogin 管理员登录（管理员专用）
+func (uc *userController) AdminLogin(ctx *gin.Context) {
+	log.Info("admin login function called...")
+
+	type AdminLoginForm struct {
+		Mobile    string `json:"mobile" binding:"required,mobile"`
+		Password  string `json:"password" binding:"required,min=3,max=20"`
+		Captcha   string `json:"captcha" binding:"required,min=5,max=5"`
+		CaptchaId string `json:"captcha_id" binding:"required"`
+	}
+
+	var loginForm AdminLoginForm
+	if err := ctx.ShouldBindJSON(&loginForm); err != nil {
+		gin2.HandleValidatorError(ctx, err, uc.trans)
+		return
+	}
+
+	// 验证码验证
+	if !store.Verify(loginForm.CaptchaId, loginForm.Captcha, true) {
+		core.WriteResponse(ctx, errors.WithCode(code.ErrValidation, "验证码错误"), nil)
+		return
+	}
+
+	// 直接通过登录服务验证用户和生成token
+	loginResult, err := uc.sf.Users().MobileLogin(ctx, loginForm.Mobile, loginForm.Password)
+	if err != nil {
+		log.Errorf("Admin login failed: %v", err)
+		core.WriteResponse(ctx, errors.WithCode(appcode.ErrUserNotFound, "管理员登录失败"), nil)
+		return
+	}
+
+	// 验证用户角色：必须是管理员
+	if loginResult.Role < 2 { // RoleAdmin = 2
+		log.Warnf("Admin login denied: insufficient privileges - userID: %d, role: %d", loginResult.ID, loginResult.Role)
+		core.WriteResponse(ctx, errors.WithCode(code.ErrPermissionDenied, "权限不足：仅限管理员登录"), nil)
+		return
+	}
+
+	log.Infof("Admin login successful - userID: %d, role: %d", loginResult.ID, loginResult.Role)
+
+	// 返回管理员登录结果
+	core.WriteResponse(ctx, nil, gin.H{
+		"id":         loginResult.ID,
+		"nick_name":  loginResult.NickName,
+		"mobile":     loginResult.Mobile,
+		"role":       loginResult.Role,
+		"token":      loginResult.Token,
+		"expires_at": loginResult.ExpiresAt,
+		"message":    "管理员登录成功",
 	})
 }

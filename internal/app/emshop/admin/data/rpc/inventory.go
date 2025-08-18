@@ -41,6 +41,46 @@ func NewInventoryServiceClient(r registry.Discovery) ipbv1.InventoryClient {
 	return c
 }
 
-// 库存相关方法可以根据需要添加
+// GetInventory 获取商品库存信息
+func (i *inventory) GetInventory(ctx context.Context, goodsId int32) (*ipbv1.GoodsInvInfo, error) {
+	request := &ipbv1.GoodsInvInfo{GoodsId: goodsId}
+	return i.ic.InvDetail(ctx, request)
+}
+
+// BatchGetInventory 批量获取商品库存信息
+func (i *inventory) BatchGetInventory(ctx context.Context, goodsIds []int32) (map[int32]*ipbv1.GoodsInvInfo, error) {
+	result := make(map[int32]*ipbv1.GoodsInvInfo)
+	
+	// 并发获取库存信息以提高性能
+	for _, goodsId := range goodsIds {
+		inv, err := i.GetInventory(ctx, goodsId)
+		if err != nil {
+			log.Errorf("Failed to get inventory for goods %d: %v", goodsId, err)
+			// 库存获取失败时，设置默认值
+			result[goodsId] = &ipbv1.GoodsInvInfo{GoodsId: goodsId, Num: 0}
+			continue
+		}
+		result[goodsId] = inv
+	}
+	
+	return result, nil
+}
+
+// SetInventory 设置商品库存
+func (i *inventory) SetInventory(ctx context.Context, request *ipbv1.GoodsInvInfo) error {
+	_, err := i.ic.SetInv(ctx, request)
+	return err
+}
+
+// BatchSetInventory 批量设置商品库存
+func (i *inventory) BatchSetInventory(ctx context.Context, inventories []*ipbv1.GoodsInvInfo) error {
+	for _, inv := range inventories {
+		if err := i.SetInventory(ctx, inv); err != nil {
+			log.Errorf("Failed to set inventory for goods %d: %v", inv.GoodsId, err)
+			return err
+		}
+	}
+	return nil
+}
 
 var _ data.InventoryData = &inventory{}

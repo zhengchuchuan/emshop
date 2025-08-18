@@ -2,10 +2,25 @@ package user
 
 import (
 	"context"
+	"time"
 	upbv1 "emshop/api/user/v1"
 	"emshop/internal/app/emshop/admin/data"
+	"emshop/internal/app/pkg/options"
 	"emshop/pkg/log"
+	"emshop/gin-micro/server/rest-server/middlewares"
+	"github.com/golang-jwt/jwt/v4"
 )
+
+// AdminUserDTO 管理员用户数据传输对象
+type AdminUserDTO struct {
+	ID       uint64 `json:"id"`
+	Mobile   string `json:"mobile"`
+	NickName string `json:"nick_name"`
+	Role     int32  `json:"role"`
+	PassWord string `json:"password"`
+	Token    string `json:"token"`
+	ExpiresAt int64 `json:"expires_at"`
+}
 
 // UserSrv 管理员用户服务接口
 type UserSrv interface {
@@ -13,14 +28,21 @@ type UserSrv interface {
 	GetUserById(ctx context.Context, id uint64) (*upbv1.UserInfoResponse, error)
 	GetUserByMobile(ctx context.Context, mobile string) (*upbv1.UserInfoResponse, error)
 	UpdateUserStatus(ctx context.Context, id uint64, status int32) error
+	// 添加登录相关方法
+	MobileLogin(ctx context.Context, mobile, password string) (*AdminUserDTO, error)
+	CheckPassWord(ctx context.Context, password, encryptedPassword string) (bool, error)
 }
 
 type userService struct {
 	data data.DataFactory
+	jwt  *options.JwtOptions
 }
 
-func NewUserService(data data.DataFactory) UserSrv {
-	return &userService{data: data}
+func NewUserService(data data.DataFactory, jwt *options.JwtOptions) UserSrv {
+	return &userService{
+		data: data,
+		jwt:  jwt,
+	}
 }
 
 func (u *userService) GetUserList(ctx context.Context, page, pageSize uint32) (*upbv1.UserListResponse, error) {
@@ -65,4 +87,75 @@ func (u *userService) UpdateUserStatus(ctx context.Context, id uint64, status in
 	
 	_, err := u.data.Users().UpdateUser(ctx, request)
 	return err
+}
+
+// MobileLogin 管理员手机号登录
+func (u *userService) MobileLogin(ctx context.Context, mobile, password string) (*AdminUserDTO, error) {
+	log.Infof("Admin MobileLogin called with mobile: %s", mobile)
+	
+	// 获取用户信息
+	userResp, err := u.GetUserByMobile(ctx, mobile)
+	if err != nil {
+		log.Errorf("Admin login failed: user not found - %v", err)
+		return nil, err
+	}
+	
+	// 验证密码
+	isValid, err := u.CheckPassWord(ctx, password, userResp.PassWord)
+	if err != nil {
+		log.Errorf("Admin login failed: password check error - %v", err)
+		return nil, err
+	}
+	
+	if !isValid {
+		log.Warnf("Admin login failed: incorrect password for user ID: %d", userResp.Id)
+		return nil, err
+	}
+	
+	// 生成JWT Token
+	j := middlewares.NewJWT(u.jwt.Key)
+	claims := middlewares.CustomClaims{
+		ID:          uint(userResp.Id),
+		NickName:    userResp.NickName,
+		AuthorityId: uint(userResp.Role), // 这里是角色信息
+		RegisteredClaims: jwt.RegisteredClaims{
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(u.jwt.Timeout)),
+			Issuer:    u.jwt.Realm,
+		},
+	}
+	
+	token, err := j.CreateToken(claims)
+	if err != nil {
+		log.Errorf("Admin login failed: token generation error - %v", err)
+		return nil, err
+	}
+	
+	return &AdminUserDTO{
+		ID:       uint64(userResp.Id),
+		Mobile:   userResp.Mobile,
+		NickName: userResp.NickName,
+		Role:     userResp.Role,
+		PassWord: userResp.PassWord,
+		Token:    token,
+		ExpiresAt: time.Now().Add(u.jwt.Timeout).Unix(),
+	}, nil
+}
+
+// CheckPassWord 验证密码
+func (u *userService) CheckPassWord(ctx context.Context, password, encryptedPassword string) (bool, error) {
+	log.Infof("Admin CheckPassWord called")
+	
+	request := &upbv1.PasswordCheckInfo{
+		Password:          password,
+		EncryptedPassword: encryptedPassword,
+	}
+	
+	response, err := u.data.Users().CheckPassWord(ctx, request)
+	if err != nil {
+		log.Errorf("Admin password check failed: %v", err)
+		return false, err
+	}
+	
+	return response.Success, nil
 }

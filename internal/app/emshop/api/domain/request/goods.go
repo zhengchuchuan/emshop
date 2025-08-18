@@ -1,16 +1,16 @@
 package request
 
 type GoodsFilter struct {
-	PriceMin    int32  `form:"pmin"`	// 请求参数，请求 ...?pmin=100 时，PriceMin字段会赋值为 100。
-	PriceMax    int32  `form:"pmax"`
-	IsHot       bool   `form:"ih"`
-	IsNew       bool   `form:"in"`
-	IsTab       bool   `form:"it"`
-	TopCategory int32  `form:"c"`
-	Pages       int32  `form:"p"`
-	PagePerNums int32  `form:"pnum"`
-	KeyWords    string `form:"q"`
-	Brand       int32  `form:"b"`
+	PriceMin    *int32  `form:"priceMin"`
+	PriceMax    *int32  `form:"priceMax"`
+	IsHot       *bool   `form:"isHot"`
+	IsNew       *bool   `form:"isNew"`
+	IsTab       *bool   `form:"isTab"`
+	TopCategory *int32  `form:"topCategory"`
+	Pages       *int32  `form:"pages"`
+	PagePerNums *int32  `form:"pagePerNums"`
+	KeyWords    *string `form:"keyWords"`
+	Brand       *int32  `form:"brand"`
 }
 
 type CreateGoods struct {
@@ -85,8 +85,8 @@ type UpdateBrand struct {
 }
 
 type BrandFilter struct {
-	Pages       int32 `form:"p"`
-	PagePerNums int32 `form:"pnum"`
+	Pages       *int32 `form:"pages"`
+	PagePerNums *int32 `form:"pagePerNums"`
 }
 
 // 轮播图管理相关结构体
@@ -106,8 +106,8 @@ type UpdateBanner struct {
 
 // 订单列表查询参数
 type OrderFilter struct {
-	Pages       int32 `form:"p"`
-	PagePerNums int32 `form:"pnum"`
+	Pages       *int32 `form:"pages"`
+	PagePerNums *int32 `form:"pagePerNums"`
 }
 
 // 创建订单请求

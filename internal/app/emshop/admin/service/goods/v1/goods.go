@@ -3,6 +3,7 @@ package goods
 import (
 	"context"
 	gpbv1 "emshop/api/goods/v1"
+	ipbv1 "emshop/api/inventory/v1"
 	"emshop/internal/app/emshop/admin/data"
 	"emshop/pkg/log"
 )
@@ -34,6 +35,15 @@ type GoodsSrv interface {
 	CreateBanner(ctx context.Context, request *gpbv1.BannerRequest) (*gpbv1.BannerResponse, error)
 	UpdateBanner(ctx context.Context, request *gpbv1.BannerRequest) (*gpbv1.BannerResponse, error)
 	DeleteBanner(ctx context.Context, id uint64) (*gpbv1.BannerResponse, error)
+	
+	// 库存管理
+	GetGoodsInventory(ctx context.Context, goodsId int32) (*ipbv1.GoodsInvInfo, error)
+	SetGoodsInventory(ctx context.Context, request *ipbv1.GoodsInvInfo) error
+	BatchSetGoodsInventory(ctx context.Context, inventories []*ipbv1.GoodsInvInfo) error
+	
+	// 批量操作
+	BatchDeleteGoods(ctx context.Context, request *gpbv1.BatchDeleteGoodsRequest) (*gpbv1.BatchOperationResponse, error)
+	BatchUpdateGoodsStatus(ctx context.Context, request *gpbv1.BatchUpdateGoodsStatusRequest) (*gpbv1.BatchOperationResponse, error)
 }
 
 type goodsService struct {
@@ -48,7 +58,40 @@ func NewGoodsService(data data.DataFactory) GoodsSrv {
 
 func (g *goodsService) GetGoodsList(ctx context.Context, request *gpbv1.GoodsFilterRequest) (*gpbv1.GoodsListResponse, error) {
 	log.Infof("Admin GetGoodsList called")
-	return g.data.Goods().GoodsList(ctx, request)
+	
+	// 获取商品列表
+	goodsResp, err := g.data.Goods().GoodsList(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	
+	// 批量获取库存信息
+	if len(goodsResp.Data) > 0 {
+		goodsIds := make([]int32, 0, len(goodsResp.Data))
+		for _, goods := range goodsResp.Data {
+			goodsIds = append(goodsIds, goods.Id)
+		}
+		
+		inventoryMap, err := g.data.Inventory().BatchGetInventory(ctx, goodsIds)
+		if err != nil {
+			log.Errorf("Failed to get inventory info: %v", err)
+			// 库存获取失败不影响商品列表返回，设置默认库存为0
+			for _, goods := range goodsResp.Data {
+				goods.Stocks = 0
+			}
+		} else {
+			// 设置库存信息
+			for _, goods := range goodsResp.Data {
+				if inv, exists := inventoryMap[goods.Id]; exists {
+					goods.Stocks = inv.Num
+				} else {
+					goods.Stocks = 0
+				}
+			}
+		}
+	}
+	
+	return goodsResp, nil
 }
 
 func (g *goodsService) CreateGoods(ctx context.Context, info *gpbv1.CreateGoodsInfo) (*gpbv1.GoodsInfoResponse, error) {
@@ -70,8 +113,24 @@ func (g *goodsService) DeleteGoods(ctx context.Context, id uint64) (*gpbv1.Goods
 
 func (g *goodsService) GetGoodsDetail(ctx context.Context, id uint64) (*gpbv1.GoodsInfoResponse, error) {
 	log.Infof("Admin GetGoodsDetail called for ID: %d", id)
+	
+	// 获取商品详情
 	request := &gpbv1.GoodInfoRequest{Id: int32(id)}
-	return g.data.Goods().GetGoodsDetail(ctx, request)
+	goodsResp, err := g.data.Goods().GetGoodsDetail(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	
+	// 获取库存信息
+	inv, err := g.data.Inventory().GetInventory(ctx, int32(id))
+	if err != nil {
+		log.Errorf("Failed to get inventory for goods %d: %v", id, err)
+		goodsResp.Stocks = 0 // 库存获取失败设置为0
+	} else {
+		goodsResp.Stocks = inv.Num
+	}
+	
+	return goodsResp, nil
 }
 
 func (g *goodsService) SyncGoodsData(ctx context.Context, request *gpbv1.SyncDataRequest) (*gpbv1.SyncDataResponse, error) {
@@ -146,4 +205,33 @@ func (g *goodsService) DeleteBanner(ctx context.Context, id uint64) (*gpbv1.Bann
 	log.Infof("Admin DeleteBanner called for ID: %d", id)
 	request := &gpbv1.BannerRequest{Id: int32(id)}
 	return g.data.Goods().DeleteBanner(ctx, request)
+}
+
+// ==================== 库存管理 ====================
+
+func (g *goodsService) GetGoodsInventory(ctx context.Context, goodsId int32) (*ipbv1.GoodsInvInfo, error) {
+	log.Infof("Admin GetGoodsInventory called for goods ID: %d", goodsId)
+	return g.data.Inventory().GetInventory(ctx, goodsId)
+}
+
+func (g *goodsService) SetGoodsInventory(ctx context.Context, request *ipbv1.GoodsInvInfo) error {
+	log.Infof("Admin SetGoodsInventory called for goods ID: %d, num: %d", request.GoodsId, request.Num)
+	return g.data.Inventory().SetInventory(ctx, request)
+}
+
+func (g *goodsService) BatchSetGoodsInventory(ctx context.Context, inventories []*ipbv1.GoodsInvInfo) error {
+	log.Infof("Admin BatchSetGoodsInventory called for %d items", len(inventories))
+	return g.data.Inventory().BatchSetInventory(ctx, inventories)
+}
+
+// ==================== 批量操作 ====================
+
+func (g *goodsService) BatchDeleteGoods(ctx context.Context, request *gpbv1.BatchDeleteGoodsRequest) (*gpbv1.BatchOperationResponse, error) {
+	log.Infof("Admin BatchDeleteGoods called for %d items", len(request.Ids))
+	return g.data.Goods().BatchDeleteGoods(ctx, request)
+}
+
+func (g *goodsService) BatchUpdateGoodsStatus(ctx context.Context, request *gpbv1.BatchUpdateGoodsStatusRequest) (*gpbv1.BatchOperationResponse, error) {
+	log.Infof("Admin BatchUpdateGoodsStatus called for %d items", len(request.Ids))
+	return g.data.Goods().BatchUpdateGoodsStatus(ctx, request)
 }
