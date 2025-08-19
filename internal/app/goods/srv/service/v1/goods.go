@@ -98,6 +98,10 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 		searchReq.PagePerNums = int32(opts.PageSize)
 	}
 
+	// 调试输出
+	log.Debugf("ES Search Request: %+v", searchReq)
+	log.Debugf("CategoryIDs: %v", searchReq.CategoryIDs)
+
 	// 通过搜索引擎查询
 	goodsList, err := dataFactory.Search().Goods().Search(ctx, searchReq)
 	if err != nil {
