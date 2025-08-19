@@ -164,6 +164,58 @@ func (uc *userController) UpdateUserStatus(ctx *gin.Context) {
 	})
 }
 
+type UpdateUserForm struct {
+	Name     string `form:"name" json:"name" binding:"required,min=3,max=10"`
+	Gender   string `form:"gender" json:"gender" binding:"required,oneof=female male"`
+	Birthday string `form:"birthday" json:"birthday" binding:"required,datetime=2006-01-02"`
+}
+
+// UpdateUser 更新用户信息（管理员专用）
+func (uc *userController) UpdateUser(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	if idStr == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": "id parameter is required",
+		})
+		return
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": "invalid id parameter",
+		})
+		return
+	}
+
+	updateForm := UpdateUserForm{}
+	if err := ctx.ShouldBind(&updateForm); err != nil {
+		gin2.HandleValidatorError(ctx, err, uc.trans)
+		return
+	}
+
+	// 将前端传递过来的日期格式转换成时间戳
+	loc, _ := time.LoadLocation("Local")
+	birthDay, err := time.ParseInLocation("2006-01-02", updateForm.Birthday, loc)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": "invalid birthday format",
+		})
+		return
+	}
+
+	// 只传递需要更新的字段
+	err = uc.sf.Users().UpdateUserInfo(ctx, id, updateForm.Name, updateForm.Gender, uint64(birthDay.Unix()))
+	if err != nil {
+		core.WriteResponse(ctx, err, nil)
+		return
+	}
+
+	core.WriteResponse(ctx, nil, gin.H{
+		"msg": "User updated successfully",
+	})
+}
+
 // AdminLogin 管理员登录（管理员专用）
 func (uc *userController) AdminLogin(ctx *gin.Context) {
 	log.Info("admin login function called...")

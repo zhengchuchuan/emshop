@@ -43,8 +43,15 @@ func NewInventoryServiceClient(r registry.Discovery) ipbv1.InventoryClient {
 
 // GetInventory 获取商品库存信息
 func (i *inventory) GetInventory(ctx context.Context, goodsId int32) (*ipbv1.GoodsInvInfo, error) {
+	log.Infof("Calling InvDetail gRPC for goods ID: %d", goodsId)
 	request := &ipbv1.GoodsInvInfo{GoodsId: goodsId}
-	return i.ic.InvDetail(ctx, request)
+	response, err := i.ic.InvDetail(ctx, request)
+	if err != nil {
+		log.Errorf("InvDetail gRPC call failed for goods %d: %v", goodsId, err)
+		return nil, err
+	}
+	log.Infof("InvDetail gRPC call successful for goods %d: stocks=%d", goodsId, response.Num)
+	return response, nil
 }
 
 // BatchGetInventory 批量获取商品库存信息

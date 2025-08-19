@@ -33,7 +33,7 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		ugroup.POST("register", uController.Register)
 
 		ugroup.GET("detail", jwtAuth.AuthFunc(), uController.GetUserDetail)
-		ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.GetUserDetail)
+		ugroup.PATCH("update", jwtAuth.AuthFunc(), uController.UpdateUser)
 
 		// 注意：管理员功能已迁移到Admin应用
 		// ugroup.GET("list", jwtAuth.AuthFunc(), uController.GetUserList) // 已迁移到 /v1/admin/users

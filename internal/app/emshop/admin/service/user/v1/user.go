@@ -28,6 +28,8 @@ type UserSrv interface {
 	GetUserById(ctx context.Context, id uint64) (*upbv1.UserInfoResponse, error)
 	GetUserByMobile(ctx context.Context, mobile string) (*upbv1.UserInfoResponse, error)
 	UpdateUserStatus(ctx context.Context, id uint64, status int32) error
+	UpdateUser(ctx context.Context, user *upbv1.UserInfoResponse) error
+	UpdateUserInfo(ctx context.Context, id uint64, nickName, gender string, birthday uint64) error
 	// 添加登录相关方法
 	MobileLogin(ctx context.Context, mobile, password string) (*AdminUserDTO, error)
 	CheckPassWord(ctx context.Context, password, encryptedPassword string) (bool, error)
@@ -83,6 +85,34 @@ func (u *userService) UpdateUserStatus(ctx context.Context, id uint64, status in
 	request := &upbv1.UpdateUserInfo{
 		Id: int32(id),
 		// 根据实际需要设置状态字段
+	}
+	
+	_, err := u.data.Users().UpdateUser(ctx, request)
+	return err
+}
+
+func (u *userService) UpdateUser(ctx context.Context, user *upbv1.UserInfoResponse) error {
+	log.Infof("Admin UpdateUser called with id: %d", user.Id)
+	
+	request := &upbv1.UpdateUserInfo{
+		Id:       user.Id,
+		NickName: user.NickName,
+		Gender:   user.Gender,
+		BirthDay: user.BirthDay,
+	}
+	
+	_, err := u.data.Users().UpdateUser(ctx, request)
+	return err
+}
+
+func (u *userService) UpdateUserInfo(ctx context.Context, id uint64, nickName, gender string, birthday uint64) error {
+	log.Infof("Admin UpdateUserInfo called with id: %d, nickName: %s, gender: %s, birthday: %d", id, nickName, gender, birthday)
+	
+	request := &upbv1.UpdateUserInfo{
+		Id:       int32(id),
+		NickName: nickName,
+		Gender:   gender,
+		BirthDay: birthday,
 	}
 	
 	_, err := u.data.Users().UpdateUser(ctx, request)

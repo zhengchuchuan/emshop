@@ -118,18 +118,25 @@ func (g *goodsService) GetGoodsDetail(ctx context.Context, id uint64) (*gpbv1.Go
 	request := &gpbv1.GoodInfoRequest{Id: int32(id)}
 	goodsResp, err := g.data.Goods().GetGoodsDetail(ctx, request)
 	if err != nil {
+		log.Errorf("Failed to get goods detail for ID %d: %v", id, err)
 		return nil, err
 	}
+	log.Infof("Goods detail retrieved successfully for ID %d, name: %s", id, goodsResp.Name)
 	
 	// 获取库存信息
+	log.Infof("Calling inventory service for goods ID: %d", id)
 	inv, err := g.data.Inventory().GetInventory(ctx, int32(id))
 	if err != nil {
 		log.Errorf("Failed to get inventory for goods %d: %v", id, err)
 		goodsResp.Stocks = 0 // 库存获取失败设置为0
+		log.Warnf("Set stocks to 0 for goods %d due to inventory error", id)
 	} else {
+		log.Infof("Inventory retrieved successfully for goods %d: %d stocks", id, inv.Num)
 		goodsResp.Stocks = inv.Num
+		log.Infof("Set goods %d stocks to %d", id, goodsResp.Stocks)
 	}
 	
+	log.Infof("Final response for goods %d: stocks=%d", id, goodsResp.Stocks)
 	return goodsResp, nil
 }
 

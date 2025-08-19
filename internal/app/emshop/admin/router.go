@@ -52,6 +52,7 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 			userGroup.GET("", userController.GetUserList)                    // GET /v1/admin/users?pn=页码&psize=每页数量
 			userGroup.GET("/by-mobile", userController.GetUserByMobile)      // GET /v1/admin/users/by-mobile?mobile=手机号
 			userGroup.GET("/:id", userController.GetUserById)                // GET /v1/admin/users/:id
+			userGroup.PATCH("/:id", userController.UpdateUser)                // PATCH /v1/admin/users/:id 更新用户信息
 			userGroup.PATCH("/:id/status", userController.UpdateUserStatus)  // PATCH /v1/admin/users/:id/status
 		}
 

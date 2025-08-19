@@ -58,7 +58,7 @@ func (u *users) Create(ctx context.Context, user *do.UserDO) error {
 }
 
 func (u *users) Update(ctx context.Context, user *do.UserDO) error {
-	tx := u.factory.db.Save(user)
+	tx := u.factory.db.Model(&do.UserDO{}).Where("id = ?", user.ID).Updates(user)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
