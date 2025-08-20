@@ -255,16 +255,21 @@ func (gs *goodsServer) GetAllCategorysList(ctx context.Context, empty *emptypb.E
 		return nil, err
 	}
 
+	// 首先扁平化所有嵌套的分类数据
+	allCategories := flattenCategories(categories.Items)
+	
+	log.Infof("GetAllCategorysList: flattened %d categories from %d root categories", len(allCategories), len(categories.Items))
+
 	response := &proto.CategoryListResponse{
-		Total: int32(categories.TotalCount),
+		Total: int32(len(allCategories)), // 使用扁平化后的总数
 	}
 
 	// 构建树状结构的分类数据
 	categoryMap := make(map[int32][]*proto.CategoryInfoResponse)
 	var rootCategories []*proto.CategoryInfoResponse
 
-	// 首先收集所有分类并按父级分组
-	for _, item := range categories.Items {
+	// 处理所有扁平化后的分类
+	for _, item := range allCategories {
 		categoryInfo := &proto.CategoryInfoResponse{
 			Id:             item.ID,
 			Name:           item.Name,
@@ -295,6 +300,7 @@ func (gs *goodsServer) GetAllCategorysList(ctx context.Context, empty *emptypb.E
 		response.JsonData = jsonData
 	}
 
+	log.Infof("GetAllCategorysList: returning %d total categories in response", len(response.Data))
 	return response, nil
 }
 
@@ -327,6 +333,108 @@ func (gs *goodsServer) GetSubCategory(ctx context.Context, request *proto.Catego
 	}
 
 	return response, nil
+}
+
+func (gs *goodsServer) GetCategoryTree(ctx context.Context, empty *emptypb.Empty) (*proto.CategoryTreeResponse, error) {
+	categories, err := gs.srv.Category().ListAll(ctx, []string{})
+	if err != nil {
+		log.Errorf("get category tree error: %v", err)
+		return nil, err
+	}
+	
+	// 构建树形结构
+	treeNodes := buildCategoryTreeNodes(categories.Items)
+	
+	// 计算统计信息
+	stats := calculateCategoryStats(categories.Items)
+	
+	response := &proto.CategoryTreeResponse{
+		Categories: treeNodes,
+		Stats:      stats,
+	}
+	
+	log.Infof("GetCategoryTree: returning %d root categories with %d total categories", 
+		len(treeNodes), stats.TotalCount)
+	
+	return response, nil
+}
+
+// buildCategoryTreeNodes 将DTO结构转换为protobuf树形结构
+func buildCategoryTreeNodes(categories []*dto.CategoryDTO) []*proto.CategoryTreeNode {
+	var nodes []*proto.CategoryTreeNode
+	
+	for _, category := range categories {
+		node := &proto.CategoryTreeNode{
+			Id:             category.ID,
+			Name:           category.Name,
+			ParentCategory: category.ParentCategoryID,
+			Level:          category.Level,
+			IsTab:          category.IsTab,
+		}
+		
+		// 递归构建子节点
+		if len(category.SubCategories) > 0 {
+			node.Children = buildCategoryTreeNodes(category.SubCategories)
+		}
+		
+		nodes = append(nodes, node)
+	}
+	
+	return nodes
+}
+
+// calculateCategoryStats 计算分类统计信息
+func calculateCategoryStats(categories []*dto.CategoryDTO) *proto.CategoryStatistics {
+	stats := &proto.CategoryStatistics{}
+	
+	// 递归统计各级分类
+	calculateStatsRecursive(categories, stats, 1)
+	
+	return stats
+}
+
+func calculateStatsRecursive(categories []*dto.CategoryDTO, stats *proto.CategoryStatistics, currentDepth int32) {
+	for _, category := range categories {
+		stats.TotalCount++
+		
+		// 统计各级别分类数量
+		switch category.Level {
+		case 1:
+			stats.Level1Count++
+		case 2:
+			stats.Level2Count++
+		case 3:
+			stats.Level3Count++
+		}
+		
+		// 更新最大深度
+		if currentDepth > stats.MaxDepth {
+			stats.MaxDepth = currentDepth
+		}
+		
+		// 递归处理子分类
+		if len(category.SubCategories) > 0 {
+			calculateStatsRecursive(category.SubCategories, stats, currentDepth+1)
+		}
+	}
+}
+
+// flattenCategories 递归将嵌套的分类结构扁平化
+func flattenCategories(categories []*dto.CategoryDTO) []*dto.CategoryDTO {
+	var flattened []*dto.CategoryDTO
+	
+	for _, category := range categories {
+		// 添加当前分类
+		flattened = append(flattened, category)
+		
+		// 递归添加子分类
+		if len(category.SubCategories) > 0 {
+			subFlattened := flattenCategories(category.SubCategories)
+			flattened = append(flattened, subFlattened...)
+		}
+	}
+	
+	return flattened
 }
 
 func (gs *goodsServer) CreateCategory(ctx context.Context, request *proto.CategoryInfoRequest) (*proto.CategoryInfoResponse, error) {

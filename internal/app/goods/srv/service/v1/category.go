@@ -90,6 +90,29 @@ func (c *category) ListAll(ctx context.Context, orderby []string) (*dto.Category
 	return ret, nil
 }
 
+func (c *category) GetByLevel(ctx context.Context, level int32) (*dto.CategoryDTOList, error) {
+	dataFactory := c.srv.factoryManager.GetDataFactory()
+	categories, err := dataFactory.Categorys().GetByLevel(ctx, int(level))
+	if err != nil {
+		log.Errorf("get categories by level error: %v", err)
+		return nil, err
+	}
+
+	ret := &dto.CategoryDTOList{
+		TotalCount: int64(len(categories.Items)),
+		Items: make([]*dto.CategoryDTO, 0),
+	}
+
+	for _, item := range categories.Items {
+		categoryDTO := &dto.CategoryDTO{
+			CategoryDO: *item,
+		}
+		ret.Items = append(ret.Items, categoryDTO)
+	}
+
+	return ret, nil
+}
+
 func (c *category) GetSubCategories(ctx context.Context, parentID int32) (*dto.CategoryDTOList, error) {
 	dataFactory := c.srv.factoryManager.GetDataFactory()
 	

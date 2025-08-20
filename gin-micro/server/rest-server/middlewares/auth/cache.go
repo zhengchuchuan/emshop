@@ -8,7 +8,7 @@ import (
 	"emshop/gin-micro/server/rest-server/middlewares"
 	"emshop/pkg/common/core"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gin-gonic/gin"
 	"emshop/pkg/errors"
 )

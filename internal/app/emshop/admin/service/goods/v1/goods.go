@@ -21,6 +21,8 @@ type GoodsSrv interface {
 	// 分类管理
 	GetAllCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error)
 	GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error)
+	GetCategoriesByLevel(ctx context.Context, level int32) (*gpbv1.CategoryListResponse, error)
+	GetCategoryTree(ctx context.Context) (*gpbv1.CategoryTreeResponse, error)
 	CreateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error)
 	UpdateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error)
 	DeleteCategory(ctx context.Context, id uint64) (*gpbv1.CategoryInfoResponse, error)
@@ -156,6 +158,16 @@ func (g *goodsService) GetAllCategoriesList(ctx context.Context) (*gpbv1.Categor
 func (g *goodsService) GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error) {
 	log.Infof("Admin GetCategoriesList called")
 	return g.data.Goods().GetCategoriesList(ctx)
+}
+
+func (g *goodsService) GetCategoriesByLevel(ctx context.Context, level int32) (*gpbv1.CategoryListResponse, error) {
+	log.Infof("Admin GetCategoriesByLevel called with level: %d", level)
+	return g.data.Goods().GetCategoriesByLevel(ctx, level)
+}
+
+func (g *goodsService) GetCategoryTree(ctx context.Context) (*gpbv1.CategoryTreeResponse, error) {
+	log.Infof("Admin GetCategoryTree called")
+	return g.data.Goods().GetCategoryTree(ctx)
 }
 
 func (g *goodsService) CreateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error) {

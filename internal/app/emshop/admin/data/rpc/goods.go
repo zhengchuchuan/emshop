@@ -140,6 +140,50 @@ func (g *goods) GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListRespo
 	return flatResponse, nil
 }
 
+func (g *goods) GetCategoriesByLevel(ctx context.Context, level int32) (*gpbv1.CategoryListResponse, error) {
+	log.Infof("Calling GetCategoriesByLevel gRPC with level: %d", level)
+	
+	// 直接在admin数据层实现，调用goods服务的gRPC方法获取所有分类
+	// 然后在这里按层级过滤
+	response, err := g.gc.GetAllCategorysList(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.Errorf("GetCategoriesByLevel gRPC call failed: %v", err)
+		return nil, err
+	}
+	
+	log.Infof("GetAllCategorysList returned %d total categories", len(response.Data))
+	
+	// 过滤出指定层级的分类
+	var filteredCategories []*gpbv1.CategoryInfoResponse
+	for _, category := range response.Data {
+		// log.Debugf("Category %d: ID=%d, Name=%s, Level=%d", i, category.Id, category.Name, category.Level)
+		if category.Level == level {
+			filteredCategories = append(filteredCategories, category)
+		}
+	}
+	
+	filteredResponse := &gpbv1.CategoryListResponse{
+		Total: int32(len(filteredCategories)),
+		Data:  filteredCategories,
+	}
+	
+	log.Infof("GetCategoriesByLevel completed, found %d categories at level %d", len(filteredCategories), level)
+	return filteredResponse, nil
+}
+
+func (g *goods) GetCategoryTree(ctx context.Context) (*gpbv1.CategoryTreeResponse, error) {
+	log.Infof("Calling GetCategoryTree gRPC")
+	response, err := g.gc.GetCategoryTree(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.Errorf("GetCategoryTree gRPC call failed: %v", err)
+		return nil, err
+	}
+	
+	log.Infof("GetCategoryTree completed, got %d root categories with %d total", 
+		len(response.Categories), response.Stats.TotalCount)
+	return response, nil
+}
+
 func (g *goods) GetSubCategory(ctx context.Context, request *gpbv1.CategoryListRequest) (*gpbv1.SubCategoryListResponse, error) {
 	log.Infof("Calling GetSubCategory gRPC for category ID: %d", request.Id)
 	response, err := g.gc.GetSubCategory(ctx, request)

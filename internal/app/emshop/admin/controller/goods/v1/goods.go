@@ -185,8 +185,63 @@ func (gc *goodsController) Sync(ctx *gin.Context) {
 // ==================== 分类管理 ====================
 
 // CategoryList 分类列表（管理员专用）
+// 支持 level 查询参数: ?level=1,2,3 获取指定层级的分类
 func (gc *goodsController) CategoryList(ctx *gin.Context) {
+	levelStr := ctx.Query("level")
+	
+	// 如果指定了 level 参数，按层级获取
+	if levelStr != "" {
+		level, err := strconv.Atoi(levelStr)
+		if err != nil || level < 1 || level > 3 {
+			ctx.JSON(http.StatusBadRequest, gin.H{"msg": "invalid level parameter, must be 1, 2, or 3"})
+			return
+		}
+		
+		response, err := gc.sf.Goods().GetCategoriesByLevel(ctx, int32(level))
+		if err != nil {
+			core.WriteResponse(ctx, err, nil)
+			return
+		}
+		
+		core.WriteResponse(ctx, nil, response)
+		return
+	}
+	
+	// 没有指定 level，返回所有分类的扁平列表
 	response, err := gc.sf.Goods().GetCategoriesList(ctx)
+	if err != nil {
+		core.WriteResponse(ctx, err, nil)
+		return
+	}
+
+	core.WriteResponse(ctx, nil, response)
+}
+
+// CategoryListFlat 获取所有层级的扁平分类列表（管理员专用）
+func (gc *goodsController) CategoryListFlat(ctx *gin.Context) {
+	response, err := gc.sf.Goods().GetCategoriesList(ctx)
+	if err != nil {
+		core.WriteResponse(ctx, err, nil)
+		return
+	}
+
+	core.WriteResponse(ctx, nil, response)
+}
+
+// CategoryListTree 获取嵌套的分类树结构（管理员专用）
+func (gc *goodsController) CategoryListTree(ctx *gin.Context) {
+	response, err := gc.sf.Goods().GetAllCategoriesList(ctx)
+	if err != nil {
+		core.WriteResponse(ctx, err, nil)
+		return
+	}
+
+	core.WriteResponse(ctx, nil, response)
+}
+
+// CategoryHierarchy 获取强类型的分类层级结构（管理员专用）
+func (gc *goodsController) CategoryHierarchy(ctx *gin.Context) {
+	response, err := gc.sf.Goods().GetCategoryTree(ctx)
 	if err != nil {
 		core.WriteResponse(ctx, err, nil)
 		return

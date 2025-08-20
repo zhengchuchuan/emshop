@@ -7,8 +7,7 @@ import (
 	"emshop/internal/app/emshop/admin/data"
 	"emshop/internal/app/pkg/options"
 	"emshop/pkg/log"
-	"emshop/gin-micro/server/rest-server/middlewares"
-	"github.com/golang-jwt/jwt/v4"
+	jwtpkg "emshop/internal/app/pkg/jwt"
 )
 
 // AdminUserDTO 管理员用户数据传输对象
@@ -143,18 +142,13 @@ func (u *userService) MobileLogin(ctx context.Context, mobile, password string) 
 	}
 	
 	// 生成JWT Token
-	j := middlewares.NewJWT(u.jwt.Key)
-	claims := middlewares.CustomClaims{
-		ID:          uint(userResp.Id),
-		AuthorityId: uint(userResp.Role), // 这里是角色信息
-		RegisteredClaims: jwt.RegisteredClaims{
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(u.jwt.Timeout)),
-			Issuer:    u.jwt.Realm,
-		},
-	}
-	
-	token, err := j.CreateToken(claims)
+	j := jwtpkg.NewEmshopJWT(u.jwt.Key)
+	token, err := j.CreateToken(
+		uint(userResp.Id),
+		uint(userResp.Role), // 这里是角色信息
+		jwtpkg.IssuerEmshopAdmin,
+		u.jwt.Timeout,
+	)
 	if err != nil {
 		log.Errorf("Admin login failed: token generation error - %v", err)
 		return nil, err

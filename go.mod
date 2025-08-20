@@ -8,7 +8,6 @@ require (
 	github.com/alibaba/sentinel-golang/pkg/adapters/grpc v0.0.0-20250513022732-368e01c4a4a2
 	github.com/alibaba/sentinel-golang/pkg/datasource/nacos v0.0.0-20250513022732-368e01c4a4a2
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
-	github.com/appleboy/gin-jwt/v2 v2.10.3
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/bitly/go-simplejson v0.5.1
 	github.com/buger/jsonparser v1.1.1
@@ -21,7 +20,7 @@ require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-redsync/redsync/v4 v4.13.0
-	github.com/golang-jwt/jwt/v4 v4.5.2
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
 	github.com/gosuri/uitable v0.0.4

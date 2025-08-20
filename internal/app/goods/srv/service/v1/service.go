@@ -39,6 +39,9 @@ type CategorySrv interface {
 	// 获取扁平分类列表（管理后台专用）
 	GetCategoriesList(ctx context.Context) (*dto.CategoryDTOList, error)
 	
+	// 按层级获取分类
+	GetByLevel(ctx context.Context, level int32) (*dto.CategoryDTOList, error)
+	
 	// 获取子分类
 	GetSubCategories(ctx context.Context, parentID int32) (*dto.CategoryDTOList, error)
 	

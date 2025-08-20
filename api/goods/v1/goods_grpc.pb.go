@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: goods.proto
+// source: api/goods/v1/goods.proto
 
 package proto
 
@@ -28,6 +28,7 @@ const (
 	Goods_GetGoodsDetail_FullMethodName         = "/Goods/GetGoodsDetail"
 	Goods_GetAllCategorysList_FullMethodName    = "/Goods/GetAllCategorysList"
 	Goods_GetSubCategory_FullMethodName         = "/Goods/GetSubCategory"
+	Goods_GetCategoryTree_FullMethodName        = "/Goods/GetCategoryTree"
 	Goods_CreateCategory_FullMethodName         = "/Goods/CreateCategory"
 	Goods_DeleteCategory_FullMethodName         = "/Goods/DeleteCategory"
 	Goods_UpdateCategory_FullMethodName         = "/Goods/UpdateCategory"
@@ -65,6 +66,8 @@ type GoodsClient interface {
 	GetAllCategorysList(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CategoryListResponse, error)
 	// 获取子分类
 	GetSubCategory(ctx context.Context, in *CategoryListRequest, opts ...grpc.CallOption) (*SubCategoryListResponse, error)
+	// 新增：获取树形分类结构（强类型）
+	GetCategoryTree(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CategoryTreeResponse, error)
 	CreateCategory(ctx context.Context, in *CategoryInfoRequest, opts ...grpc.CallOption) (*CategoryInfoResponse, error)
 	DeleteCategory(ctx context.Context, in *DeleteCategoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdateCategory(ctx context.Context, in *CategoryInfoRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -174,6 +177,16 @@ func (c *goodsClient) GetSubCategory(ctx context.Context, in *CategoryListReques
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SubCategoryListResponse)
 	err := c.cc.Invoke(ctx, Goods_GetSubCategory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *goodsClient) GetCategoryTree(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CategoryTreeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CategoryTreeResponse)
+	err := c.cc.Invoke(ctx, Goods_GetCategoryTree_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -386,6 +399,8 @@ type GoodsServer interface {
 	GetAllCategorysList(context.Context, *emptypb.Empty) (*CategoryListResponse, error)
 	// 获取子分类
 	GetSubCategory(context.Context, *CategoryListRequest) (*SubCategoryListResponse, error)
+	// 新增：获取树形分类结构（强类型）
+	GetCategoryTree(context.Context, *emptypb.Empty) (*CategoryTreeResponse, error)
 	CreateCategory(context.Context, *CategoryInfoRequest) (*CategoryInfoResponse, error)
 	DeleteCategory(context.Context, *DeleteCategoryRequest) (*emptypb.Empty, error)
 	UpdateCategory(context.Context, *CategoryInfoRequest) (*emptypb.Empty, error)
@@ -444,6 +459,9 @@ func (UnimplementedGoodsServer) GetAllCategorysList(context.Context, *emptypb.Em
 }
 func (UnimplementedGoodsServer) GetSubCategory(context.Context, *CategoryListRequest) (*SubCategoryListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSubCategory not implemented")
+}
+func (UnimplementedGoodsServer) GetCategoryTree(context.Context, *emptypb.Empty) (*CategoryTreeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCategoryTree not implemented")
 }
 func (UnimplementedGoodsServer) CreateCategory(context.Context, *CategoryInfoRequest) (*CategoryInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateCategory not implemented")
@@ -663,6 +681,24 @@ func _Goods_GetSubCategory_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(GoodsServer).GetSubCategory(ctx, req.(*CategoryListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Goods_GetCategoryTree_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GoodsServer).GetCategoryTree(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Goods_GetCategoryTree_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GoodsServer).GetCategoryTree(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1049,6 +1085,10 @@ var Goods_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Goods_GetSubCategory_Handler,
 		},
 		{
+			MethodName: "GetCategoryTree",
+			Handler:    _Goods_GetCategoryTree_Handler,
+		},
+		{
 			MethodName: "CreateCategory",
 			Handler:    _Goods_CreateCategory_Handler,
 		},
@@ -1126,5 +1166,5 @@ var Goods_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "goods.proto",
+	Metadata: "api/goods/v1/goods.proto",
 }

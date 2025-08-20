@@ -6,7 +6,7 @@ import (
 	"time"
 
 	upb "emshop/api/user/v1"
-	"emshop/gin-micro/server/rest-server/middlewares"
+	jwtpkg "emshop/internal/app/pkg/jwt"
 	"emshop/internal/app/emshop/api/data"
 	"emshop/internal/app/pkg/code"
 	"emshop/internal/app/pkg/options"
@@ -15,7 +15,6 @@ import (
 	"emshop/pkg/storage"
 	itime "emshop/pkg/common/time"
 
-	"github.com/golang-jwt/jwt/v4"
 )
 
 type User struct {
@@ -97,17 +96,13 @@ func (us *userService) MobileLogin(ctx context.Context, mobile, password string)
 	}
 
 	//生成token
-	j := middlewares.NewJWT(us.jwtOpts.Key)
-	claims := middlewares.CustomClaims{
-		ID:          uint(user.ID),
-		AuthorityId: uint(user.Role),
-		RegisteredClaims: jwt.RegisteredClaims{
-			NotBefore: jwt.NewNumericDate(time.Now()),                                   //签名的生效时间
-			ExpiresAt: jwt.NewNumericDate(time.Now().Local().Add(us.jwtOpts.Timeout)), //30天过期
-			Issuer:    us.jwtOpts.Realm,
-		},
-	}
-	token, err := j.CreateToken(claims)
+	j := jwtpkg.NewEmshopJWT(us.jwtOpts.Key)
+	token, err := j.CreateToken(
+		uint(user.ID),
+		uint(user.Role),
+		jwtpkg.IssuerEmshopAPI,
+		us.jwtOpts.Timeout,
+	)
 	
 	if err != nil {
 		return nil, err
@@ -145,17 +140,13 @@ func (us *userService) Register(ctx context.Context, mobile, password, codes str
 	user := protoToUser(userResp)
 
 	// 直接生成token
-	j := middlewares.NewJWT(us.jwtOpts.Key)
-	claims := middlewares.CustomClaims{
-		ID:          uint(user.ID),
-		AuthorityId: uint(user.Role),
-		RegisteredClaims: jwt.RegisteredClaims{
-			NotBefore: jwt.NewNumericDate(time.Now()),                                   //签名的生效时间
-			ExpiresAt: jwt.NewNumericDate(time.Now().Local().Add(us.jwtOpts.Timeout)), //30天过期
-			Issuer:    us.jwtOpts.Realm,
-		},
-	}
-	token, err := j.CreateToken(claims)
+	j := jwtpkg.NewEmshopJWT(us.jwtOpts.Key)
+	token, err := j.CreateToken(
+		uint(user.ID),
+		uint(user.Role),
+		jwtpkg.IssuerEmshopAPI,
+		us.jwtOpts.Timeout,
+	)
 	if err != nil {
 		return nil, err
 	}

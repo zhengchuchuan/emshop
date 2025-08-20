@@ -40,6 +40,8 @@ type GoodsData interface {
 	// 分类管理
 	GetAllCategorysList(ctx context.Context) (*gpbv1.CategoryListResponse, error)
 	GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error)
+	GetCategoriesByLevel(ctx context.Context, level int32) (*gpbv1.CategoryListResponse, error)
+	GetCategoryTree(ctx context.Context) (*gpbv1.CategoryTreeResponse, error)
 	GetSubCategory(ctx context.Context, request *gpbv1.CategoryListRequest) (*gpbv1.SubCategoryListResponse, error)
 	CreateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error)
 	UpdateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error)
