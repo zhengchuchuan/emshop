@@ -38,7 +38,6 @@ type GoodsData interface {
 	UpdateGoods(ctx context.Context, info *gpbv1.CreateGoodsInfo) (*gpbv1.GoodsInfoResponse, error)
 	
 	// 分类管理
-	GetAllCategorysList(ctx context.Context) (*gpbv1.CategoryListResponse, error)
 	GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error)
 	GetCategoriesByLevel(ctx context.Context, level int32) (*gpbv1.CategoryListResponse, error)
 	GetCategoryTree(ctx context.Context) (*gpbv1.CategoryTreeResponse, error)

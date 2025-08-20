@@ -76,7 +76,6 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		{
 			categoriesGroup.GET("", goodsController.CategoryList)              // GET /v1/admin/categories 获取分类列表，支持?level=1,2,3参数
 			categoriesGroup.GET("/flat", goodsController.CategoryListFlat)     // GET /v1/admin/categories/flat 获取所有层级的扁平分类列表
-			categoriesGroup.GET("/tree", goodsController.CategoryListTree)     // GET /v1/admin/categories/tree 获取嵌套的分类树结构(JSON字符串)
 			categoriesGroup.GET("/hierarchy", goodsController.CategoryHierarchy) // GET /v1/admin/categories/hierarchy 获取强类型的分类树结构
 			categoriesGroup.POST("", goodsController.CreateCategory)           // POST /v1/admin/categories 创建分类
 			categoriesGroup.PUT("/:id", goodsController.UpdateCategory)        // PUT /v1/admin/categories/:id 更新分类

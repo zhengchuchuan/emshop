@@ -1,7 +1,6 @@
 package goods
 
 import (
-	"encoding/json"
 	"strconv"
 	"github.com/gin-gonic/gin"
 	"emshop/gin-micro/server/rest-server"
@@ -453,17 +452,8 @@ func (gc *goodsController) CategoryList(ctx *gin.Context) {
 		return
 	}
 
-	// 返回JSON格式的分类树
-	var data []interface{}
-	if categoriesResponse.JsonData != "" {
-		if err := json.Unmarshal([]byte(categoriesResponse.JsonData), &data); err != nil {
-			log.Errorf("unmarshal category json data error: %v", err)
-			core.WriteResponse(ctx, errors.WithCode(code.ErrEncodingJSON, "分类数据解析失败"), nil)
-			return
-		}
-	}
-
-	core.WriteResponse(ctx, nil, data)
+	// 直接返回分类数据，不再依赖JsonData字段
+	core.WriteResponse(ctx, nil, categoriesResponse.Data)
 }
 
 func (gc *goodsController) CategoryDetail(ctx *gin.Context) {

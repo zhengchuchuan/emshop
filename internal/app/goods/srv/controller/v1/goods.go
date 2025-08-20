@@ -2,7 +2,6 @@ package v1
 
 import (
 	"context"
-	"encoding/json"
 	"emshop/internal/app/goods/srv/domain/do"
 	"emshop/internal/app/goods/srv/domain/dto"
 	v12 "emshop/pkg/common/meta/v1"
@@ -289,15 +288,6 @@ func (gs *goodsServer) GetAllCategorysList(ctx context.Context, empty *emptypb.E
 	response.Data = rootCategories
 	for _, children := range categoryMap {
 		response.Data = append(response.Data, children...)
-	}
-
-	// 生成JSON格式的分类树结构
-	jsonData, err := buildCategoryTree(rootCategories, categoryMap)
-	if err != nil {
-		log.Errorf("build category tree error: %v", err)
-		response.JsonData = "[]"
-	} else {
-		response.JsonData = jsonData
 	}
 
 	log.Infof("GetAllCategorysList: returning %d total categories in response", len(response.Data))
@@ -807,63 +797,3 @@ func ModelToResponse(goods *dto.GoodsDTO) *proto.GoodsInfoResponse {
 	}
 }
 
-// CategoryTreeNode represents a category node in tree structure for JSON serialization
-type CategoryTreeNode struct {
-	Id             int32               `json:"id"`
-	Name           string              `json:"name"`
-	Level          int32               `json:"level"`
-	IsTab          bool                `json:"is_tab"`
-	ParentCategory int32               `json:"parent_category"`
-	Children       []*CategoryTreeNode `json:"children,omitempty"`
-}
-
-// buildCategoryTree builds a hierarchical JSON string from category data
-func buildCategoryTree(rootCategories []*proto.CategoryInfoResponse, categoryMap map[int32][]*proto.CategoryInfoResponse) (string, error) {
-	var treeNodes []*CategoryTreeNode
-
-	for _, root := range rootCategories {
-		node := &CategoryTreeNode{
-			Id:             root.Id,
-			Name:           root.Name,
-			Level:          root.Level,
-			IsTab:          root.IsTab,
-			ParentCategory: root.ParentCategory,
-		}
-
-		// Recursively build children
-		node.Children = buildChildren(root.Id, categoryMap)
-		treeNodes = append(treeNodes, node)
-	}
-
-	jsonData, err := json.Marshal(treeNodes)
-	if err != nil {
-		return "[]", err
-	}
-
-	return string(jsonData), nil
-}
-
-// buildChildren recursively builds child nodes
-func buildChildren(parentId int32, categoryMap map[int32][]*proto.CategoryInfoResponse) []*CategoryTreeNode {
-	children, exists := categoryMap[parentId]
-	if !exists {
-		return nil
-	}
-
-	var childNodes []*CategoryTreeNode
-	for _, child := range children {
-		childNode := &CategoryTreeNode{
-			Id:             child.Id,
-			Name:           child.Name,
-			Level:          child.Level,
-			IsTab:          child.IsTab,
-			ParentCategory: child.ParentCategory,
-		}
-
-		// Recursively build grandchildren
-		childNode.Children = buildChildren(child.Id, categoryMap)
-		childNodes = append(childNodes, childNode)
-	}
-
-	return childNodes
-}

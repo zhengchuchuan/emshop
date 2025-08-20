@@ -110,17 +110,6 @@ func (g *goods) UpdateGoods(ctx context.Context, info *gpbv1.CreateGoodsInfo) (*
 
 // ==================== 分类管理 ====================
 
-func (g *goods) GetAllCategorysList(ctx context.Context) (*gpbv1.CategoryListResponse, error) {
-	log.Infof("Calling GetAllCategorysList gRPC")
-	response, err := g.gc.GetAllCategorysList(ctx, &emptypb.Empty{})
-	if err != nil {
-		log.Errorf("GetAllCategorysList gRPC call failed: %v", err)
-		return nil, err
-	}
-	log.Infof("GetAllCategorysList gRPC call successful, total: %d", response.Total)
-	return response, nil
-}
-
 func (g *goods) GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error) {
 	log.Infof("Calling GetCategoriesList gRPC")
 	response, err := g.gc.GetAllCategorysList(ctx, &emptypb.Empty{})
@@ -129,15 +118,8 @@ func (g *goods) GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListRespo
 		return nil, err
 	}
 	
-	// 返回扁平的分类数据，去掉jsonData字段
-	flatResponse := &gpbv1.CategoryListResponse{
-		Total: response.Total,
-		Data:  response.Data,
-		// 不设置JsonData字段，保持扁平结构
-	}
-	
-	log.Infof("GetCategoriesList gRPC call successful, total: %d", flatResponse.Total)
-	return flatResponse, nil
+	log.Infof("GetCategoriesList gRPC call successful, total: %d", response.Total)
+	return response, nil
 }
 
 func (g *goods) GetCategoriesByLevel(ctx context.Context, level int32) (*gpbv1.CategoryListResponse, error) {

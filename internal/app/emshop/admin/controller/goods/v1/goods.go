@@ -228,16 +228,6 @@ func (gc *goodsController) CategoryListFlat(ctx *gin.Context) {
 	core.WriteResponse(ctx, nil, response)
 }
 
-// CategoryListTree 获取嵌套的分类树结构（管理员专用）
-func (gc *goodsController) CategoryListTree(ctx *gin.Context) {
-	response, err := gc.sf.Goods().GetAllCategoriesList(ctx)
-	if err != nil {
-		core.WriteResponse(ctx, err, nil)
-		return
-	}
-
-	core.WriteResponse(ctx, nil, response)
-}
 
 // CategoryHierarchy 获取强类型的分类层级结构（管理员专用）
 func (gc *goodsController) CategoryHierarchy(ctx *gin.Context) {
