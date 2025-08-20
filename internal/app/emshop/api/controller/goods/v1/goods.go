@@ -626,15 +626,17 @@ func (gc *goodsController) BrandList(ctx *gin.Context) {
 	
 	// 分页参数 - 设置默认值
 	if r.Pages != nil {
-		brandRequest.Pages = *r.Pages
+		brandRequest.Pages = r.Pages
 	} else {
-		brandRequest.Pages = 1 // 默认第1页
+		defaultPage := int32(1)
+		brandRequest.Pages = &defaultPage // 默认第1页
 	}
 	
 	if r.PagePerNums != nil {
-		brandRequest.PagePerNums = *r.PagePerNums
+		brandRequest.PagePerNums = r.PagePerNums
 	} else {
-		brandRequest.PagePerNums = 10 // 默认每页10条
+		defaultPagePerNums := int32(10)
+		brandRequest.PagePerNums = &defaultPagePerNums // 默认每页10条
 	}
 
 	brandsResponse, err := gc.srv.Goods().BrandList(ctx, &brandRequest)

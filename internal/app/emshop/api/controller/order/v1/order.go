@@ -4,12 +4,12 @@ import (
 	"strconv"
 	"github.com/gin-gonic/gin"
 	"emshop/gin-micro/server/rest-server"
-	"emshop/gin-micro/server/rest-server/middlewares"
 	proto "emshop/api/order/v1"
 	"emshop/internal/app/emshop/api/domain/dto/request"
 	"emshop/internal/app/emshop/api/service"
 	v1 "emshop/internal/app/emshop/api/service/order/v1"
 	gin2 "emshop/internal/app/pkg/translator/gin"
+	"emshop/internal/app/pkg/jwt"
 	"emshop/pkg/common/core"
 	"emshop/gin-micro/code"
 	"emshop/pkg/errors"
@@ -42,7 +42,7 @@ func (oc *orderController) OrderList(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(middlewares.KeyUserID)
+	userId, exists := ctx.Get(jwt.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -105,7 +105,7 @@ func (oc *orderController) CreateOrder(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(middlewares.KeyUserID)
+	userId, exists := ctx.Get(jwt.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -146,7 +146,7 @@ func (oc *orderController) OrderDetail(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(middlewares.KeyUserID)
+	userId, exists := ctx.Get(jwt.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -198,7 +198,7 @@ func (oc *orderController) CartList(ctx *gin.Context) {
 	log.Info("cart list function called ...")
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(middlewares.KeyUserID)
+	userId, exists := ctx.Get(jwt.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -243,7 +243,7 @@ func (oc *orderController) AddToCart(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(middlewares.KeyUserID)
+	userId, exists := ctx.Get(jwt.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -295,7 +295,7 @@ func (oc *orderController) UpdateCartItem(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(middlewares.KeyUserID)
+	userId, exists := ctx.Get(jwt.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
@@ -337,7 +337,7 @@ func (oc *orderController) DeleteCartItem(ctx *gin.Context) {
 	}
 	
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(middlewares.KeyUserID)
+	userId, exists := ctx.Get(jwt.KeyUserID)
 	if !exists {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return

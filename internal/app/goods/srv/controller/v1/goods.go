@@ -491,7 +491,36 @@ func (gs *goodsServer) UpdateCategory(ctx context.Context, request *proto.Catego
 }
 
 func (gs *goodsServer) BrandList(ctx context.Context, request *proto.BrandFilterRequest) (*proto.BrandListResponse, error) {
-	brands, err := gs.srv.Brand().List(ctx, v12.ListMeta{Page: int(request.Pages), PageSize: int(request.PagePerNums)}, []string{})
+	// 如果Pages或PagePerNums为nil，表示不分页，返回所有数据
+	listMeta := v12.ListMeta{}
+	if request.Pages == nil && request.PagePerNums == nil {
+		// 设置一个很大的PageSize以获取所有数据，Page设置为1
+		listMeta.Page = 1
+		listMeta.PageSize = 10000 // 足够大的数字来获取所有品牌数据
+	} else {
+		// 正常分页逻辑
+		page := 1
+		pageSize := 10
+		
+		if request.Pages != nil {
+			page = int(*request.Pages)
+			if page <= 0 {
+				page = 1
+			}
+		}
+		
+		if request.PagePerNums != nil {
+			pageSize = int(*request.PagePerNums)
+			if pageSize <= 0 {
+				pageSize = 10
+			}
+		}
+		
+		listMeta.Page = page
+		listMeta.PageSize = pageSize
+	}
+	
+	brands, err := gs.srv.Brand().List(ctx, listMeta, []string{})
 	if err != nil {
 		log.Errorf("get brands list error: %v", err)
 		return nil, err

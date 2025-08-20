@@ -154,8 +154,8 @@ message BannerResponse {
 }
 
 message BrandFilterRequest {
-  int32 pages = 1;
-  int32 pagePerNums = 2;
+  optional int32 pages = 1;
+  optional int32 pagePerNums = 2;
 }
 
 message BrandRequest {

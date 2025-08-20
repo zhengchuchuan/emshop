@@ -13,3 +13,5 @@ type AdminGoodsFilter struct {
 	KeyWords    *string `form:"keyWords"`    // 关键词搜索
 	Brand       *int32  `form:"brand"`       // 品牌筛选
 }
+
+

@@ -304,25 +304,17 @@ func (gc *goodsController) DeleteCategory(ctx *gin.Context) {
 
 // BrandList 品牌列表（管理员专用）
 func (gc *goodsController) BrandList(ctx *gin.Context) {
-	var r struct {
-		Pages       *int32 `form:"pages"`
-		PagePerNums *int32 `form:"pagePerNums"`
-	}
+	var request proto.BrandFilterRequest
 
-	if err := ctx.ShouldBindQuery(&r); err != nil {
+	if err := ctx.ShouldBindQuery(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "invalid query parameters"})
 		return
 	}
 
-	request := &proto.BrandFilterRequest{}
-	if r.Pages != nil {
-		request.Pages = *r.Pages
-	}
-	if r.PagePerNums != nil {
-		request.PagePerNums = *r.PagePerNums
-	}
+	// 如果不指定pages或pagePerNums（指针为nil），则在服务层返回全部数据
+	// 这里直接使用protobuf生成的结构体，字段为指针类型，能够区分未设置和设置为0的情况
 
-	response, err := gc.sf.Goods().GetBrandsList(ctx, request)
+	response, err := gc.sf.Goods().GetBrandsList(ctx, &request)
 	if err != nil {
 		core.WriteResponse(ctx, err, nil)
 		return

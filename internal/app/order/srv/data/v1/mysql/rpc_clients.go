@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"time"
 
 	gpbv1 "emshop/api/goods/v1"
 	proto "emshop/api/inventory/v1"
@@ -39,8 +40,12 @@ func GetGoodsClient(opts *options.RegistryOptions) gpbv1.GoodsClient {
 }
 
 func NewGoodsServiceClient(r registry.Discovery) gpbv1.GoodsClient {
+	// 创建带有重试和超时的上下文
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	
 	conn, err := rpcserver.DialInsecure(
-		context.Background(),
+		ctx,
 		rpcserver.WithEndpoint(goodsserviceName),
 		rpcserver.WithDiscovery(r),
 		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),

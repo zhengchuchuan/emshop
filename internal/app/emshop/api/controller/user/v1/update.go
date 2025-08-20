@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	gin2 "emshop/internal/app/pkg/translator/gin"
-	"emshop/gin-micro/server/rest-server/middlewares"
+	"emshop/internal/app/pkg/jwt"
 	"emshop/pkg/common/core"
 	jtime "emshop/pkg/common/time"
 )
@@ -24,8 +24,8 @@ func (us *userServer) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	userID, _ := ctx.Get(middlewares.KeyUserID)
-	userIDInt := uint64(userID.(float64))
+	userID, _ := ctx.Get(jwt.KeyUserID)
+	userIDInt := uint64(userID.(int))
 	userDTO, err := us.sf.Users().Get(ctx, userIDInt)
 	if err != nil {
 		core.WriteResponse(ctx, err, nil)
