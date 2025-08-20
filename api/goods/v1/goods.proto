@@ -85,7 +85,6 @@ message CategoryInfoResponse {
 message CategoryListResponse {
   int32 total = 1;
   repeated CategoryInfoResponse data = 2;
-  string jsonData = 3;
 }
 
 // 新增：树形分类节点，支持递归嵌套
