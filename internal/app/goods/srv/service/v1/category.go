@@ -2,7 +2,6 @@ package v1
 
 import (
 	"context"
-	"encoding/json"
 	
 	"emshop/internal/app/goods/srv/domain/do"
 	"emshop/internal/app/goods/srv/domain/dto"
@@ -226,48 +225,8 @@ func (c *category) Delete(ctx context.Context, ID int32) error {
 	return nil
 }
 
-// GetAllCategoriesJSON 获取所有分类的JSON格式数据（与原有接口兼容）
-func (c *category) GetAllCategoriesJSON(ctx context.Context) (string, error) {
-	categories, err := c.ListAll(ctx, []string{})
-	if err != nil {
-		return "", err
-	}
-
-	// 构建树形结构
-	type CategoryNode struct {
-		ID            int32           `json:"id"`
-		Name          string          `json:"name"`
-		Level         int32           `json:"level"`
-		IsTab         bool            `json:"is_tab"`
-		ParentID      int32           `json:"parent,omitempty"`
-		SubCategories []*CategoryNode `json:"sub_category,omitempty"`
-	}
-
-	var buildTree func([]*dto.CategoryDTO) []*CategoryNode
-	buildTree = func(categories []*dto.CategoryDTO) []*CategoryNode {
-		var nodes []*CategoryNode
-		for _, cat := range categories {
-			node := &CategoryNode{
-				ID:       cat.ID,
-				Name:     cat.Name,
-				Level:    cat.Level,
-				IsTab:    cat.IsTab,
-				ParentID: cat.ParentCategoryID,
-			}
-			if len(cat.SubCategories) > 0 {
-				node.SubCategories = buildTree(cat.SubCategories)
-			}
-			nodes = append(nodes, node)
-		}
-		return nodes
-	}
-
-	tree := buildTree(categories.Items)
-	jsonData, err := json.Marshal(tree)
-	if err != nil {
-		log.Errorf("marshal categories to json error: %v", err)
-		return "", err
-	}
-
-	return string(jsonData), nil
+// GetCategoriesList 获取扁平的分类列表（管理后台专用）
+func (c *category) GetCategoriesList(ctx context.Context) (*dto.CategoryDTOList, error) {
+	return c.List(ctx, metav1.ListMeta{}, []string{})
 }
+

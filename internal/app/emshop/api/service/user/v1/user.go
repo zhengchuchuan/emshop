@@ -100,7 +100,6 @@ func (us *userService) MobileLogin(ctx context.Context, mobile, password string)
 	j := middlewares.NewJWT(us.jwtOpts.Key)
 	claims := middlewares.CustomClaims{
 		ID:          uint(user.ID),
-		NickName:    user.NickName,
 		AuthorityId: uint(user.Role),
 		RegisteredClaims: jwt.RegisteredClaims{
 			NotBefore: jwt.NewNumericDate(time.Now()),                                   //签名的生效时间
@@ -149,7 +148,6 @@ func (us *userService) Register(ctx context.Context, mobile, password, codes str
 	j := middlewares.NewJWT(us.jwtOpts.Key)
 	claims := middlewares.CustomClaims{
 		ID:          uint(user.ID),
-		NickName:    user.NickName,
 		AuthorityId: uint(user.Role),
 		RegisteredClaims: jwt.RegisteredClaims{
 			NotBefore: jwt.NewNumericDate(time.Now()),                                   //签名的生效时间

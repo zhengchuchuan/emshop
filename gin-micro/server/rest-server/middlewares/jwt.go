@@ -8,7 +8,6 @@ import (
 
 type CustomClaims struct {
 	ID          uint `json:"userid"`
-	NickName    string
 	AuthorityId uint
 	jwt.RegisteredClaims
 }
@@ -37,7 +36,7 @@ func (j *JWT) CreateToken(claims CustomClaims) (string, error) {
 }
 
 // 解析 token
-func (j *JWT) ParseToken(tokenString string) (*CustomClaims, error) {
+func (j *JWT) ParseToken(tokenString string)   (*CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (i interface{}, e error) {
 		return j.SigningKey, nil
 	})

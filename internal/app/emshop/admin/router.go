@@ -12,6 +12,7 @@ import (
 	"emshop/internal/app/emshop/admin/controller/analytics/v1"
 	"emshop/internal/app/emshop/admin/data/rpc"
 	"emshop/internal/app/emshop/admin/service"
+	"emshop/internal/app/pkg/middleware"
 )
 
 func initRouter(g *restserver.Server, cfg *config.Config) {
@@ -30,7 +31,7 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	serviceFactory := service.NewService(data, cfg.Jwt)
 	
 	// 创建管理员认证中间件
-	adminAuth := newAdminAuth(cfg.Jwt)
+	adminAuth := middleware.AdminAuth(cfg.Jwt)
 
 	// 管理员认证接口（无需认证）
 	authGroup := v1.Group("/admin/auth")

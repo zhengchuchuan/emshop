@@ -146,7 +146,6 @@ func (u *userService) MobileLogin(ctx context.Context, mobile, password string) 
 	j := middlewares.NewJWT(u.jwt.Key)
 	claims := middlewares.CustomClaims{
 		ID:          uint(userResp.Id),
-		NickName:    userResp.NickName,
 		AuthorityId: uint(userResp.Role), // 这里是角色信息
 		RegisteredClaims: jwt.RegisteredClaims{
 			NotBefore: jwt.NewNumericDate(time.Now()),

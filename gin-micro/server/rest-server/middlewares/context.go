@@ -5,6 +5,7 @@ import "github.com/gin-gonic/gin"
 const (
 	UsernameKey = "username"
 	KeyUserID   = "userid"
+	KeyUserRole = "userRole"
 	UserIP      = "ip"
 )
 

@@ -1,4 +1,4 @@
-package admin
+package middleware
 
 import (
 	"strings"
@@ -33,27 +33,19 @@ const (
 const (
 	KeyUserID   = "userID"
 	KeyUserRole = "userRole"
-	KeyUserName = "userName"
 )
 
-func newJWTAuth(opts *options.JwtOptions) middlewares.AuthStrategy {
-	return &customJWTAuth{opts: opts}
-}
-
-type customJWTAuth struct {
-	opts *options.JwtOptions
-}
-
-func (c *customJWTAuth) AuthFunc() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		token := extractToken(ctx)
+// JWTAuth 创建基础JWT认证中间件
+func JWTAuth(opts *options.JwtOptions) gin.HandlerFunc {
+	return gin.HandlerFunc(func(ctx *gin.Context) {
+		token := ExtractToken(ctx)
 		if token == "" {
 			core.WriteResponse(ctx, errors.WithCode(code.ErrSignatureInvalid, "Authorization token is missing"), nil)
 			ctx.Abort()
 			return
 		}
 
-		j := middlewares.NewJWT(c.opts.Key)
+		j := middlewares.NewJWT(opts.Key)
 		claims, err := j.ParseToken(token)
 		if err != nil {
 			core.WriteResponse(ctx, errors.WithCode(code.ErrSignatureInvalid, "Invalid token: %s", err.Error()), nil)
@@ -64,15 +56,14 @@ func (c *customJWTAuth) AuthFunc() gin.HandlerFunc {
 		// 设置基础用户信息到上下文
 		ctx.Set(KeyUserID, int(claims.ID))
 		ctx.Set(KeyUserRole, int(claims.AuthorityId))
-		ctx.Set(KeyUserName, claims.NickName)
 		ctx.Next()
-	}
+	})
 }
 
-// 管理员权限验证中间件
-func newAdminAuth(opts *options.JwtOptions) gin.HandlerFunc {
+// AdminAuth 创建管理员权限验证中间件
+func AdminAuth(opts *options.JwtOptions) gin.HandlerFunc {
 	return gin.HandlerFunc(func(ctx *gin.Context) {
-		token := extractToken(ctx)
+		token := ExtractToken(ctx)
 		if token == "" {
 			log.Warn("Admin access denied: missing token")
 			core.WriteResponse(ctx, errors.WithCode(code.ErrSignatureInvalid, "管理员认证失败：缺少认证令牌"), nil)
@@ -104,12 +95,12 @@ func newAdminAuth(opts *options.JwtOptions) gin.HandlerFunc {
 		// 设置用户信息到上下文
 		ctx.Set(KeyUserID, int(claims.ID))
 		ctx.Set(KeyUserRole, userRole)
-		ctx.Set(KeyUserName, claims.NickName)
 		ctx.Next()
 	})
 }
 
-func extractToken(c *gin.Context) string {
+// ExtractToken 从请求中提取JWT token
+func ExtractToken(c *gin.Context) string {
 	// 1. Try to get token from Authorization header
 	auth := c.Request.Header.Get("Authorization")
 	if auth != "" {
@@ -149,15 +140,6 @@ func GetUserRoleFromContext(ctx *gin.Context) (int, bool) {
 		return 0, false
 	}
 	return userRole.(int), true
-}
-
-// GetUserNameFromContext 从上下文中获取用户名
-func GetUserNameFromContext(ctx *gin.Context) (string, bool) {
-	userName, exists := ctx.Get(KeyUserName)
-	if !exists {
-		return "", false
-	}
-	return userName.(string), true
 }
 
 // CheckAdminPermission 检查管理员权限

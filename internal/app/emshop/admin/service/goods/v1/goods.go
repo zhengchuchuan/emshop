@@ -20,6 +20,7 @@ type GoodsSrv interface {
 	
 	// 分类管理
 	GetAllCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error)
+	GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error)
 	CreateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error)
 	UpdateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error)
 	DeleteCategory(ctx context.Context, id uint64) (*gpbv1.CategoryInfoResponse, error)
@@ -150,6 +151,11 @@ func (g *goodsService) SyncGoodsData(ctx context.Context, request *gpbv1.SyncDat
 func (g *goodsService) GetAllCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error) {
 	log.Infof("Admin GetAllCategoriesList called")
 	return g.data.Goods().GetAllCategorysList(ctx)
+}
+
+func (g *goodsService) GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error) {
+	log.Infof("Admin GetCategoriesList called")
+	return g.data.Goods().GetCategoriesList(ctx)
 }
 
 func (g *goodsService) CreateCategory(ctx context.Context, request *gpbv1.CategoryInfoRequest) (*gpbv1.CategoryInfoResponse, error) {

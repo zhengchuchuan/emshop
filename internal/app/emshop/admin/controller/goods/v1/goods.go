@@ -186,7 +186,7 @@ func (gc *goodsController) Sync(ctx *gin.Context) {
 
 // CategoryList 分类列表（管理员专用）
 func (gc *goodsController) CategoryList(ctx *gin.Context) {
-	response, err := gc.sf.Goods().GetAllCategoriesList(ctx)
+	response, err := gc.sf.Goods().GetCategoriesList(ctx)
 	if err != nil {
 		core.WriteResponse(ctx, err, nil)
 		return

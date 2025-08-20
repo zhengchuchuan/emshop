@@ -121,6 +121,25 @@ func (g *goods) GetAllCategorysList(ctx context.Context) (*gpbv1.CategoryListRes
 	return response, nil
 }
 
+func (g *goods) GetCategoriesList(ctx context.Context) (*gpbv1.CategoryListResponse, error) {
+	log.Infof("Calling GetCategoriesList gRPC")
+	response, err := g.gc.GetAllCategorysList(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.Errorf("GetCategoriesList gRPC call failed: %v", err)
+		return nil, err
+	}
+	
+	// 返回扁平的分类数据，去掉jsonData字段
+	flatResponse := &gpbv1.CategoryListResponse{
+		Total: response.Total,
+		Data:  response.Data,
+		// 不设置JsonData字段，保持扁平结构
+	}
+	
+	log.Infof("GetCategoriesList gRPC call successful, total: %d", flatResponse.Total)
+	return flatResponse, nil
+}
+
 func (g *goods) GetSubCategory(ctx context.Context, request *gpbv1.CategoryListRequest) (*gpbv1.SubCategoryListResponse, error) {
 	log.Infof("Calling GetSubCategory gRPC for category ID: %d", request.Id)
 	response, err := g.gc.GetSubCategory(ctx, request)
