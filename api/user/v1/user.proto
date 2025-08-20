@@ -24,8 +24,8 @@ message CheckResponse{
 }
 
 message PageInfo {
-    uint32 pn = 1;
-    uint32 pSize = 2;
+    optional uint32 pn = 1;
+    optional uint32 pSize = 2;
 }
 
 message MobileRequest{
@@ -44,9 +44,9 @@ message CreateUserInfo {
 
 message UpdateUserInfo {
     int32 id = 1;
-    string nickName = 2;
-    string gender = 3;
-    uint64 birthDay = 4;
+    optional string nickName = 2;
+    optional string gender = 3;
+    optional uint64 birthDay = 4;
 }
 
 message UserInfoResponse {

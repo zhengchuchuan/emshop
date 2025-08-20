@@ -159,11 +159,12 @@ func (us *userService) Register(ctx context.Context, mobile, password, codes str
 }
 
 func (u *userService) Update(ctx context.Context, userDTO *UserDTO) error {
+	birthDay := uint64(userDTO.Birthday.Unix())
 	_, err := u.data.Users().UpdateUser(ctx, &upb.UpdateUserInfo{
 		Id:       int32(userDTO.ID),
-		NickName: userDTO.NickName,
-		Gender:   userDTO.Gender,
-		BirthDay: uint64(userDTO.Birthday.Unix()),
+		NickName: &userDTO.NickName,
+		Gender:   &userDTO.Gender,
+		BirthDay: &birthDay,
 	})
 	return err
 }
@@ -199,8 +200,8 @@ func (u *userService) CheckPassWord(ctx context.Context, password, EncryptedPass
 
 func (u *userService) GetUserList(ctx context.Context, pn, pSize uint32) (*UserListDTO, error) {
 	userListResp, err := u.data.Users().GetUserList(ctx, &upb.PageInfo{
-		Pn:    pn,
-		PSize: pSize,
+		Pn:    &pn,
+		PSize: &pSize,
 	})
 	if err != nil {
 		return nil, err

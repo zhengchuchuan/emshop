@@ -55,13 +55,18 @@ func main() {
 
 	uc := v1.NewOrderClient(conn)
 
+	address := "慕课网"
+	orderSn := generateOrderSn(1)
+	name := "bobby"
+	post := "尽快发货"
+	mobile := "18787878787"
 	_, err = uc.SubmitOrder(context.Background(), &v1.OrderRequest{
 		UserId:  1,
-		Address: "慕课网",
-		OrderSn: generateOrderSn(1),
-		Name:    "bobby",
-		Post:    "尽快发货",
-		Mobile:  "18787878787",
+		Address: &address,
+		OrderSn: &orderSn,
+		Name:    &name,
+		Post:    &post,
+		Mobile:  &mobile,
 	})
 	if err != nil {
 		panic(err)

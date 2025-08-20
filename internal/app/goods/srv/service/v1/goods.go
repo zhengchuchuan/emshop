@@ -32,21 +32,21 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 	var categoryIDs []interface{}
 	
 	// 检查各种搜索条件
-	if req.KeyWords != "" {
+	if req.KeyWords != nil && *req.KeyWords != "" {
 		hasSearchConditions = true
 	}
-	if req.Brand > 0 {
+	if req.Brand != nil && *req.Brand > 0 {
 		hasSearchConditions = true
 	}
-	if req.PriceMin > 0 || req.PriceMax > 0 {
+	if (req.PriceMin != nil && *req.PriceMin > 0) || (req.PriceMax != nil && *req.PriceMax > 0) {
 		hasSearchConditions = true
 	}
-	if req.IsHot || req.IsNew || req.IsTab {
+	if (req.IsHot != nil && *req.IsHot) || (req.IsNew != nil && *req.IsNew) || (req.IsTab != nil && *req.IsTab) {
 		hasSearchConditions = true
 	}
-	if req.TopCategory > 0 {
+	if req.TopCategory != nil && *req.TopCategory > 0 {
 		hasSearchConditions = true
-		category, err := dataFactory.Categorys().Get(ctx, uint64(req.TopCategory))
+		category, err := dataFactory.Categorys().Get(ctx, uint64(*req.TopCategory))
 		if err != nil {
 			log.Errorf("categoryData.Get err: %v", err)
 			return nil, err
@@ -78,16 +78,36 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 
 	// 有搜索条件时，构建ES搜索请求
 	searchReq := &interfaces.GoodsFilterRequest{
-		KeyWords:    req.KeyWords,
-		BrandID:     req.Brand,
-		PriceMin:    float32(req.PriceMin),
-		PriceMax:    float32(req.PriceMax),
-		IsHot:       req.IsHot,
-		IsNew:       req.IsNew,
-		OnSale:      req.IsTab,
 		CategoryIDs: categoryIDs,
-		Pages:       req.Pages,
-		PagePerNums: req.PagePerNums,
+	}
+	
+	// 安全地解引用指针字段
+	if req.KeyWords != nil {
+		searchReq.KeyWords = *req.KeyWords
+	}
+	if req.Brand != nil {
+		searchReq.BrandID = *req.Brand
+	}
+	if req.PriceMin != nil {
+		searchReq.PriceMin = float32(*req.PriceMin)
+	}
+	if req.PriceMax != nil {
+		searchReq.PriceMax = float32(*req.PriceMax)
+	}
+	if req.IsHot != nil {
+		searchReq.IsHot = *req.IsHot
+	}
+	if req.IsNew != nil {
+		searchReq.IsNew = *req.IsNew
+	}
+	if req.IsTab != nil {
+		searchReq.OnSale = *req.IsTab
+	}
+	if req.Pages != nil {
+		searchReq.Pages = *req.Pages
+	}
+	if req.PagePerNums != nil {
+		searchReq.PagePerNums = *req.PagePerNums
 	}
 
 	// 确保分页参数有效

@@ -13,6 +13,7 @@ import (
 	"emshop/gin-micro/code"
 	appcode "emshop/internal/app/pkg/code"
 	"emshop/pkg/log"
+	upbv1 "emshop/api/user/v1"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,26 +29,13 @@ func NewUserController(trans restserver.I18nTranslator, sf service.ServiceFactor
 
 // GetUserList 获取用户列表（管理员专用）
 func (uc *userController) GetUserList(ctx *gin.Context) {
-	pnStr := ctx.DefaultQuery("pn", "1")
-	pSizeStr := ctx.DefaultQuery("pSize", "10")
-
-	pn, err := strconv.ParseUint(pnStr, 10, 32)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"msg": "invalid pn parameter",
-		})
+	var pageInfo upbv1.PageInfo
+	if err := ctx.ShouldBindQuery(&pageInfo); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "invalid query parameters"})
 		return
 	}
 
-	pSize, err := strconv.ParseUint(pSizeStr, 10, 32)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"msg": "invalid pSize parameter",
-		})
-		return
-	}
-
-	userListDTO, err := uc.sf.Users().GetUserList(ctx, uint32(pn), uint32(pSize))
+	userListDTO, err := uc.sf.Users().GetUserList(ctx, &pageInfo)
 	if err != nil {
 		core.WriteResponse(ctx, err, nil)
 		return

@@ -40,8 +40,9 @@ func main() {
 
 	uc := v1.NewGoodsClient(conn)
 
+	keyWords := "猕猴桃"
 	re, err := uc.GoodsList(context.Background(), &v1.GoodsFilterRequest{
-		KeyWords: "猕猴桃",
+		KeyWords: &keyWords,
 	})
 	if err != nil {
 		panic(err)

@@ -42,41 +42,43 @@ func (gc *goodsController) List(ctx *gin.Context) {
 	
 	// 条件参数 - 只有非空时才设置
 	if r.IsNew != nil {
-		gfr.IsNew = *r.IsNew
+		gfr.IsNew = r.IsNew
 	}
 	if r.IsHot != nil {
-		gfr.IsHot = *r.IsHot
+		gfr.IsHot = r.IsHot
 	}
 	if r.IsTab != nil {
-		gfr.IsTab = *r.IsTab
+		gfr.IsTab = r.IsTab
 	}
 	if r.PriceMax != nil {
-		gfr.PriceMax = *r.PriceMax
+		gfr.PriceMax = r.PriceMax
 	}
 	if r.PriceMin != nil {
-		gfr.PriceMin = *r.PriceMin
+		gfr.PriceMin = r.PriceMin
 	}
 	if r.TopCategory != nil {
-		gfr.TopCategory = *r.TopCategory
+		gfr.TopCategory = r.TopCategory
 	}
 	if r.Brand != nil {
-		gfr.Brand = *r.Brand
+		gfr.Brand = r.Brand
 	}
 	if r.KeyWords != nil {
-		gfr.KeyWords = *r.KeyWords
+		gfr.KeyWords = r.KeyWords
 	}
 	
 	// 分页参数 - 设置默认值
 	if r.Pages != nil {
-		gfr.Pages = *r.Pages
+		gfr.Pages = r.Pages
 	} else {
-		gfr.Pages = 1 // 默认第1页
+		pages := int32(1)
+		gfr.Pages = &pages
 	}
 	
 	if r.PagePerNums != nil {
-		gfr.PagePerNums = *r.PagePerNums
+		gfr.PagePerNums = r.PagePerNums
 	} else {
-		gfr.PagePerNums = 10 // 默认每页10条
+		pagePerNums := int32(10)
+		gfr.PagePerNums = &pagePerNums
 	}
 
 	goodsDTOList, err := gc.srv.Goods().List(ctx, &gfr)

@@ -34,10 +34,27 @@ controller依赖service并不是直接依赖了具体的struct而是依赖了int
 */
 
 func (us *userServer)GetUserList(ctx context.Context, info *upbv1.PageInfo) (*upbv1.UserListResponse, error) {
-	srvOpts := metav1.ListMeta{
-		Page:    int(info.Pn),
-		PageSize: int(info.PSize),
+	srvOpts := metav1.ListMeta{}
+	
+	// Handle optional pagination parameters
+	if info.Pn == nil && info.PSize == nil {
+		// Return all data when no pagination parameters are specified
+		srvOpts.Page = 1
+		srvOpts.PageSize = 10000 // Large page size to get all data
+	} else {
+		// Use provided pagination parameters with default values for nil fields
+		if info.Pn != nil {
+			srvOpts.Page = int(*info.Pn)
+		} else {
+			srvOpts.Page = 1 // Default page
+		}
+		if info.PSize != nil {
+			srvOpts.PageSize = int(*info.PSize)
+		} else {
+			srvOpts.PageSize = 10 // Default page size
+		}
 	}
+	
 	dtoList, err := us.srv.List(ctx,[]string{}, srvOpts)
 	if err != nil {
 		return nil, err

@@ -54,15 +54,17 @@ func (oc *orderController) OrderList(ctx *gin.Context) {
 	
 	// 分页参数 - 设置默认值
 	if r.Pages != nil {
-		orderRequest.Pages = *r.Pages
+		orderRequest.Pages = r.Pages
 	} else {
-		orderRequest.Pages = 1 // 默认第1页
+		pages := int32(1)
+		orderRequest.Pages = &pages
 	}
 	
 	if r.PagePerNums != nil {
-		orderRequest.PagePerNums = *r.PagePerNums
+		orderRequest.PagePerNums = r.PagePerNums
 	} else {
-		orderRequest.PagePerNums = 10 // 默认每页10条
+		pagePerNums := int32(10)
+		orderRequest.PagePerNums = &pagePerNums
 	}
 	
 	ordersResponse, err := oc.srv.Order().OrderList(ctx, &orderRequest)
@@ -113,10 +115,10 @@ func (oc *orderController) CreateOrder(ctx *gin.Context) {
 	
 	orderRequest := proto.OrderRequest{
 		UserId:  int32(userId.(int)),
-		Address: r.Address,
-		Name:    r.Name,
-		Mobile:  r.Mobile,
-		Post:    r.Post,
+		Address: &r.Address,
+		Name:    &r.Name,
+		Mobile:  &r.Mobile,
+		Post:    &r.Post,
 	}
 	
 	_, err := oc.srv.Order().CreateOrder(ctx, &orderRequest)
@@ -249,11 +251,12 @@ func (oc *orderController) AddToCart(ctx *gin.Context) {
 		return
 	}
 	
+	checked := true
 	cartRequest := proto.CartItemRequest{
 		UserId:  int32(userId.(int)),
 		GoodsId: r.GoodsId,
-		Nums:    r.Nums,
-		Checked: true,
+		Nums:    &r.Nums,
+		Checked: &checked,
 	}
 	
 	cartResponse, err := oc.srv.Order().CreateCartItem(ctx, &cartRequest)
@@ -304,10 +307,10 @@ func (oc *orderController) UpdateCartItem(ctx *gin.Context) {
 	cartRequest := proto.CartItemRequest{
 		Id:     int32(i),
 		UserId: int32(userId.(int)),
-		Nums:   r.Nums,
+		Nums:   &r.Nums,
 	}
 	if r.Checked != nil {
-		cartRequest.Checked = *r.Checked
+		cartRequest.Checked = r.Checked
 	}
 	
 	err = oc.srv.Order().UpdateCartItem(ctx, &cartRequest)

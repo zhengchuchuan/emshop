@@ -15,15 +15,24 @@ import (
 func (u *userServer) UpdateUser(ctx context.Context, request *upbv1.UpdateUserInfo) (*emptypb.Empty, error) {
 	log.Infof("update user function called.")
 
-	birthDay := time.Unix(int64(request.BirthDay), 0)
 	userDO := do.UserDO{
 		BaseModel: db.BaseModel{
 			ID: request.Id,
 		},
-		NickName: request.NickName,
-		Gender:   request.Gender,
-		Birthday: &birthDay,
 	}
+	
+	// Only update fields that were explicitly provided (not nil)
+	if request.NickName != nil {
+		userDO.NickName = *request.NickName
+	}
+	if request.Gender != nil {
+		userDO.Gender = *request.Gender
+	}
+	if request.BirthDay != nil {
+		birthDay := time.Unix(int64(*request.BirthDay), 0)
+		userDO.Birthday = &birthDay
+	}
+	
 	userDTO := dto.UserDTO{userDO}
 
 	err := u.srv.Update(ctx, &userDTO)

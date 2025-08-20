@@ -119,13 +119,13 @@ message SubCategoryListResponse {
 }
 
 message CategoryBrandFilterRequest  {
-  int32 pages = 1;
-  int32 pagePerNums = 2;
+  optional int32 pages = 1;
+  optional int32 pagePerNums = 2;
 }
 
 message FilterRequest  {
-  int32 pages = 1;
-  int32 pagePerNums = 2;
+  optional int32 pages = 1;
+  optional int32 pagePerNums = 2;
 }
 
 message CategoryBrandRequest{
@@ -241,16 +241,16 @@ message BatchCategoryInfoRequest {
 }
 
 message GoodsFilterRequest  {
-  int32 priceMin = 1;
-  int32 priceMax = 2;
-  bool  isHot = 3;
-  bool  isNew = 4;
-  bool  isTab = 5;
-  int32 topCategory = 6;
-  int32 pages = 7;
-  int32 pagePerNums = 8;
-  string keyWords = 9;
-  int32 brand = 10;
+  optional int32 priceMin = 1;
+  optional int32 priceMax = 2;
+  optional bool  isHot = 3;
+  optional bool  isNew = 4;
+  optional bool  isTab = 5;
+  optional int32 topCategory = 6;
+  optional int32 pages = 7;
+  optional int32 pagePerNums = 8;
+  optional string keyWords = 9;
+  optional int32 brand = 10;
 }
 
 

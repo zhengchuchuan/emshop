@@ -42,7 +42,9 @@ func main() {
 	uc := v1.NewUserClient(conn)
 
 	for {
-		re, err := uc.GetUserList(context.Background(), &v1.PageInfo{Pn: 1, PSize: 10})
+		pn := uint32(1)
+		pSize := uint32(10)
+		re, err := uc.GetUserList(context.Background(), &v1.PageInfo{Pn: &pn, PSize: &pSize})
 		if err != nil {
 			panic(err)
 		}

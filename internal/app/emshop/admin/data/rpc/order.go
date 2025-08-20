@@ -90,7 +90,7 @@ func (o *order) GetOrderByOrderSn(ctx context.Context, orderSn string) (*opbv1.O
 	log.Infof("Calling GetOrderByOrderSn gRPC for orderSn: %s", orderSn)
 	
 	request := &opbv1.OrderRequest{
-		OrderSn: orderSn,
+		OrderSn: &orderSn,
 	}
 	
 	response, err := o.oc.OrderDetail(ctx, request)
@@ -110,8 +110,8 @@ func (o *order) GetOrdersByUserId(ctx context.Context, userId int32, pages, page
 	
 	request := &opbv1.OrderFilterRequest{
 		UserId:      userId,
-		Pages:       pages,
-		PagePerNums: pagePerNums,
+		Pages:       &pages,
+		PagePerNums: &pagePerNums,
 	}
 	
 	response, err := o.oc.OrderList(ctx, request)

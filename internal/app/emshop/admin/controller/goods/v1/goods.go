@@ -41,41 +41,43 @@ func (gc *goodsController) List(ctx *gin.Context) {
 	
 	// 条件参数 - 只有非空时才设置
 	if r.IsNew != nil {
-		request.IsNew = *r.IsNew
+		request.IsNew = r.IsNew
 	}
 	if r.IsHot != nil {
-		request.IsHot = *r.IsHot
+		request.IsHot = r.IsHot
 	}
 	if r.IsTab != nil {
-		request.IsTab = *r.IsTab
+		request.IsTab = r.IsTab
 	}
 	if r.PriceMax != nil {
-		request.PriceMax = *r.PriceMax
+		request.PriceMax = r.PriceMax
 	}
 	if r.PriceMin != nil {
-		request.PriceMin = *r.PriceMin
+		request.PriceMin = r.PriceMin
 	}
 	if r.TopCategory != nil {
-		request.TopCategory = *r.TopCategory
+		request.TopCategory = r.TopCategory
 	}
 	if r.Brand != nil {
-		request.Brand = *r.Brand
+		request.Brand = r.Brand
 	}
 	if r.KeyWords != nil {
-		request.KeyWords = *r.KeyWords
+		request.KeyWords = r.KeyWords
 	}
 	
 	// 分页参数 - 设置默认值
 	if r.Pages != nil {
-		request.Pages = *r.Pages
+		request.Pages = r.Pages
 	} else {
-		request.Pages = 1 // 默认第1页
+		pages := int32(1)
+		request.Pages = &pages
 	}
 	
 	if r.PagePerNums != nil {
-		request.PagePerNums = *r.PagePerNums
+		request.PagePerNums = r.PagePerNums
 	} else {
-		request.PagePerNums = 10 // 默认每页10条
+		pagePerNums := int32(10)
+		request.PagePerNums = &pagePerNums
 	}
 
 	response, err := gc.sf.Goods().GetGoodsList(ctx, request)

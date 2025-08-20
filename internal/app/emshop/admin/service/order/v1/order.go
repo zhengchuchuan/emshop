@@ -39,14 +39,17 @@ func (os *orderService) AdminOrderList(ctx context.Context, request *proto.Order
 		request.UserId, request.Pages, request.PagePerNums)
 	
 	// 验证分页参数
-	if request.Pages <= 0 {
-		request.Pages = 1
+	if request.Pages == nil || *request.Pages <= 0 {
+		pages := int32(1)
+		request.Pages = &pages
 	}
-	if request.PagePerNums <= 0 {
-		request.PagePerNums = 10
+	if request.PagePerNums == nil || *request.PagePerNums <= 0 {
+		pagePerNums := int32(10)
+		request.PagePerNums = &pagePerNums
 	}
-	if request.PagePerNums > 100 {
-		request.PagePerNums = 100
+	if *request.PagePerNums > 100 {
+		pagePerNums := int32(100)
+		request.PagePerNums = &pagePerNums
 	}
 	
 	response, err := os.data.Order().AdminOrderList(ctx, request)
@@ -65,7 +68,7 @@ func (os *orderService) AdminOrderDetail(ctx context.Context, request *proto.Ord
 		request.Id, request.OrderSn)
 	
 	// 参数验证
-	if request.Id <= 0 && request.OrderSn == "" {
+	if request.Id <= 0 && (request.OrderSn == nil || *request.OrderSn == "") {
 		return nil, fmt.Errorf("订单ID或订单号不能为空")
 	}
 	

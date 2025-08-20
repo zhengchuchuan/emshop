@@ -27,9 +27,11 @@ func NewAnalyticsController(sf service.ServiceFactory, trans restserver.I18nTran
 // GetGoodsOverview 获取商品概览统计（管理员专用）
 func (ac *analyticsController) GetGoodsOverview(ctx *gin.Context) {
 	// 获取所有商品数据进行统计
+	pages := int32(1)
+	pagePerNums := int32(10000)
 	request := &gpbv1.GoodsFilterRequest{
-		Pages:       1,
-		PagePerNums: 10000, // 获取大量数据进行统计
+		Pages:       &pages,
+		PagePerNums: &pagePerNums, // 获取大量数据进行统计
 	}
 
 	response, err := ac.sf.Goods().GetGoodsList(ctx, request)
@@ -114,9 +116,11 @@ func (ac *analyticsController) GetTopSellingGoods(ctx *gin.Context) {
 	}
 
 	// 获取商品数据
+	pages2 := int32(1)
+	pagePerNums2 := int32(1000)
 	request := &gpbv1.GoodsFilterRequest{
-		Pages:       1,
-		PagePerNums: 1000,
+		Pages:       &pages2,
+		PagePerNums: &pagePerNums2,
 	}
 
 	response, err := ac.sf.Goods().GetGoodsList(ctx, request)
@@ -161,9 +165,11 @@ func (ac *analyticsController) GetTopSellingGoods(ctx *gin.Context) {
 // GetCategoryStats 获取分类统计（管理员专用）
 func (ac *analyticsController) GetCategoryStats(ctx *gin.Context) {
 	// 获取所有商品数据
+	pages3 := int32(1)
+	pagePerNums3 := int32(10000)
 	goodsRequest := &gpbv1.GoodsFilterRequest{
-		Pages:       1,
-		PagePerNums: 10000,
+		Pages:       &pages3,
+		PagePerNums: &pagePerNums3,
 	}
 
 	goodsResponse, err := ac.sf.Goods().GetGoodsList(ctx, goodsRequest)
@@ -251,9 +257,11 @@ func (ac *analyticsController) GetInventoryAlerts(ctx *gin.Context) {
 	}
 
 	// 获取商品数据
+	pages4 := int32(1)
+	pagePerNums4 := int32(10000)
 	request := &gpbv1.GoodsFilterRequest{
-		Pages:       1,
-		PagePerNums: 10000,
+		Pages:       &pages4,
+		PagePerNums: &pagePerNums4,
 	}
 
 	response, err := ac.sf.Goods().GetGoodsList(ctx, request)

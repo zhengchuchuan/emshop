@@ -23,7 +23,7 @@ type AdminUserDTO struct {
 
 // UserSrv 管理员用户服务接口
 type UserSrv interface {
-	GetUserList(ctx context.Context, page, pageSize uint32) (*upbv1.UserListResponse, error)
+	GetUserList(ctx context.Context, pageInfo *upbv1.PageInfo) (*upbv1.UserListResponse, error)
 	GetUserById(ctx context.Context, id uint64) (*upbv1.UserInfoResponse, error)
 	GetUserByMobile(ctx context.Context, mobile string) (*upbv1.UserInfoResponse, error)
 	UpdateUserStatus(ctx context.Context, id uint64, status int32) error
@@ -46,15 +46,14 @@ func NewUserService(data data.DataFactory, jwt *options.JwtOptions) UserSrv {
 	}
 }
 
-func (u *userService) GetUserList(ctx context.Context, page, pageSize uint32) (*upbv1.UserListResponse, error) {
-	log.Infof("Admin GetUserList called with page: %d, pageSize: %d", page, pageSize)
-	
-	request := &upbv1.PageInfo{
-		Pn:    page,
-		PSize: pageSize,
+func (u *userService) GetUserList(ctx context.Context, pageInfo *upbv1.PageInfo) (*upbv1.UserListResponse, error) {
+	if pageInfo.Pn != nil && pageInfo.PSize != nil {
+		log.Infof("Admin GetUserList called with page: %d, pageSize: %d", *pageInfo.Pn, *pageInfo.PSize)
+	} else {
+		log.Infof("Admin GetUserList called with no pagination (return all data)")
 	}
 	
-	return u.data.Users().GetUserList(ctx, request)
+	return u.data.Users().GetUserList(ctx, pageInfo)
 }
 
 func (u *userService) GetUserById(ctx context.Context, id uint64) (*upbv1.UserInfoResponse, error) {
@@ -95,9 +94,9 @@ func (u *userService) UpdateUser(ctx context.Context, user *upbv1.UserInfoRespon
 	
 	request := &upbv1.UpdateUserInfo{
 		Id:       user.Id,
-		NickName: user.NickName,
-		Gender:   user.Gender,
-		BirthDay: user.BirthDay,
+		NickName: &user.NickName,
+		Gender:   &user.Gender,
+		BirthDay: &user.BirthDay,
 	}
 	
 	_, err := u.data.Users().UpdateUser(ctx, request)
@@ -109,9 +108,9 @@ func (u *userService) UpdateUserInfo(ctx context.Context, id uint64, nickName, g
 	
 	request := &upbv1.UpdateUserInfo{
 		Id:       int32(id),
-		NickName: nickName,
-		Gender:   gender,
-		BirthDay: birthday,
+		NickName: &nickName,
+		Gender:   &gender,
+		BirthDay: &birthday,
 	}
 	
 	_, err := u.data.Users().UpdateUser(ctx, request)

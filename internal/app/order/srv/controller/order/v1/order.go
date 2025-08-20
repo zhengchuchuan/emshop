@@ -50,9 +50,15 @@ func (os *orderServer) CreateCartItem(ctx context.Context, request *pb.CartItemR
 		ShoppingCartDO: do.ShoppingCartDO{
 			User:    request.UserId,
 			Goods:   request.GoodsId,
-			Nums:    request.Nums,
-			Checked: request.Checked,
 		},
+	}
+	
+	// 安全地解引用指针字段
+	if request.Nums != nil {
+		cartItem.Nums = *request.Nums
+	}
+	if request.Checked != nil {
+		cartItem.Checked = *request.Checked
 	}
 	
 	err := os.srv.Orders().CreateCartItem(ctx, cartItem)
@@ -74,9 +80,15 @@ func (os *orderServer) UpdateCartItem(ctx context.Context, request *pb.CartItemR
 		ShoppingCartDO: do.ShoppingCartDO{
 			User:    request.UserId,
 			Goods:   request.GoodsId,
-			Nums:    request.Nums,
-			Checked: request.Checked,
 		},
+	}
+	
+	// 安全地解引用指针字段
+	if request.Nums != nil {
+		cartItem.Nums = *request.Nums
+	}
+	if request.Checked != nil {
+		cartItem.Checked = *request.Checked
 	}
 	
 	err := os.srv.Orders().UpdateCartItem(ctx, cartItem)
@@ -106,16 +118,31 @@ func (os *orderServer) CreateOrder(ctx context.Context, request *pb.OrderRequest
 		}
 	}
 
+	// 构建 OrderInfoDO 结构体
+	orderInfo := do.OrderInfoDO{
+		User:       request.UserId,
+		OrderGoods: orderGoods,
+	}
+	
+	// 安全地解引用指针字段
+	if request.Address != nil {
+		orderInfo.Address = *request.Address
+	}
+	if request.Name != nil {
+		orderInfo.SignerName = *request.Name
+	}
+	if request.Mobile != nil {
+		orderInfo.SingerMobile = *request.Mobile
+	}
+	if request.Post != nil {
+		orderInfo.Post = *request.Post
+	}
+	if request.OrderSn != nil {
+		orderInfo.OrderSn = *request.OrderSn
+	}
+	
 	err := os.srv.Orders().Create(ctx, &dto.OrderDTO{
-		OrderInfoDO: do.OrderInfoDO{
-			User:         request.UserId,
-			Address:      request.Address,
-			SignerName:   request.Name,
-			SingerMobile: request.Mobile,
-			Post:         request.Post,
-			OrderSn:      request.OrderSn,
-			OrderGoods:   orderGoods,
-		},
+		OrderInfoDO: orderInfo,
 	})
 	if err != nil {
 		return nil, err
@@ -148,15 +175,30 @@ func (os *orderServer) CreateOrderCom(ctx context.Context, request *pb.OrderRequ
 */
 func (os *orderServer) SubmitOrder(ctx context.Context, request *pb.OrderRequest) (*emptypb.Empty, error) {
 	//从购物车中得到选中的商品
+	// 构建 OrderInfoDO 结构体
+	orderInfo := do.OrderInfoDO{
+		User: request.UserId,
+	}
+	
+	// 安全地解引用指针字段
+	if request.Address != nil {
+		orderInfo.Address = *request.Address
+	}
+	if request.Name != nil {
+		orderInfo.SignerName = *request.Name
+	}
+	if request.Mobile != nil {
+		orderInfo.SingerMobile = *request.Mobile
+	}
+	if request.Post != nil {
+		orderInfo.Post = *request.Post
+	}
+	if request.OrderSn != nil {
+		orderInfo.OrderSn = *request.OrderSn
+	}
+	
 	orderDTO := dto.OrderDTO{
-		OrderInfoDO: do.OrderInfoDO{
-			User:         request.UserId,
-			Address:      request.Address,
-			SignerName:   request.Name,
-			SingerMobile: request.Mobile,
-			Post:         request.Post,
-			OrderSn:      request.OrderSn,
-		},
+		OrderInfoDO: orderInfo,
 	}
 	err := os.srv.Orders().Submit(ctx, &orderDTO)
 	if err != nil {
@@ -168,9 +210,18 @@ func (os *orderServer) SubmitOrder(ctx context.Context, request *pb.OrderRequest
 }
 
 func (os *orderServer) OrderList(ctx context.Context, request *pb.OrderFilterRequest) (*pb.OrderListResponse, error) {
+	// 处理分页参数
+	var page, pageSize int = 1, 10
+	if request.Pages != nil {
+		page = int(*request.Pages)
+	}
+	if request.PagePerNums != nil {
+		pageSize = int(*request.PagePerNums)
+	}
+	
 	orderList, err := os.srv.Orders().List(ctx, uint64(request.UserId), v1.ListMeta{
-		Page:     int(request.Pages),
-		PageSize: int(request.PagePerNums),
+		Page:     page,
+		PageSize: pageSize,
 	}, []string{})
 	if err != nil {
 		return nil, err
@@ -201,7 +252,13 @@ func (os *orderServer) OrderList(ctx context.Context, request *pb.OrderFilterReq
 }
 
 func (os *orderServer) OrderDetail(ctx context.Context, request *pb.OrderRequest) (*pb.OrderInfoDetailResponse, error) {
-	order, err := os.srv.Orders().Get(ctx, request.OrderSn)
+	// 处理 OrderSn 参数
+	var orderSn string
+	if request.OrderSn != nil {
+		orderSn = *request.OrderSn
+	}
+	
+	order, err := os.srv.Orders().Get(ctx, orderSn)
 	if err != nil {
 		return nil, err
 	}

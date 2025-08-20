@@ -25,16 +25,16 @@ const (
 
 // Validation functions
 func validateGoodsFilterRequest(request *proto.GoodsFilterRequest) error {
-	if request.Pages < 0 {
+	if request.Pages != nil && *request.Pages < 0 {
 		return errors.WithCode(ErrInvalidParameter, "pages must be non-negative")
 	}
-	if request.PagePerNums < 0 {
+	if request.PagePerNums != nil && *request.PagePerNums < 0 {
 		return errors.WithCode(ErrInvalidParameter, "pagePerNums must be non-negative")
 	}
-	if request.PriceMin < 0 || request.PriceMax < 0 {
+	if (request.PriceMin != nil && *request.PriceMin < 0) || (request.PriceMax != nil && *request.PriceMax < 0) {
 		return errors.WithCode(ErrInvalidParameter, "price range must be non-negative")
 	}
-	if request.PriceMin > 0 && request.PriceMax > 0 && request.PriceMin > request.PriceMax {
+	if request.PriceMin != nil && request.PriceMax != nil && *request.PriceMin > 0 && *request.PriceMax > 0 && *request.PriceMin > *request.PriceMax {
 		return errors.WithCode(ErrInvalidParameter, "priceMin cannot be greater than priceMax")
 	}
 	return nil
@@ -99,7 +99,16 @@ func (gs *goodsServer) GoodsList(ctx context.Context, request *proto.GoodsFilter
 		return nil, err
 	}
 
-	list, err := gs.srv.Goods().List(ctx, v12.ListMeta{Page: int(request.Pages), PageSize: int(request.PagePerNums)}, request, []string{})
+	// 处理分页参数
+	var page, pageSize int = 1, 10
+	if request.Pages != nil {
+		page = int(*request.Pages)
+	}
+	if request.PagePerNums != nil {
+		pageSize = int(*request.PagePerNums)
+	}
+	
+	list, err := gs.srv.Goods().List(ctx, v12.ListMeta{Page: page, PageSize: pageSize}, request, []string{})
 	if err != nil {
 		log.Errorf("get goods list error: %v", err.Error())
 		return nil, err
@@ -667,7 +676,16 @@ func (gs *goodsServer) UpdateBanner(ctx context.Context, request *proto.BannerRe
 }
 
 func (gs *goodsServer) CategoryBrandList(ctx context.Context, request *proto.CategoryBrandFilterRequest) (*proto.CategoryBrandListResponse, error) {
-	categoryBrands, err := gs.srv.CategoryBrand().List(ctx, v12.ListMeta{Page: int(request.Pages), PageSize: int(request.PagePerNums)}, []string{})
+	// 处理分页参数
+	var page, pageSize int = 1, 10
+	if request.Pages != nil {
+		page = int(*request.Pages)
+	}
+	if request.PagePerNums != nil {
+		pageSize = int(*request.PagePerNums)
+	}
+	
+	categoryBrands, err := gs.srv.CategoryBrand().List(ctx, v12.ListMeta{Page: page, PageSize: pageSize}, []string{})
 	if err != nil {
 		log.Errorf("get category brands list error: %v", err)
 		return nil, err

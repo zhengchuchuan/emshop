@@ -46,31 +46,33 @@ func (ec *exportController) ExportGoods(ctx *gin.Context) {
 	}
 
 	// 构建查询请求
+	pages := int32(1)
+	pagePerNums := int32(10000)
 	request := &gpbv1.GoodsFilterRequest{
-		Pages:       1,
-		PagePerNums: 10000, // 导出时设置较大的分页数
+		Pages:       &pages,
+		PagePerNums: &pagePerNums, // 导出时设置较大的分页数
 	}
 	
 	if r.IsNew != nil {
-		request.IsNew = *r.IsNew
+		request.IsNew = r.IsNew
 	}
 	if r.IsHot != nil {
-		request.IsHot = *r.IsHot
+		request.IsHot = r.IsHot
 	}
 	if r.PriceMax != nil {
-		request.PriceMax = *r.PriceMax
+		request.PriceMax = r.PriceMax
 	}
 	if r.PriceMin != nil {
-		request.PriceMin = *r.PriceMin
+		request.PriceMin = r.PriceMin
 	}
 	if r.TopCategory != nil {
-		request.TopCategory = *r.TopCategory
+		request.TopCategory = r.TopCategory
 	}
 	if r.Brand != nil {
-		request.Brand = *r.Brand
+		request.Brand = r.Brand
 	}
 	if r.KeyWords != nil {
-		request.KeyWords = *r.KeyWords
+		request.KeyWords = r.KeyWords
 	}
 
 	// 获取商品数据

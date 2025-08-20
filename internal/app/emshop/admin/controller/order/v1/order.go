@@ -51,8 +51,8 @@ func (oc *orderController) AdminOrderList(ctx *gin.Context) {
 	
 	orderRequest := &proto.OrderFilterRequest{
 		UserId:      r.UserId,      // 如果为0，则查询所有用户的订单
-		Pages:       r.Pages,
-		PagePerNums: r.PagePerNums,
+		Pages:       &r.Pages,
+		PagePerNums: &r.PagePerNums,
 	}
 	
 	ordersResponse, err := oc.srv.Order().AdminOrderList(ctx, orderRequest)

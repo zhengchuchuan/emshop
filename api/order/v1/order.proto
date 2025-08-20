@@ -34,21 +34,21 @@ message CartItemRequest {
     int32 id = 1;
     int32 userId = 2;
     int32 goodsId = 3;
-    string goodsName = 4;
-    string goodsImage = 5;
-    float goodsPrice = 6;
-    int32 nums = 7;
-    bool checked = 8;
+    optional string goodsName = 4;
+    optional string goodsImage = 5;
+    optional float goodsPrice = 6;
+    optional int32 nums = 7;
+    optional bool checked = 8;
 }
 
 message OrderRequest {
     int32 id = 1;
     int32 userId = 2;
-    string address = 3;
-    string name = 4;
-    string mobile = 5;
-    string post = 6;
-    string orderSn = 7;
+    optional string address = 3;
+    optional string name = 4;
+    optional string mobile = 5;
+    optional string post = 6;
+    optional string orderSn = 7;
 
     repeated OrderItemResponse orderItems = 8;
 }
@@ -92,8 +92,8 @@ message OrderInfoDetailResponse {
 
 message OrderFilterRequest {
     int32 userId = 1;
-    int32 pages = 2;
-    int32 pagePerNums = 3;
+    optional int32 pages = 2;
+    optional int32 pagePerNums = 3;
 }
 
 message OrderListResponse {

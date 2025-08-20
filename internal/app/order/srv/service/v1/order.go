@@ -177,12 +177,12 @@ func (os *orderService) Submit(ctx context.Context, order *dto.OrderDTO) error {
 		OrderSn:   order.OrderSn,
 	}
 	oReq := &proto3.OrderRequest{
-		OrderSn:    order.OrderSn,
+		OrderSn:    &order.OrderSn,
 		UserId:     order.User,
-		Address:    order.Address,
-		Name:       order.SignerName,
-		Mobile:     order.SingerMobile,
-		Post:       order.Post,
+		Address:    &order.Address,
+		Name:       &order.SignerName,
+		Mobile:     &order.SingerMobile,
+		Post:       &order.Post,
 		OrderItems: orderItems,
 	}
 
