@@ -23,6 +23,9 @@ func NewUsers(uc upbv1.UserClient) *users {
 	return &users{uc}
 }
 
+// NewUserServiceClient 创建用户服务的 gRPC 客户端
+//	@param r 服务发现
+//	@return upbv1.UserClient 用户服务的 gRPC 客户端
 func NewUserServiceClient(r registry.Discovery) upbv1.UserClient {
 	log.Infof("Initializing gRPC connection to service: %s", serviceName)
 	conn, err := rpcserver.DialInsecure(

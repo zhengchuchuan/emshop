@@ -149,10 +149,10 @@ func (os *orderService) Submit(ctx context.Context, order *dto.OrderDTO) error {
 		return errors.WithCode(code.ErrNoGoodsSelect, "没有选择商品")
 	}
 
-	var orderGoods []*do.OrderGoods
+	var orderGoods []*do.OrderGoodsDO
 	var orderItems []*proto3.OrderItemResponse
 	for _, value := range list.Items {
-		orderGoods = append(orderGoods, &do.OrderGoods{
+		orderGoods = append(orderGoods, &do.OrderGoodsDO{
 			Goods: value.Goods,
 			Nums:  value.Nums,
 		})

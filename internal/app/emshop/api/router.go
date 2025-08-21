@@ -27,6 +27,8 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	}
 	// 创建服务工厂
 	serviceFactory := service.NewService(data, cfg.Sms, cfg.Jwt)
+
+	
 	jwtAuth := middleware.JWTAuth(cfg.Jwt)
 	uController := user.NewUserController(g.Translator(), serviceFactory)
 	{

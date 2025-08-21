@@ -22,7 +22,7 @@ func (g *GormList) Scan(value interface{}) error {
 type OrderInfoDO struct {
 	gorm.BaseModel
 
-	OrderGoods []*OrderGoods `gorm:"foreignKey:Order;references:ID" json:"goods"`
+	OrderGoods []*OrderGoodsDO `gorm:"foreignKey:Order;references:ID" json:"goods"`
 
 	User    int32  `gorm:"type:int;index"`
 	OrderSn string `gorm:"type:varchar(30);index"` //订单号，我们平台自己生成的订单号
@@ -45,7 +45,7 @@ func (OrderInfoDO) TableName() string {
 	return "orderinfo"
 }
 
-type OrderGoods struct {
+type OrderGoodsDO struct {
 	gorm.BaseModel
 
 	Order int32 `gorm:"type:int;index"`
@@ -58,7 +58,7 @@ type OrderGoods struct {
 	Nums       int32 `gorm:"type:int"`
 }
 
-func (OrderGoods) TableName() string {
+func (OrderGoodsDO) TableName() string {
 	return "ordergoods"
 }
 

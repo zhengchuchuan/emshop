@@ -110,9 +110,9 @@ func (os *orderServer) DeleteCartItem(ctx context.Context, request *pb.CartItemR
 
 // 这个是给分布式事务saga调用的，目前没为api提供的目的
 func (os *orderServer) CreateOrder(ctx context.Context, request *pb.OrderRequest) (*emptypb.Empty, error) {
-	orderGoods := make([]*do.OrderGoods, len(request.OrderItems))
+	orderGoods := make([]*do.OrderGoodsDO, len(request.OrderItems))
 	for i, item := range request.OrderItems {
-		orderGoods[i] = &do.OrderGoods{
+		orderGoods[i] = &do.OrderGoodsDO{
 			Goods: item.GoodsId,
 			Nums:  item.Nums,
 		}

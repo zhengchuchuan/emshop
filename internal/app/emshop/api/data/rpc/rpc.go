@@ -77,16 +77,20 @@ func GetDataFactoryOr(options *options.RegistryOptions) (data.DataFactory, error
 	//这里负责依赖的所有的rpc连接
 	once.Do(func() {
 		discovery := NewDiscovery(options)
+
+		// 创建rpc客户端
 		userClient := NewUserServiceClient(discovery)
 		goodsClient := NewGoodsServiceClient(discovery)
 		inventoryClient := NewInventoryServiceClient(discovery)
 		orderClient := NewOrderServiceClient(discovery)
 		userOpClient := NewUserOpServiceClient(discovery)
+
 		userData := NewUsers(userClient)
 		goodsData := NewGoods(goodsClient)
 		inventoryData := NewInventory(inventoryClient)
 		orderData := NewOrder(orderClient)
 		userOpData := NewUserOp(userOpClient)
+
 		dbFactory = &grpcData{
 			gc: goodsClient,
 			ic: inventoryClient,
