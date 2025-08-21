@@ -24,7 +24,7 @@ var _ BannerSrv = &banner{}
 func (b *banner) List(ctx context.Context, orderby []string) (*dto.BannerDTOList, error) {
 	dataFactory := b.srv.factoryManager.GetDataFactory()
 	// 获取所有轮播图，不需要分页
-	banners, err := dataFactory.Banners().List(ctx, orderby, metav1.ListMeta{Page: 1, PageSize: 100})
+	banners, err := dataFactory.Banners().List(ctx, dataFactory.DB(), orderby, metav1.ListMeta{Page: 1, PageSize: 100})
 	if err != nil {
 		log.Errorf("get banners list error: %v", err)
 		return nil, err
@@ -47,7 +47,7 @@ func (b *banner) List(ctx context.Context, orderby []string) (*dto.BannerDTOList
 
 func (b *banner) Get(ctx context.Context, ID int32) (*dto.BannerDTO, error) {
 	dataFactory := b.srv.factoryManager.GetDataFactory()
-	banner, err := dataFactory.Banners().Get(ctx, uint64(ID))
+	banner, err := dataFactory.Banners().Get(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("get banner error: %v", err)
 		return nil, err
@@ -67,7 +67,7 @@ func (b *banner) Create(ctx context.Context, banner *dto.BannerDTO) error {
 		Index: banner.Index,
 	}
 
-	err := dataFactory.Banners().Create(ctx, bannerDO)
+	err := dataFactory.Banners().Create(ctx, dataFactory.DB(), bannerDO)
 	if err != nil {
 		log.Errorf("create banner error: %v", err)
 		return err
@@ -81,7 +81,7 @@ func (b *banner) Update(ctx context.Context, banner *dto.BannerDTO) error {
 	dataFactory := b.srv.factoryManager.GetDataFactory()
 
 	// 检查轮播图是否存在
-	existing, err := dataFactory.Banners().Get(ctx, uint64(banner.ID))
+	existing, err := dataFactory.Banners().Get(ctx, dataFactory.DB(), uint64(banner.ID))
 	if err != nil {
 		log.Errorf("banner not found: %v", err)
 		return errors.WithCode(code.ErrBannerNotFound, "轮播图不存在")
@@ -92,7 +92,7 @@ func (b *banner) Update(ctx context.Context, banner *dto.BannerDTO) error {
 	existing.Url = banner.Url
 	existing.Index = banner.Index
 
-	err = dataFactory.Banners().Update(ctx, existing)
+	err = dataFactory.Banners().Update(ctx, dataFactory.DB(), existing)
 	if err != nil {
 		log.Errorf("update banner error: %v", err)
 		return err
@@ -105,13 +105,13 @@ func (b *banner) Delete(ctx context.Context, ID int32) error {
 	dataFactory := b.srv.factoryManager.GetDataFactory()
 
 	// 检查轮播图是否存在
-	_, err := dataFactory.Banners().Get(ctx, uint64(ID))
+	_, err := dataFactory.Banners().Get(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("banner not found: %v", err)
 		return errors.WithCode(code.ErrBannerNotFound, "轮播图不存在")
 	}
 
-	err = dataFactory.Banners().Delete(ctx, uint64(ID))
+	err = dataFactory.Banners().Delete(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("delete banner error: %v", err)
 		return err

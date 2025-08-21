@@ -23,7 +23,7 @@ var _ CategorySrv = &category{}
 
 func (c *category) List(ctx context.Context, opts metav1.ListMeta, orderby []string) (*dto.CategoryDTOList, error) {
 	dataFactory := c.srv.factoryManager.GetDataFactory()
-	categories, err := dataFactory.Categorys().List(ctx, orderby, opts)
+	categories, err := dataFactory.Categorys().List(ctx, dataFactory.DB(), orderby, opts)
 	if err != nil {
 		log.Errorf("get categories list error: %v", err)
 		return nil, err
@@ -47,7 +47,7 @@ func (c *category) List(ctx context.Context, opts metav1.ListMeta, orderby []str
 func (c *category) ListAll(ctx context.Context, orderby []string) (*dto.CategoryDTOList, error) {
 	dataFactory := c.srv.factoryManager.GetDataFactory()
 	// 获取一级分类（包括子分类）
-	categories, err := dataFactory.Categorys().GetByLevel(ctx, 1)
+	categories, err := dataFactory.Categorys().GetByLevel(ctx, dataFactory.DB(), 1)
 	if err != nil {
 		log.Errorf("get all categories error: %v", err)
 		return nil, err
@@ -65,7 +65,7 @@ func (c *category) ListAll(ctx context.Context, orderby []string) (*dto.Category
 		}
 
 		// 获取二级分类
-		if subCategories, err := dataFactory.Categorys().GetSubCategories(ctx, uint64(item.ID)); err == nil {
+		if subCategories, err := dataFactory.Categorys().GetSubCategories(ctx, dataFactory.DB(), uint64(item.ID)); err == nil {
 			for _, sub := range subCategories.Items {
 				subCategoryDTO := &dto.CategoryDTO{
 					CategoryDO:    *sub,
@@ -73,7 +73,7 @@ func (c *category) ListAll(ctx context.Context, orderby []string) (*dto.Category
 				}
 
 				// 获取三级分类
-				if subSubCategories, err := dataFactory.Categorys().GetSubCategories(ctx, uint64(sub.ID)); err == nil {
+				if subSubCategories, err := dataFactory.Categorys().GetSubCategories(ctx, dataFactory.DB(), uint64(sub.ID)); err == nil {
 					for _, subSub := range subSubCategories.Items {
 						subSubCategoryDTO := &dto.CategoryDTO{
 							CategoryDO: *subSub,
@@ -92,7 +92,7 @@ func (c *category) ListAll(ctx context.Context, orderby []string) (*dto.Category
 
 func (c *category) GetByLevel(ctx context.Context, level int32) (*dto.CategoryDTOList, error) {
 	dataFactory := c.srv.factoryManager.GetDataFactory()
-	categories, err := dataFactory.Categorys().GetByLevel(ctx, int(level))
+	categories, err := dataFactory.Categorys().GetByLevel(ctx, dataFactory.DB(), int(level))
 	if err != nil {
 		log.Errorf("get categories by level error: %v", err)
 		return nil, err
@@ -117,13 +117,13 @@ func (c *category) GetSubCategories(ctx context.Context, parentID int32) (*dto.C
 	dataFactory := c.srv.factoryManager.GetDataFactory()
 	
 	// 先检查父分类是否存在
-	parent, err := dataFactory.Categorys().Get(ctx, uint64(parentID))
+	parent, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(parentID))
 	if err != nil {
 		log.Errorf("parent category not found: %v", err)
 		return nil, errors.WithCode(code.ErrCategoryNotFound, "父分类不存在")
 	}
 
-	categories, err := dataFactory.Categorys().GetSubCategories(ctx, uint64(parentID))
+	categories, err := dataFactory.Categorys().GetSubCategories(ctx, dataFactory.DB(), uint64(parentID))
 	if err != nil {
 		log.Errorf("get sub categories error: %v", err)
 		return nil, err
@@ -149,7 +149,7 @@ func (c *category) GetSubCategories(ctx context.Context, parentID int32) (*dto.C
 
 func (c *category) Get(ctx context.Context, ID int32) (*dto.CategoryDTO, error) {
 	dataFactory := c.srv.factoryManager.GetDataFactory()
-	category, err := dataFactory.Categorys().Get(ctx, uint64(ID))
+	category, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("get category error: %v", err)
 		return nil, err
@@ -165,7 +165,7 @@ func (c *category) Create(ctx context.Context, category *dto.CategoryDTO) error 
 
 	// 验证父分类是否存在（如果不是一级分类）
 	if category.Level != 1 && category.ParentCategoryID != 0 {
-		_, err := dataFactory.Categorys().Get(ctx, uint64(category.ParentCategoryID))
+		_, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(category.ParentCategoryID))
 		if err != nil {
 			log.Errorf("parent category not found: %v", err)
 			return errors.WithCode(code.ErrCategoryNotFound, "父分类不存在")
@@ -179,7 +179,7 @@ func (c *category) Create(ctx context.Context, category *dto.CategoryDTO) error 
 		IsTab:            category.IsTab,
 	}
 
-	err := dataFactory.Categorys().Create(ctx, categoryDO)
+	err := dataFactory.Categorys().Create(ctx, dataFactory.DB(), categoryDO)
 	if err != nil {
 		log.Errorf("create category error: %v", err)
 		return err
@@ -193,7 +193,7 @@ func (c *category) Update(ctx context.Context, category *dto.CategoryDTO) error 
 	dataFactory := c.srv.factoryManager.GetDataFactory()
 
 	// 检查分类是否存在
-	existing, err := dataFactory.Categorys().Get(ctx, uint64(category.ID))
+	existing, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(category.ID))
 	if err != nil {
 		log.Errorf("category not found: %v", err)
 		return errors.WithCode(code.ErrCategoryNotFound, "分类不存在")
@@ -201,7 +201,7 @@ func (c *category) Update(ctx context.Context, category *dto.CategoryDTO) error 
 
 	// 验证父分类是否存在（如果不是一级分类）
 	if category.Level != 1 && category.ParentCategoryID != 0 {
-		_, err := dataFactory.Categorys().Get(ctx, uint64(category.ParentCategoryID))
+		_, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(category.ParentCategoryID))
 		if err != nil {
 			log.Errorf("parent category not found: %v", err)
 			return errors.WithCode(code.ErrCategoryNotFound, "父分类不存在")
@@ -214,7 +214,7 @@ func (c *category) Update(ctx context.Context, category *dto.CategoryDTO) error 
 	existing.Level = category.Level
 	existing.IsTab = category.IsTab
 
-	err = dataFactory.Categorys().Update(ctx, existing)
+	err = dataFactory.Categorys().Update(ctx, dataFactory.DB(), existing)
 	if err != nil {
 		log.Errorf("update category error: %v", err)
 		return err
@@ -227,19 +227,19 @@ func (c *category) Delete(ctx context.Context, ID int32) error {
 	dataFactory := c.srv.factoryManager.GetDataFactory()
 
 	// 检查分类是否存在
-	_, err := dataFactory.Categorys().Get(ctx, uint64(ID))
+	_, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("category not found: %v", err)
 		return errors.WithCode(code.ErrCategoryNotFound, "分类不存在")
 	}
 
 	// 检查是否有子分类
-	subCategories, err := dataFactory.Categorys().GetSubCategories(ctx, uint64(ID))
+	subCategories, err := dataFactory.Categorys().GetSubCategories(ctx, dataFactory.DB(), uint64(ID))
 	if err == nil && len(subCategories.Items) > 0 {
 		return errors.WithCode(code.ErrCategoryHasChildren, "分类下存在子分类，无法删除")
 	}
 
-	err = dataFactory.Categorys().Delete(ctx, uint64(ID))
+	err = dataFactory.Categorys().Delete(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("delete category error: %v", err)
 		return err

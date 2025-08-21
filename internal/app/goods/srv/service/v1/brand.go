@@ -23,7 +23,7 @@ var _ BrandSrv = &brand{}
 
 func (b *brand) List(ctx context.Context, opts metav1.ListMeta, orderby []string) (*dto.BrandDTOList, error) {
 	dataFactory := b.srv.factoryManager.GetDataFactory()
-	brands, err := dataFactory.Brands().List(ctx, orderby, opts)
+	brands, err := dataFactory.Brands().List(ctx, dataFactory.DB(), orderby, opts)
 	if err != nil {
 		log.Errorf("get brands list error: %v", err)
 		return nil, err
@@ -46,7 +46,7 @@ func (b *brand) List(ctx context.Context, opts metav1.ListMeta, orderby []string
 
 func (b *brand) Get(ctx context.Context, ID int32) (*dto.BrandDTO, error) {
 	dataFactory := b.srv.factoryManager.GetDataFactory()
-	brand, err := dataFactory.Brands().Get(ctx, uint64(ID))
+	brand, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("get brand error: %v", err)
 		return nil, err
@@ -61,7 +61,7 @@ func (b *brand) Create(ctx context.Context, brand *dto.BrandDTO) error {
 	dataFactory := b.srv.factoryManager.GetDataFactory()
 
 	// 检查品牌名称是否已存在
-	existingBrands, err := dataFactory.Brands().List(ctx, []string{}, metav1.ListMeta{Page: 1, PageSize: 1})
+	existingBrands, err := dataFactory.Brands().List(ctx, dataFactory.DB(), []string{}, metav1.ListMeta{Page: 1, PageSize: 1})
 	if err == nil {
 		for _, existing := range existingBrands.Items {
 			if existing.Name == brand.Name {
@@ -76,7 +76,7 @@ func (b *brand) Create(ctx context.Context, brand *dto.BrandDTO) error {
 		Logo: brand.Logo,
 	}
 
-	err = dataFactory.Brands().Create(ctx, brandDO)
+	err = dataFactory.Brands().Create(ctx, dataFactory.DB(), brandDO)
 	if err != nil {
 		log.Errorf("create brand error: %v", err)
 		return err
@@ -90,7 +90,7 @@ func (b *brand) Update(ctx context.Context, brand *dto.BrandDTO) error {
 	dataFactory := b.srv.factoryManager.GetDataFactory()
 
 	// 检查品牌是否存在
-	existing, err := dataFactory.Brands().Get(ctx, uint64(brand.ID))
+	existing, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(brand.ID))
 	if err != nil {
 		log.Errorf("brand not found: %v", err)
 		return errors.WithCode(code.ErrBrandNotFound, "品牌不存在")
@@ -98,7 +98,7 @@ func (b *brand) Update(ctx context.Context, brand *dto.BrandDTO) error {
 
 	// 检查品牌名称是否已被其他品牌使用
 	if brand.Name != existing.Name {
-		existingBrands, err := dataFactory.Brands().List(ctx, []string{}, metav1.ListMeta{Page: 1, PageSize: 100})
+		existingBrands, err := dataFactory.Brands().List(ctx, dataFactory.DB(), []string{}, metav1.ListMeta{Page: 1, PageSize: 100})
 		if err == nil {
 			for _, existingBrand := range existingBrands.Items {
 				if existingBrand.Name == brand.Name && existingBrand.ID != brand.ID {
@@ -113,7 +113,7 @@ func (b *brand) Update(ctx context.Context, brand *dto.BrandDTO) error {
 	existing.Name = brand.Name
 	existing.Logo = brand.Logo
 
-	err = dataFactory.Brands().Update(ctx, existing)
+	err = dataFactory.Brands().Update(ctx, dataFactory.DB(), existing)
 	if err != nil {
 		log.Errorf("update brand error: %v", err)
 		return err
@@ -126,7 +126,7 @@ func (b *brand) Delete(ctx context.Context, ID int32) error {
 	dataFactory := b.srv.factoryManager.GetDataFactory()
 
 	// 检查品牌是否存在
-	_, err := dataFactory.Brands().Get(ctx, uint64(ID))
+	_, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("brand not found: %v", err)
 		return errors.WithCode(code.ErrBrandNotFound, "品牌不存在")
@@ -135,7 +135,7 @@ func (b *brand) Delete(ctx context.Context, ID int32) error {
 	// TODO: 检查是否有商品在使用该品牌
 	// TODO: 检查是否有分类品牌关系在使用该品牌
 
-	err = dataFactory.Brands().Delete(ctx, uint64(ID))
+	err = dataFactory.Brands().Delete(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("delete brand error: %v", err)
 		return err

@@ -46,7 +46,7 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 	}
 	if req.TopCategory != nil && *req.TopCategory > 0 {
 		hasSearchConditions = true
-		category, err := dataFactory.Categorys().Get(ctx, uint64(*req.TopCategory))
+		category, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(*req.TopCategory))
 		if err != nil {
 			log.Errorf("categoryData.Get err: %v", err)
 			return nil, err
@@ -60,7 +60,7 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 	// 如果没有搜索条件，直接查询MySQL
 	if !hasSearchConditions {
 		log.Debugf("No search conditions, querying MySQL directly")
-		goods, err := dataFactory.Goods().List(ctx, orderby, opts)
+		goods, err := dataFactory.Goods().List(ctx, dataFactory.DB(), orderby, opts)
 		if err != nil {
 			log.Errorf("data.List err: %v", err)
 			return nil, err
@@ -137,7 +137,7 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 	}
 
 	// 通过id批量查询mysql数据
-	goods, err := dataFactory.Goods().ListByIDs(ctx, goodsIDs, orderby)
+	goods, err := dataFactory.Goods().ListByIDs(ctx, dataFactory.DB(), goodsIDs, orderby)
 	if err != nil {
 		log.Errorf("data.ListByIDs err: %v", err)
 		return nil, err
@@ -155,7 +155,7 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 
 func (gs *goodsService) Get(ctx context.Context, ID uint64) (*dto.GoodsDTO, error) {
 	dataFactory := gs.factoryManager.GetDataFactory()
-	goods, err := dataFactory.Goods().Get(ctx, ID)
+	goods, err := dataFactory.Goods().Get(ctx, dataFactory.DB(), ID)
 	if err != nil {
 		log.Errorf("data.Get err: %v", err)
 		return nil, err
@@ -169,12 +169,12 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) (*dto.G
 	dataFactory := gs.factoryManager.GetDataFactory()
 	
 	// 验证品牌和分类是否存在
-	_, err := dataFactory.Brands().Get(ctx, uint64(goods.BrandsID))
+	_, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(goods.BrandsID))
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = dataFactory.Categorys().Get(ctx, uint64(goods.CategoryID))
+	_, err = dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(goods.CategoryID))
 	if err != nil {
 		return nil, err
 	}
@@ -182,16 +182,16 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) (*dto.G
 	// 开启事务
 	txn := dataFactory.Begin()
 	defer func() {
-		if err := recover(); err != nil {
+		if r := recover(); r != nil {
 			txn.Rollback()
-			log.Errorf("goodsService.Create panic: %v", err)
+			log.Errorf("goodsService.Create panic: %v", r)
 			return
 		}
 	}()
 
-	err = dataFactory.Goods().CreateInTxn(ctx, txn, &goods.GoodsDO)
+	err = dataFactory.Goods().Create(ctx, txn, &goods.GoodsDO)
 	if err != nil {
-		log.Errorf("data.CreateInTxn err: %v", err)
+		log.Errorf("data.Create err: %v", err)
 		txn.Rollback()
 		return nil, err
 	}
@@ -235,12 +235,12 @@ func (gs *goodsService) Update(ctx context.Context, goods *dto.GoodsDTO) error {
 	dataFactory := gs.factoryManager.GetDataFactory()
 	
 	// 验证品牌和分类是否存在
-	_, err := dataFactory.Brands().Get(ctx, uint64(goods.BrandsID))
+	_, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(goods.BrandsID))
 	if err != nil {
 		return err
 	}
 
-	_, err = dataFactory.Categorys().Get(ctx, uint64(goods.CategoryID))
+	_, err = dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(goods.CategoryID))
 	if err != nil {
 		return err
 	}
@@ -248,17 +248,17 @@ func (gs *goodsService) Update(ctx context.Context, goods *dto.GoodsDTO) error {
 	// 开启事务
 	txn := dataFactory.Begin()
 	defer func() {
-		if err := recover(); err != nil {
+		if r := recover(); r != nil {
 			txn.Rollback()
-			log.Errorf("goodsService.Update panic: %v", err)
+			log.Errorf("goodsService.Update panic: %v", r)
 			return
 		}
 	}()
 
 	// 更新MySQL数据
-	err = dataFactory.Goods().UpdateInTxn(ctx, txn, &goods.GoodsDO)
+	err = dataFactory.Goods().Update(ctx, txn, &goods.GoodsDO)
 	if err != nil {
-		log.Errorf("data.UpdateInTxn err: %v", err)
+		log.Errorf("data.Update err: %v", err)
 		txn.Rollback()
 		return err
 	}
@@ -305,7 +305,7 @@ func (gs *goodsService) Delete(ctx context.Context, ID uint64) error {
 	}()
 
 	// 删除MySQL数据
-	err := dataFactory.Goods().DeleteInTxn(ctx, txn, ID)
+	err := dataFactory.Goods().Delete(ctx, txn, ID)
 	if err != nil {
 		log.Errorf("data.DeleteInTxn err: %v", err)
 		txn.Rollback()

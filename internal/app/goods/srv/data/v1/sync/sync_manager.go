@@ -44,7 +44,7 @@ func (dsm *DataSyncManager) SyncToCache(ctx context.Context, entityType string, 
 // syncGoodsToSearch 同步商品数据到搜索引擎
 func (dsm *DataSyncManager) syncGoodsToSearch(ctx context.Context, goodsID uint64) error {
 	// 从主数据库获取商品信息
-	goods, err := dsm.dataFactory.Goods().Get(ctx, goodsID)
+	goods, err := dsm.dataFactory.Goods().Get(ctx, dsm.dataFactory.DB(), goodsID)
 	if err != nil {
 		log.Errorf("failed to get goods from database: %v", err)
 		return err
@@ -118,7 +118,7 @@ func (dsm *DataSyncManager) SyncAllGoodsToSearch(ctx context.Context, forceSync 
 		goodsList = goodsIds
 	} else {
 		// 获取所有商品ID - 使用专用方法
-		goodsIds, err := dsm.dataFactory.Goods().GetAllGoodsIDs(ctx)
+		goodsIds, err := dsm.dataFactory.Goods().GetAllGoodsIDs(ctx, dsm.dataFactory.DB())
 		if err != nil {
 			log.Errorf("failed to get all goods IDs: %v", err)
 			return nil, err

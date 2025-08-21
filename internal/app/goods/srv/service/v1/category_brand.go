@@ -23,7 +23,7 @@ var _ CategoryBrandSrv = &categoryBrand{}
 
 func (cb *categoryBrand) List(ctx context.Context, opts metav1.ListMeta, orderby []string) (*dto.CategoryBrandDTOList, error) {
 	dataFactory := cb.srv.factoryManager.GetDataFactory()
-	categoryBrands, err := dataFactory.CategoryBrands().List(ctx, orderby, opts)
+	categoryBrands, err := dataFactory.CategoryBrands().List(ctx, dataFactory.DB(), orderby, opts)
 	if err != nil {
 		log.Errorf("get category brands list error: %v", err)
 		return nil, err
@@ -36,13 +36,13 @@ func (cb *categoryBrand) List(ctx context.Context, opts metav1.ListMeta, orderby
 
 	for _, item := range categoryBrands.Items {
 		// 获取关联的分类和品牌信息
-		category, err := dataFactory.Categorys().Get(ctx, uint64(item.CategoryID))
+		category, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(item.CategoryID))
 		if err != nil {
 			log.Warnf("get category error: %v", err)
 			continue
 		}
 
-		brand, err := dataFactory.Brands().Get(ctx, uint64(item.BrandsID))
+		brand, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(item.BrandsID))
 		if err != nil {
 			log.Warnf("get brand error: %v", err)
 			continue
@@ -66,14 +66,14 @@ func (cb *categoryBrand) GetBrandsByCategory(ctx context.Context, categoryID int
 	dataFactory := cb.srv.factoryManager.GetDataFactory()
 	
 	// 先检查分类是否存在
-	_, err := dataFactory.Categorys().Get(ctx, uint64(categoryID))
+	_, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(categoryID))
 	if err != nil {
 		log.Errorf("category not found: %v", err)
 		return nil, errors.WithCode(code.ErrCategoryNotFound, "分类不存在")
 	}
 
 	// 获取该分类下的所有品牌关系
-	categoryBrands, err := dataFactory.CategoryBrands().GetByCategory(ctx, uint64(categoryID))
+	categoryBrands, err := dataFactory.CategoryBrands().GetByCategory(ctx, dataFactory.DB(), uint64(categoryID))
 	if err != nil {
 		log.Errorf("get brands by category error: %v", err)
 		return nil, err
@@ -85,7 +85,7 @@ func (cb *categoryBrand) GetBrandsByCategory(ctx context.Context, categoryID int
 	}
 
 	for _, item := range categoryBrands.Items {
-		brand, err := dataFactory.Brands().Get(ctx, uint64(item.BrandsID))
+		brand, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(item.BrandsID))
 		if err != nil {
 			log.Warnf("get brand error: %v", err)
 			continue
@@ -102,20 +102,20 @@ func (cb *categoryBrand) GetBrandsByCategory(ctx context.Context, categoryID int
 
 func (cb *categoryBrand) Get(ctx context.Context, ID int32) (*dto.CategoryBrandDTO, error) {
 	dataFactory := cb.srv.factoryManager.GetDataFactory()
-	categoryBrand, err := dataFactory.CategoryBrands().Get(ctx, uint64(ID))
+	categoryBrand, err := dataFactory.CategoryBrands().Get(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("get category brand error: %v", err)
 		return nil, err
 	}
 
 	// 获取关联的分类和品牌信息
-	category, err := dataFactory.Categorys().Get(ctx, uint64(categoryBrand.CategoryID))
+	category, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(categoryBrand.CategoryID))
 	if err != nil {
 		log.Errorf("get category error: %v", err)
 		return nil, err
 	}
 
-	brand, err := dataFactory.Brands().Get(ctx, uint64(categoryBrand.BrandsID))
+	brand, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(categoryBrand.BrandsID))
 	if err != nil {
 		log.Errorf("get brand error: %v", err)
 		return nil, err
@@ -134,21 +134,21 @@ func (cb *categoryBrand) Create(ctx context.Context, categoryBrand *dto.Category
 	dataFactory := cb.srv.factoryManager.GetDataFactory()
 
 	// 验证分类是否存在
-	_, err := dataFactory.Categorys().Get(ctx, uint64(categoryBrand.CategoryID))
+	_, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(categoryBrand.CategoryID))
 	if err != nil {
 		log.Errorf("category not found: %v", err)
 		return errors.WithCode(code.ErrCategoryNotFound, "分类不存在")
 	}
 
 	// 验证品牌是否存在
-	_, err = dataFactory.Brands().Get(ctx, uint64(categoryBrand.BrandsID))
+	_, err = dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(categoryBrand.BrandsID))
 	if err != nil {
 		log.Errorf("brand not found: %v", err)
 		return errors.WithCode(code.ErrBrandNotFound, "品牌不存在")
 	}
 
 	// 检查关系是否已存在
-	existingRelations, err := dataFactory.CategoryBrands().GetByCategory(ctx, uint64(categoryBrand.CategoryID))
+	existingRelations, err := dataFactory.CategoryBrands().GetByCategory(ctx, dataFactory.DB(), uint64(categoryBrand.CategoryID))
 	if err == nil {
 		for _, existing := range existingRelations.Items {
 			if existing.BrandsID == categoryBrand.BrandsID {
@@ -163,7 +163,7 @@ func (cb *categoryBrand) Create(ctx context.Context, categoryBrand *dto.Category
 		BrandsID:   categoryBrand.BrandsID,
 	}
 
-	err = dataFactory.CategoryBrands().Create(ctx, categoryBrandDO)
+	err = dataFactory.CategoryBrands().Create(ctx, dataFactory.DB(), categoryBrandDO)
 	if err != nil {
 		log.Errorf("create category brand error: %v", err)
 		return err
@@ -177,21 +177,21 @@ func (cb *categoryBrand) Update(ctx context.Context, categoryBrand *dto.Category
 	dataFactory := cb.srv.factoryManager.GetDataFactory()
 
 	// 检查关系是否存在
-	existing, err := dataFactory.CategoryBrands().Get(ctx, uint64(categoryBrand.ID))
+	existing, err := dataFactory.CategoryBrands().Get(ctx, dataFactory.DB(), uint64(categoryBrand.ID))
 	if err != nil {
 		log.Errorf("category brand not found: %v", err)
 		return errors.WithCode(code.ErrCategoryBrandNotFound, "分类品牌关系不存在")
 	}
 
 	// 验证分类是否存在
-	_, err = dataFactory.Categorys().Get(ctx, uint64(categoryBrand.CategoryID))
+	_, err = dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(categoryBrand.CategoryID))
 	if err != nil {
 		log.Errorf("category not found: %v", err)
 		return errors.WithCode(code.ErrCategoryNotFound, "分类不存在")
 	}
 
 	// 验证品牌是否存在
-	_, err = dataFactory.Brands().Get(ctx, uint64(categoryBrand.BrandsID))
+	_, err = dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(categoryBrand.BrandsID))
 	if err != nil {
 		log.Errorf("brand not found: %v", err)
 		return errors.WithCode(code.ErrBrandNotFound, "品牌不存在")
@@ -199,7 +199,7 @@ func (cb *categoryBrand) Update(ctx context.Context, categoryBrand *dto.Category
 
 	// 检查新的关系是否与其他记录冲突（如果改变了分类或品牌）
 	if existing.CategoryID != categoryBrand.CategoryID || existing.BrandsID != categoryBrand.BrandsID {
-		existingRelations, err := dataFactory.CategoryBrands().GetByCategory(ctx, uint64(categoryBrand.CategoryID))
+		existingRelations, err := dataFactory.CategoryBrands().GetByCategory(ctx, dataFactory.DB(), uint64(categoryBrand.CategoryID))
 		if err == nil {
 			for _, existingRelation := range existingRelations.Items {
 				if existingRelation.BrandsID == categoryBrand.BrandsID && existingRelation.ID != categoryBrand.ID {
@@ -214,7 +214,7 @@ func (cb *categoryBrand) Update(ctx context.Context, categoryBrand *dto.Category
 	existing.CategoryID = categoryBrand.CategoryID
 	existing.BrandsID = categoryBrand.BrandsID
 
-	err = dataFactory.CategoryBrands().Update(ctx, existing)
+	err = dataFactory.CategoryBrands().Update(ctx, dataFactory.DB(), existing)
 	if err != nil {
 		log.Errorf("update category brand error: %v", err)
 		return err
@@ -227,13 +227,13 @@ func (cb *categoryBrand) Delete(ctx context.Context, ID int32) error {
 	dataFactory := cb.srv.factoryManager.GetDataFactory()
 
 	// 检查关系是否存在
-	_, err := dataFactory.CategoryBrands().Get(ctx, uint64(ID))
+	_, err := dataFactory.CategoryBrands().Get(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("category brand not found: %v", err)
 		return errors.WithCode(code.ErrCategoryBrandNotFound, "分类品牌关系不存在")
 	}
 
-	err = dataFactory.CategoryBrands().Delete(ctx, uint64(ID))
+	err = dataFactory.CategoryBrands().Delete(ctx, dataFactory.DB(), uint64(ID))
 	if err != nil {
 		log.Errorf("delete category brand error: %v", err)
 		return err

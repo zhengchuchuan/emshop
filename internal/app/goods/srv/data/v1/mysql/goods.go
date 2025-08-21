@@ -13,36 +13,15 @@ import (
 )
 
 type goods struct {
-	db *gorm.DB
+	// 无状态结构体，不需要db字段
 }
 
-func newGoods(factory *mysqlFactory) *goods {
-	return &goods{
-		db: factory.db,
-	}
+func newGoods() *goods {
+	return &goods{}
 }
 
-func (g *goods) CreateInTxn(ctx context.Context, txn *gorm.DB, goods *do.GoodsDO) error {
-	tx := txn.Create(goods)
-	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
-	}
-	return nil
-}
 
-func (g *goods) UpdateInTxn(ctx context.Context, txn *gorm.DB, goods *do.GoodsDO) error {
-	tx := txn.Model(goods).Omit("add_time", "created_at").Updates(goods)
-	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
-	}
-	return nil
-}
-
-func (g *goods) DeleteInTxn(ctx context.Context, txn *gorm.DB, ID uint64) error {
-	return txn.Where("id = ?", ID).Delete(&do.GoodsDO{}).Error
-}
-
-func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.GoodsDOList, error) {
+func (g *goods) List(ctx context.Context, db *gorm.DB, orderby []string, opts metav1.ListMeta) (*do.GoodsDOList, error) {
 	ret := &do.GoodsDOList{}
 
 	// 分页
@@ -58,7 +37,7 @@ func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 	}
 
 	// 构建基础查询
-	baseQuery := g.db.WithContext(ctx).Where("deleted_at IS NULL")
+	baseQuery := db.WithContext(ctx).Where("deleted_at IS NULL")
 	
 	// 先获取总数
 	if err := baseQuery.Model(&do.GoodsDO{}).Count(&ret.TotalCount).Error; err != nil {
@@ -66,7 +45,7 @@ func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 	}
 
 	// 排序和过滤
-	query := g.db.WithContext(ctx).Preload("Category").Preload("Brands").Where("deleted_at IS NULL")
+	query := db.WithContext(ctx).Preload("Category").Preload("Brands").Where("deleted_at IS NULL")
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
@@ -79,9 +58,9 @@ func (g *goods) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 	return ret, nil
 }
 
-func (g *goods) Get(ctx context.Context, ID uint64) (*do.GoodsDO, error) {
+func (g *goods) Get(ctx context.Context, db *gorm.DB, ID uint64) (*do.GoodsDO, error) {
 	good := &do.GoodsDO{}
-	err := g.db.WithContext(ctx).Preload("Category").Preload("Brands").Where("id = ? AND deleted_at IS NULL", ID).First(good).Error
+	err := db.WithContext(ctx).Preload("Category").Preload("Brands").Where("id = ? AND deleted_at IS NULL", ID).First(good).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.WithCode(code.ErrGoodsNotFound, "%s", err.Error())
@@ -91,17 +70,17 @@ func (g *goods) Get(ctx context.Context, ID uint64) (*do.GoodsDO, error) {
 	return good, nil
 }
 
-func (g *goods) ListByIDs(ctx context.Context, ids []uint64, orderby []string) (*do.GoodsDOList, error) {
+func (g *goods) ListByIDs(ctx context.Context, db *gorm.DB, ids []uint64, orderby []string) (*do.GoodsDOList, error) {
 	ret := &do.GoodsDOList{}
 
 	// 先获取总数
-	baseQuery := g.db.WithContext(ctx).Where("deleted_at IS NULL").Where("id in ?", ids)
+	baseQuery := db.WithContext(ctx).Where("deleted_at IS NULL").Where("id in ?", ids)
 	if err := baseQuery.Model(&do.GoodsDO{}).Count(&ret.TotalCount).Error; err != nil {
 		return nil, errors.WithCode(code2.ErrDatabase, "%s", err.Error())
 	}
 
 	// 排序和过滤
-	query := g.db.WithContext(ctx).Preload("Category").Preload("Brands").Where("deleted_at IS NULL")
+	query := db.WithContext(ctx).Preload("Category").Preload("Brands").Where("deleted_at IS NULL")
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
@@ -112,31 +91,31 @@ func (g *goods) ListByIDs(ctx context.Context, ids []uint64, orderby []string) (
 	return ret, nil
 }
 
-func (g *goods) Create(ctx context.Context, goods *do.GoodsDO) error {
-	tx := g.db.Create(goods)
+func (g *goods) Create(ctx context.Context, db *gorm.DB, goods *do.GoodsDO) error {
+	tx := db.WithContext(ctx).Create(goods)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
 
-func (g *goods) Update(ctx context.Context, goods *do.GoodsDO) error {
-	tx := g.db.Model(goods).Omit("add_time", "created_at").Updates(goods)
+func (g *goods) Update(ctx context.Context, db *gorm.DB, goods *do.GoodsDO) error {
+	tx := db.WithContext(ctx).Model(goods).Omit("add_time", "created_at").Updates(goods)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
 
-func (g *goods) Delete(ctx context.Context, ID uint64) error {
-	return g.db.Where("id = ?", ID).Delete(&do.GoodsDO{}).Error
+func (g *goods) Delete(ctx context.Context, db *gorm.DB, ID uint64) error {
+	return db.WithContext(ctx).Where("id = ?", ID).Delete(&do.GoodsDO{}).Error
 }
 
-func (g *goods) GetAllGoodsIDs(ctx context.Context) ([]uint64, error) {
+func (g *goods) GetAllGoodsIDs(ctx context.Context, db *gorm.DB) ([]uint64, error) {
 	var ids []uint64
 	
 	// 只查询ID字段，避免加载完整对象
-	err := g.db.WithContext(ctx).Model(&do.GoodsDO{}).
+	err := db.WithContext(ctx).Model(&do.GoodsDO{}).
 		Where("deleted_at IS NULL").
 		Pluck("id", &ids).Error
 		

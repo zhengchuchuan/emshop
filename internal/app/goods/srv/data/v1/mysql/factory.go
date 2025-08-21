@@ -33,6 +33,9 @@ type DataFactory interface {
 	// 事务支持
 	Begin() *gorm.DB
 	
+	// DB连接访问
+	DB() *gorm.DB
+	
 	// 关闭连接
 	Close() error
 }
@@ -51,10 +54,21 @@ type SearchFactory interface {
 type mysqlFactory struct {
 	db           *gorm.DB
 	searchFactory SearchFactory
+	
+	// DAO单例
+	goodsDAO         interfaces.GoodsStore
+	categoryDAO      interfaces.CategoryStore
+	brandDAO         interfaces.BrandsStore
+	bannerDAO        interfaces.BannerStore
+	categoryBrandDAO interfaces.GoodsCategoryBrandStore
 }
 
 func (mf *mysqlFactory) Begin() *gorm.DB {
 	return mf.db.Begin()
+}
+
+func (mf *mysqlFactory) DB() *gorm.DB {
+	return mf.db
 }
 
 func (mf *mysqlFactory) Close() error {
@@ -66,23 +80,23 @@ func (mf *mysqlFactory) Close() error {
 }
 
 func (mf *mysqlFactory) Goods() interfaces.GoodsStore {
-	return newGoods(mf)
+	return mf.goodsDAO
 }
 
 func (mf *mysqlFactory) Categorys() interfaces.CategoryStore {
-	return newCategorys(mf)
+	return mf.categoryDAO
 }
 
 func (mf *mysqlFactory) Brands() interfaces.BrandsStore {
-	return newBrands(mf)
+	return mf.brandDAO
 }
 
 func (mf *mysqlFactory) Banners() interfaces.BannerStore {
-	return newBanner(mf)
+	return mf.bannerDAO
 }
 
 func (mf *mysqlFactory) CategoryBrands() interfaces.GoodsCategoryBrandStore {
-	return newCategoryBrands(mf)
+	return mf.categoryBrandDAO
 }
 
 func (mf *mysqlFactory) Search() SearchFactory {
@@ -124,17 +138,27 @@ func NewMySQLFactory(mysqlOpts *options.MySQLOptions, searchFactory SearchFactor
 		}
 
 		sqlDB, _ := db.DB()
-		factory = &mysqlFactory{
-			db:           db,
+		// 创建临时变量来构建factory
+		tempFactory := &mysqlFactory{
+			db:            db,
 			searchFactory: searchFactory,
 		}
+		
+		// 创建DAO实例
+		tempFactory.goodsDAO = newGoods()
+		tempFactory.categoryDAO = newCategorys()  // 无状态DAO
+		tempFactory.brandDAO = newBrands()        // 无状态DAO
+		tempFactory.bannerDAO = newBanner()       // 无状态DAO
+		tempFactory.categoryBrandDAO = newCategoryBrands()     // 无状态DAO
+		
+		factory = tempFactory
 
 		sqlDB.SetMaxOpenConns(mysqlOpts.MaxOpenConnections)
 		sqlDB.SetMaxIdleConns(mysqlOpts.MaxIdleConnections)
 		sqlDB.SetConnMaxLifetime(mysqlOpts.MaxConnectionLifetime)
 	})
 
-	if factory == nil || err != nil {
+	if err != nil {
 		return nil, errors2.WithCode(code.ErrConnectDB, "failed to get mysql store factory")
 	}
 	return factory, nil

@@ -13,18 +13,16 @@ import (
 )
 
 type categoryBrands struct {
-	db *gorm.DB
+	// 无状态结构体，不需要db字段
 }
 
-func newCategoryBrands(factory *mysqlFactory) *categoryBrands {
-	return &categoryBrands{
-		db: factory.db,
-	}
+func newCategoryBrands() *categoryBrands {
+	return &categoryBrands{}
 }
 
-func (cb *categoryBrands) Get(ctx context.Context, ID uint64) (*do.GoodsCategoryBrandDO, error) {
+func (cb *categoryBrands) Get(ctx context.Context, db *gorm.DB, ID uint64) (*do.GoodsCategoryBrandDO, error) {
 	categoryBrand := &do.GoodsCategoryBrandDO{}
-	err := cb.db.Preload("Category").Preload("Brand").First(categoryBrand, ID).Error
+	err := db.WithContext(ctx).Preload("Category").Preload("Brand").First(categoryBrand, ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.WithCode(code.ErrCategoryBrandNotFound, "%s", err.Error())
@@ -34,7 +32,7 @@ func (cb *categoryBrands) Get(ctx context.Context, ID uint64) (*do.GoodsCategory
 	return categoryBrand, nil
 }
 
-func (cb *categoryBrands) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.GoodsCategoryBrandDOList, error) {
+func (cb *categoryBrands) List(ctx context.Context, db *gorm.DB, orderby []string, opts metav1.ListMeta) (*do.GoodsCategoryBrandDOList, error) {
 	ret := &do.GoodsCategoryBrandDOList{}
 
 	// 分页
@@ -50,7 +48,7 @@ func (cb *categoryBrands) List(ctx context.Context, orderby []string, opts metav
 	}
 
 	// 排序
-	query := cb.db.Model(&do.GoodsCategoryBrandDO{}).Preload("Category").Preload("Brand")
+	query := db.WithContext(ctx).Model(&do.GoodsCategoryBrandDO{}).Preload("Category").Preload("Brand")
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
@@ -62,26 +60,26 @@ func (cb *categoryBrands) List(ctx context.Context, orderby []string, opts metav
 	return ret, nil
 }
 
-func (cb *categoryBrands) GetByCategory(ctx context.Context, categoryID uint64) (*do.GoodsCategoryBrandDOList, error) {
+func (cb *categoryBrands) GetByCategory(ctx context.Context, db *gorm.DB, categoryID uint64) (*do.GoodsCategoryBrandDOList, error) {
 	ret := &do.GoodsCategoryBrandDOList{}
-	d := cb.db.Preload("Category").Preload("Brand").Where("category_id = ?", categoryID).Find(&ret.Items)
+	d := db.WithContext(ctx).Preload("Category").Preload("Brand").Where("category_id = ?", categoryID).Find(&ret.Items)
 	if d.Error != nil {
 		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
 
-func (cb *categoryBrands) GetByBrand(ctx context.Context, brandID uint64) (*do.GoodsCategoryBrandDOList, error) {
+func (cb *categoryBrands) GetByBrand(ctx context.Context, db *gorm.DB, brandID uint64) (*do.GoodsCategoryBrandDOList, error) {
 	ret := &do.GoodsCategoryBrandDOList{}
-	d := cb.db.Preload("Category").Preload("Brand").Where("brand_id = ?", brandID).Find(&ret.Items)
+	d := db.WithContext(ctx).Preload("Category").Preload("Brand").Where("brand_id = ?", brandID).Find(&ret.Items)
 	if d.Error != nil {
 		return nil, errors.WithCode(code2.ErrDatabase, "%s", d.Error.Error())
 	}
 	return ret, nil
 }
 
-func (cb *categoryBrands) Create(ctx context.Context, categoryBrand *do.GoodsCategoryBrandDO) error {
-	tx := cb.db.Create(categoryBrand)
+func (cb *categoryBrands) Create(ctx context.Context, db *gorm.DB, categoryBrand *do.GoodsCategoryBrandDO) error {
+	tx := db.WithContext(ctx).Create(categoryBrand)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
@@ -96,8 +94,8 @@ func (cb *categoryBrands) CreateInTxn(ctx context.Context, txn *gorm.DB, categor
 	return nil
 }
 
-func (cb *categoryBrands) Update(ctx context.Context, categoryBrand *do.GoodsCategoryBrandDO) error {
-	tx := cb.db.Save(categoryBrand)
+func (cb *categoryBrands) Update(ctx context.Context, db *gorm.DB, categoryBrand *do.GoodsCategoryBrandDO) error {
+	tx := db.WithContext(ctx).Save(categoryBrand)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
@@ -112,8 +110,8 @@ func (cb *categoryBrands) UpdateInTxn(ctx context.Context, txn *gorm.DB, categor
 	return nil
 }
 
-func (cb *categoryBrands) Delete(ctx context.Context, ID uint64) error {
-	return cb.db.Where("id = ?", ID).Delete(&do.GoodsCategoryBrandDO{}).Error
+func (cb *categoryBrands) Delete(ctx context.Context, db *gorm.DB, ID uint64) error {
+	return db.WithContext(ctx).Where("id = ?", ID).Delete(&do.GoodsCategoryBrandDO{}).Error
 }
 
 func (cb *categoryBrands) DeleteInTxn(ctx context.Context, txn *gorm.DB, ID uint64) error {

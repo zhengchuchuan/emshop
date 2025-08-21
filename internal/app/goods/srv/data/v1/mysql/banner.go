@@ -13,18 +13,16 @@ import (
 )
 
 type banner struct {
-	db *gorm.DB
+	// 无状态结构体，不需要db字段
 }
 
-func newBanner(factory *mysqlFactory) *banner {
-	return &banner{
-		db: factory.db,
-	}
+func newBanner() *banner {
+	return &banner{}
 }
 
-func (b *banner) Get(ctx context.Context, ID uint64) (*do.BannerDO, error) {
+func (b *banner) Get(ctx context.Context, db *gorm.DB, ID uint64) (*do.BannerDO, error) {
 	banner := &do.BannerDO{}
-	err := b.db.First(banner, ID).Error
+	err := db.WithContext(ctx).First(banner, ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.WithCode(code.ErrBannerNotFound, "%s", err.Error())
@@ -34,7 +32,7 @@ func (b *banner) Get(ctx context.Context, ID uint64) (*do.BannerDO, error) {
 	return banner, nil
 }
 
-func (b *banner) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.BannerDOList, error) {
+func (b *banner) List(ctx context.Context, db *gorm.DB, orderby []string, opts metav1.ListMeta) (*do.BannerDOList, error) {
 	ret := &do.BannerDOList{}
 
 	// 分页
@@ -50,7 +48,7 @@ func (b *banner) List(ctx context.Context, orderby []string, opts metav1.ListMet
 	}
 
 	// 排序
-	query := b.db.Model(&do.BannerDO{})
+	query := db.WithContext(ctx).Model(&do.BannerDO{})
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
@@ -62,44 +60,25 @@ func (b *banner) List(ctx context.Context, orderby []string, opts metav1.ListMet
 	return ret, nil
 }
 
-func (b *banner) Create(ctx context.Context, banner *do.BannerDO) error {
-	tx := b.db.Create(banner)
+func (b *banner) Create(ctx context.Context, db *gorm.DB, banner *do.BannerDO) error {
+	tx := db.WithContext(ctx).Create(banner)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
 
-func (b *banner) CreateInTxn(ctx context.Context, txn *gorm.DB, banner *do.BannerDO) error {
-	tx := txn.Create(banner)
+func (b *banner) Update(ctx context.Context, db *gorm.DB, banner *do.BannerDO) error {
+	tx := db.WithContext(ctx).Save(banner)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
 
-func (b *banner) Update(ctx context.Context, banner *do.BannerDO) error {
-	tx := b.db.Save(banner)
-	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
-	}
-	return nil
+func (b *banner) Delete(ctx context.Context, db *gorm.DB, ID uint64) error {
+	return db.WithContext(ctx).Where("id = ?", ID).Delete(&do.BannerDO{}).Error
 }
 
-func (b *banner) UpdateInTxn(ctx context.Context, txn *gorm.DB, banner *do.BannerDO) error {
-	tx := txn.Save(banner)
-	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
-	}
-	return nil
-}
-
-func (b *banner) Delete(ctx context.Context, ID uint64) error {
-	return b.db.Where("id = ?", ID).Delete(&do.BannerDO{}).Error
-}
-
-func (b *banner) DeleteInTxn(ctx context.Context, txn *gorm.DB, ID uint64) error {
-	return txn.Where("id = ?", ID).Delete(&do.BannerDO{}).Error
-}
 
 var _ interfaces.BannerStore = &banner{}

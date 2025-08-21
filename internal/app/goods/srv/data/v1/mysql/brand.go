@@ -13,18 +13,16 @@ import (
 )
 
 type brands struct {
-	db *gorm.DB
+	// 无状态结构体，不需要db字段
 }
 
-func newBrands(factory *mysqlFactory) *brands {
-	return &brands{
-		db: factory.db,
-	}
+func newBrands() *brands {
+	return &brands{}
 }
 
-func (b *brands) Get(ctx context.Context, ID uint64) (*do.BrandsDO, error) {
+func (b *brands) Get(ctx context.Context, db *gorm.DB, ID uint64) (*do.BrandsDO, error) {
 	brand := &do.BrandsDO{}
-	err := b.db.First(brand, ID).Error
+	err := db.WithContext(ctx).First(brand, ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.WithCode(code.ErrBrandNotFound, "%s", err.Error())
@@ -34,7 +32,7 @@ func (b *brands) Get(ctx context.Context, ID uint64) (*do.BrandsDO, error) {
 	return brand, nil
 }
 
-func (b *brands) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.BrandsDOList, error) {
+func (b *brands) List(ctx context.Context, db *gorm.DB, orderby []string, opts metav1.ListMeta) (*do.BrandsDOList, error) {
 	ret := &do.BrandsDOList{}
 
 	// 分页
@@ -50,7 +48,7 @@ func (b *brands) List(ctx context.Context, orderby []string, opts metav1.ListMet
 	}
 
 	// 排序
-	query := b.db.Model(&do.BrandsDO{})
+	query := db.WithContext(ctx).Model(&do.BrandsDO{})
 	for _, value := range orderby {
 		query = query.Order(value)
 	}
@@ -62,44 +60,24 @@ func (b *brands) List(ctx context.Context, orderby []string, opts metav1.ListMet
 	return ret, nil
 }
 
-func (b *brands) Create(ctx context.Context, brand *do.BrandsDO) error {
-	tx := b.db.Create(brand)
+func (b *brands) Create(ctx context.Context, db *gorm.DB, brand *do.BrandsDO) error {
+	tx := db.WithContext(ctx).Create(brand)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
 
-func (b *brands) CreateInTxn(ctx context.Context, txn *gorm.DB, brand *do.BrandsDO) error {
-	tx := txn.Create(brand)
+func (b *brands) Update(ctx context.Context, db *gorm.DB, brand *do.BrandsDO) error {
+	tx := db.WithContext(ctx).Save(brand)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
 
-func (b *brands) Update(ctx context.Context, brand *do.BrandsDO) error {
-	tx := b.db.Save(brand)
-	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
-	}
-	return nil
-}
-
-func (b *brands) UpdateInTxn(ctx context.Context, txn *gorm.DB, brand *do.BrandsDO) error {
-	tx := txn.Save(brand)
-	if tx.Error != nil {
-		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
-	}
-	return nil
-}
-
-func (b *brands) Delete(ctx context.Context, ID uint64) error {
-	return b.db.Where("id = ?", ID).Delete(&do.BrandsDO{}).Error
-}
-
-func (b *brands) DeleteInTxn(ctx context.Context, txn *gorm.DB, ID uint64) error {
-	return txn.Where("id = ?", ID).Delete(&do.BrandsDO{}).Error
+func (b *brands) Delete(ctx context.Context, db *gorm.DB, ID uint64) error {
+	return db.WithContext(ctx).Where("id = ?", ID).Delete(&do.BrandsDO{}).Error
 }
 
 var _ interfaces.BrandsStore = &brands{}
