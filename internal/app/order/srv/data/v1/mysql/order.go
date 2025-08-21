@@ -13,25 +13,23 @@ import (
 )
 
 type orders struct {
-	factory *mysqlFactory
+	// 无状态结构体，不需要factory字段
 }
 
-func newOrders(factory *mysqlFactory) *orders {
-	return &orders{
-		factory: factory,
-	}
+func newOrders() *orders {
+	return &orders{}
 }
 
-func (o *orders) Get(ctx context.Context, orderSn string) (*do.OrderInfoDO, error) {
+func (o *orders) Get(ctx context.Context, db *gorm.DB, orderSn string) (*do.OrderInfoDO, error) {
 	var order do.OrderInfoDO
-	err := o.factory.db.WithContext(ctx).Preload("OrderGoods").Where("order_sn = ? AND deleted_at IS NULL", orderSn).First(&order).Error
+	err := db.WithContext(ctx).Preload("OrderGoods").Where("order_sn = ? AND deleted_at IS NULL", orderSn).First(&order).Error
 	if err != nil {
 		return nil, err
 	}
 	return &order, nil
 }
 
-func (o *orders) List(ctx context.Context, userID uint64, meta metav1.ListMeta, orderby []string) (*do.OrderInfoDOList, error) {
+func (o *orders) List(ctx context.Context, db *gorm.DB, userID uint64, meta metav1.ListMeta, orderby []string) (*do.OrderInfoDOList, error) {
 	ret := &do.OrderInfoDOList{}
 	// 分页
 	var limit, offset int
@@ -46,7 +44,7 @@ func (o *orders) List(ctx context.Context, userID uint64, meta metav1.ListMeta, 
 	}
 
 	// 排序和过滤
-	query := o.factory.db.WithContext(ctx).Preload("OrderGoods").Where("deleted_at IS NULL")
+	query := db.WithContext(ctx).Preload("OrderGoods").Where("deleted_at IS NULL")
 	if userID > 0 {
 		query = query.Where("user = ?", userID)
 	}
@@ -62,19 +60,11 @@ func (o *orders) List(ctx context.Context, userID uint64, meta metav1.ListMeta, 
 }
 
 // Create 创建订单之后要删除对应的购物车记录
-func (o *orders) Create(ctx context.Context, txn *gorm.DB, order *do.OrderInfoDO) error {
-	db := o.factory.db
-	if txn != nil {
-		db = txn
-	}
+func (o *orders) Create(ctx context.Context, db *gorm.DB, order *do.OrderInfoDO) error {
 	return db.Create(order).Error
 }
 
-func (o *orders) Update(ctx context.Context, txn *gorm.DB, order *do.OrderInfoDO) error {
-	db := o.factory.db
-	if txn != nil {
-		db = txn
-	}
+func (o *orders) Update(ctx context.Context, db *gorm.DB, order *do.OrderInfoDO) error {
 	return db.Model(order).Save(order).Error
 }
 

@@ -5,27 +5,74 @@ import (
 	"gorm.io/gorm"
 )
 
-// DataFactory MySQL数据访问工厂
-type DataFactory struct {
+// DataFactory MySQL数据访问工厂接口
+type DataFactory interface {
+	// 主存储接口
+	UserFav() interfaces.UserFavStore
+	Address() interfaces.AddressStore
+	Message() interfaces.MessageStore
+
+	// 事务支持
+	Begin() *gorm.DB
+
+	// DB连接访问
+	DB() *gorm.DB
+
+	// 关闭连接
+	Close() error
+}
+
+// mysqlFactory MySQL数据工厂实现
+type mysqlFactory struct {
 	db *gorm.DB
+
+	// DAO单例
+	userFavDAO interfaces.UserFavStore
+	addressDAO interfaces.AddressStore
+	messageDAO interfaces.MessageStore
 }
 
-// NewDataFactory 创建MySQL数据访问工厂
-func NewDataFactory(db *gorm.DB) *DataFactory {
-	return &DataFactory{db: db}
+func (mf *mysqlFactory) Begin() *gorm.DB {
+	return mf.db.Begin()
 }
 
-// UserFav 获取用户收藏仓储
-func (f *DataFactory) UserFav() interfaces.UserFavRepository {
-	return NewUserFavRepository(f.db)
+func (mf *mysqlFactory) DB() *gorm.DB {
+	return mf.db
 }
 
-// Address 获取地址仓储
-func (f *DataFactory) Address() interfaces.AddressRepository {
-	return NewAddressRepository(f.db)
+func (mf *mysqlFactory) Close() error {
+	sqlDB, err := mf.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
 }
 
-// Message 获取留言仓储
-func (f *DataFactory) Message() interfaces.MessageRepository {
-	return NewMessageRepository(f.db)
+func (mf *mysqlFactory) UserFav() interfaces.UserFavStore {
+	return mf.userFavDAO
+}
+
+func (mf *mysqlFactory) Address() interfaces.AddressStore {
+	return mf.addressDAO
+}
+
+func (mf *mysqlFactory) Message() interfaces.MessageStore {
+	return mf.messageDAO
+}
+
+var _ DataFactory = &mysqlFactory{}
+
+// NewDataFactory 创建 MySQL数据访问工厂
+func NewDataFactory(db *gorm.DB) DataFactory {
+	// 创建工厂实例
+	factory := &mysqlFactory{
+		db: db,
+	}
+
+	// 创建DAO实例
+	factory.userFavDAO = NewUserFavRepository()
+	factory.addressDAO = NewAddressRepository()
+	factory.messageDAO = NewMessageRepository()
+
+	return factory
 }

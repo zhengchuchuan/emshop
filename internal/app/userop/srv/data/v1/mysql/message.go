@@ -12,19 +12,19 @@ import (
 )
 
 type messageRepository struct {
-	db *gorm.DB
+	// 无状态结构体，不需要db字段
 }
 
-func NewMessageRepository(db *gorm.DB) interfaces.MessageRepository {
-	return &messageRepository{db: db}
+func NewMessageRepository() interfaces.MessageStore {
+	return &messageRepository{}
 }
 
 // GetMessageList 获取用户留言列表
-func (r *messageRepository) GetMessageList(ctx context.Context, userID int32) ([]*dto.MessageDTO, int64, error) {
+func (r *messageRepository) GetMessageList(ctx context.Context, db *gorm.DB, userID int32) ([]*dto.MessageDTO, int64, error) {
 	var messages []do.LeavingMessages
 	var total int64
 
-	result := r.db.WithContext(ctx).Where("user = ?", userID).Find(&messages)
+	result := db.WithContext(ctx).Where("user = ?", userID).Find(&messages)
 	if result.Error != nil {
 		log.Errorf("get message list failed: %v", result.Error)
 		return nil, 0, errors.WithCode(code2.ErrDatabase, "获取留言列表失败: %v", result.Error)
@@ -50,8 +50,8 @@ func (r *messageRepository) GetMessageList(ctx context.Context, userID int32) ([
 }
 
 // CreateMessage 创建留言
-func (r *messageRepository) CreateMessage(ctx context.Context, message *do.LeavingMessages) (*do.LeavingMessages, error) {
-	if err := r.db.WithContext(ctx).Create(message).Error; err != nil {
+func (r *messageRepository) CreateMessage(ctx context.Context, db *gorm.DB, message *do.LeavingMessages) (*do.LeavingMessages, error) {
+	if err := db.WithContext(ctx).Create(message).Error; err != nil {
 		log.Errorf("create message failed: %v", err)
 		return nil, errors.WithCode(code2.ErrDatabase, "创建留言失败: %v", err)
 	}

@@ -113,7 +113,7 @@ func (os *orderService) Create(ctx context.Context, order *dto.OrderDTO) error {
 }
 
 func (os *orderService) Get(ctx context.Context, orderSn string) (*dto.OrderDTO, error) {
-	order, err := os.data.Orders().Get(ctx, orderSn)
+	order, err := os.data.Orders().Get(ctx, os.data.DB(), orderSn)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (os *orderService) Get(ctx context.Context, orderSn string) (*dto.OrderDTO,
 }
 
 func (os *orderService) List(ctx context.Context, userID uint64, meta v1.ListMeta, orderby []string) (*dto.OrderDTOList, error) {
-	orders, err := os.data.Orders().List(ctx, userID, meta, orderby)
+	orders, err := os.data.Orders().List(ctx, os.data.DB(), userID, meta, orderby)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (os *orderService) List(ctx context.Context, userID uint64, meta v1.ListMet
 // Submit 提交订单， 这里是基于可靠消息最终一致性的思想， saga事务来解决订单生成的问题
 func (os *orderService) Submit(ctx context.Context, order *dto.OrderDTO) error {
 	//先从购物车中获取商品信息
-	list, err := os.data.ShoppingCarts().List(ctx, uint64(order.User), true, v1.ListMeta{}, []string{})
+	list, err := os.data.ShoppingCarts().List(ctx, os.data.DB(), uint64(order.User), true, v1.ListMeta{}, []string{})
 	if err != nil {
 		log.Errorf("获取购物车信息失败，err:%v", err)
 		return err
@@ -208,7 +208,7 @@ func (os *orderService) Update(ctx context.Context, order *dto.OrderDTO) error {
 
 // Cart operations implementation
 func (os *orderService) CartItemList(ctx context.Context, userID uint64, meta v1.ListMeta) (*dto.ShopCartDTOList, error) {
-	shopCartDOList, err := os.data.ShoppingCarts().List(ctx, userID, false, meta, []string{})
+	shopCartDOList, err := os.data.ShoppingCarts().List(ctx, os.data.DB(), userID, false, meta, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -229,27 +229,27 @@ func (os *orderService) CartItemList(ctx context.Context, userID uint64, meta v1
 
 func (os *orderService) CreateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error {
 	// Check if the cart item already exists
-	existingItem, err := os.data.ShoppingCarts().Get(ctx, uint64(cartItem.User), uint64(cartItem.Goods))
+	existingItem, err := os.data.ShoppingCarts().Get(ctx, os.data.DB(), uint64(cartItem.User), uint64(cartItem.Goods))
 	if err == nil {
 		// Item exists, update the quantity
 		existingItem.Nums += cartItem.Nums
-		return os.data.ShoppingCarts().UpdateNum(ctx, existingItem)
+		return os.data.ShoppingCarts().UpdateNum(ctx, os.data.DB(), existingItem)
 	}
 	
 	// Item doesn't exist, create new
-	return os.data.ShoppingCarts().Create(ctx, &cartItem.ShoppingCartDO)
+	return os.data.ShoppingCarts().Create(ctx, os.data.DB(), &cartItem.ShoppingCartDO)
 }
 
 func (os *orderService) UpdateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error {
-	return os.data.ShoppingCarts().UpdateNum(ctx, &cartItem.ShoppingCartDO)
+	return os.data.ShoppingCarts().UpdateNum(ctx, os.data.DB(), &cartItem.ShoppingCartDO)
 }
 
 func (os *orderService) DeleteCartItem(ctx context.Context, userID, goodsID uint64) error {
-	cartItem, err := os.data.ShoppingCarts().Get(ctx, userID, goodsID)
+	cartItem, err := os.data.ShoppingCarts().Get(ctx, os.data.DB(), userID, goodsID)
 	if err != nil {
 		return err
 	}
-	return os.data.ShoppingCarts().Delete(ctx, uint64(cartItem.ID))
+	return os.data.ShoppingCarts().Delete(ctx, os.data.DB(), uint64(cartItem.ID))
 }
 
 func newOrderService(sv *service) *orderService {

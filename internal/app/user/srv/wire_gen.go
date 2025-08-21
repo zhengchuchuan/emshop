@@ -24,8 +24,7 @@ func initApp(nacosOptions *options.NacosOptions, logOptions *log.Options, server
 	if err != nil {
 		return nil, err
 	}
-	userStore := v1.ProvideUserStore(factoryManager)
-	userSrv := v1_2.NewUserService(userStore)
+	userSrv := v1_2.NewUserService(factoryManager)
 	userServer := user.NewUserServer(userSrv)
 	nacosDataSource, err := NewNacosDataSource(nacosOptions)
 	if err != nil {

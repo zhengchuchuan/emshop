@@ -27,7 +27,7 @@ func NewUserFavService(dataFactory datav1.DataFactory) UserFavService {
 }
 
 func (s *userFavService) GetUserFavList(ctx context.Context, userID int32, goodsID int32) ([]*dto.UserFavDTO, int64, error) {
-	return s.dataFactory.UserFav().GetUserFavList(ctx, userID, goodsID)
+	return s.dataFactory.UserFav().GetUserFavList(ctx, s.dataFactory.DB(), userID, goodsID)
 }
 
 func (s *userFavService) CreateUserFav(ctx context.Context, userID int32, goodsID int32) (*do.UserFav, error) {
@@ -35,13 +35,13 @@ func (s *userFavService) CreateUserFav(ctx context.Context, userID int32, goodsI
 		User:  userID,
 		Goods: goodsID,
 	}
-	return s.dataFactory.UserFav().CreateUserFav(ctx, userFav)
+	return s.dataFactory.UserFav().CreateUserFav(ctx, s.dataFactory.DB(), userFav)
 }
 
 func (s *userFavService) DeleteUserFav(ctx context.Context, userID int32, goodsID int32) error {
-	return s.dataFactory.UserFav().DeleteUserFav(ctx, userID, goodsID)
+	return s.dataFactory.UserFav().DeleteUserFav(ctx, s.dataFactory.DB(), userID, goodsID)
 }
 
 func (s *userFavService) GetUserFavDetail(ctx context.Context, userID int32, goodsID int32) (*do.UserFav, error) {
-	return s.dataFactory.UserFav().GetUserFavDetail(ctx, userID, goodsID)
+	return s.dataFactory.UserFav().GetUserFavDetail(ctx, s.dataFactory.DB(), userID, goodsID)
 }

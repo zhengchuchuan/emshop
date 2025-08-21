@@ -34,7 +34,7 @@ func NewMessageService(dataFactory datav1.DataFactory) MessageService {
 }
 
 func (s *messageService) GetMessageList(ctx context.Context, userID int32) ([]*dto.MessageDTO, int64, error) {
-	return s.dataFactory.Message().GetMessageList(ctx, userID)
+	return s.dataFactory.Message().GetMessageList(ctx, s.dataFactory.DB(), userID)
 }
 
 func (s *messageService) CreateMessage(ctx context.Context, req *MessageCreateRequest) (*do.LeavingMessages, error) {
@@ -45,5 +45,5 @@ func (s *messageService) CreateMessage(ctx context.Context, req *MessageCreateRe
 		Message:     req.Message,
 		File:        req.File,
 	}
-	return s.dataFactory.Message().CreateMessage(ctx, message)
+	return s.dataFactory.Message().CreateMessage(ctx, s.dataFactory.DB(), message)
 }

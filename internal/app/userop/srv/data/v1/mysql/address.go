@@ -14,19 +14,19 @@ import (
 )
 
 type addressRepository struct {
-	db *gorm.DB
+	// 无状态结构体，不需要db字段
 }
 
-func NewAddressRepository(db *gorm.DB) interfaces.AddressRepository {
-	return &addressRepository{db: db}
+func NewAddressRepository() interfaces.AddressStore {
+	return &addressRepository{}
 }
 
 // GetAddressList 获取用户地址列表
-func (r *addressRepository) GetAddressList(ctx context.Context, userID int32) ([]*dto.AddressDTO, int64, error) {
+func (r *addressRepository) GetAddressList(ctx context.Context, db *gorm.DB, userID int32) ([]*dto.AddressDTO, int64, error) {
 	var addresses []do.Address
 	var total int64
 
-	result := r.db.WithContext(ctx).Where("user = ?", userID).Find(&addresses)
+	result := db.WithContext(ctx).Where("user = ?", userID).Find(&addresses)
 	if result.Error != nil {
 		log.Errorf("get address list failed: %v", result.Error)
 		return nil, 0, errors.WithCode(code2.ErrDatabase, "获取地址列表失败: %v", result.Error)
@@ -55,8 +55,8 @@ func (r *addressRepository) GetAddressList(ctx context.Context, userID int32) ([
 }
 
 // CreateAddress 创建地址
-func (r *addressRepository) CreateAddress(ctx context.Context, address *do.Address) (*do.Address, error) {
-	if err := r.db.WithContext(ctx).Create(address).Error; err != nil {
+func (r *addressRepository) CreateAddress(ctx context.Context, db *gorm.DB, address *do.Address) (*do.Address, error) {
+	if err := db.WithContext(ctx).Create(address).Error; err != nil {
 		log.Errorf("create address failed: %v", err)
 		return nil, errors.WithCode(code2.ErrDatabase, "创建地址失败: %v", err)
 	}
@@ -66,10 +66,10 @@ func (r *addressRepository) CreateAddress(ctx context.Context, address *do.Addre
 }
 
 // UpdateAddress 更新地址
-func (r *addressRepository) UpdateAddress(ctx context.Context, address *do.Address) error {
+func (r *addressRepository) UpdateAddress(ctx context.Context, db *gorm.DB, address *do.Address) error {
 	// 先查找现有地址
 	var existingAddress do.Address
-	result := r.db.WithContext(ctx).Where("id = ? AND user = ?", address.ID, address.User).First(&existingAddress)
+	result := db.WithContext(ctx).Where("id = ? AND user = ?", address.ID, address.User).First(&existingAddress)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return status.Errorf(codes.NotFound, "地址不存在")
@@ -99,7 +99,7 @@ func (r *addressRepository) UpdateAddress(ctx context.Context, address *do.Addre
 		updates["signer_mobile"] = address.SignerMobile
 	}
 
-	if err := r.db.WithContext(ctx).Model(&existingAddress).Updates(updates).Error; err != nil {
+	if err := db.WithContext(ctx).Model(&existingAddress).Updates(updates).Error; err != nil {
 		log.Errorf("update address failed: %v", err)
 		return errors.WithCode(code2.ErrDatabase, "更新地址失败: %v", err)
 	}
@@ -109,8 +109,8 @@ func (r *addressRepository) UpdateAddress(ctx context.Context, address *do.Addre
 }
 
 // DeleteAddress 删除地址
-func (r *addressRepository) DeleteAddress(ctx context.Context, addressID int32, userID int32) error {
-	result := r.db.WithContext(ctx).Where("id = ? AND user = ?", addressID, userID).Delete(&do.Address{})
+func (r *addressRepository) DeleteAddress(ctx context.Context, db *gorm.DB, addressID int32, userID int32) error {
+	result := db.WithContext(ctx).Where("id = ? AND user = ?", addressID, userID).Delete(&do.Address{})
 	if result.Error != nil {
 		log.Errorf("delete address failed: %v", result.Error)
 		return errors.WithCode(code2.ErrDatabase, "删除地址失败: %v", result.Error)
@@ -125,9 +125,9 @@ func (r *addressRepository) DeleteAddress(ctx context.Context, addressID int32, 
 }
 
 // GetAddressByID 根据ID获取地址
-func (r *addressRepository) GetAddressByID(ctx context.Context, addressID int32, userID int32) (*do.Address, error) {
+func (r *addressRepository) GetAddressByID(ctx context.Context, db *gorm.DB, addressID int32, userID int32) (*do.Address, error) {
 	var address do.Address
-	result := r.db.WithContext(ctx).Where("id = ? AND user = ?", addressID, userID).First(&address)
+	result := db.WithContext(ctx).Where("id = ? AND user = ?", addressID, userID).First(&address)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, status.Errorf(codes.NotFound, "地址不存在")

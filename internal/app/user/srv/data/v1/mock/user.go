@@ -5,6 +5,7 @@ import (
 	"emshop/internal/app/user/srv/data/v1/interfaces"
 	"emshop/internal/app/user/srv/domain/do"
 	metav1 "emshop/pkg/common/meta/v1"
+	"gorm.io/gorm"
 )
 
 type users struct{}
@@ -15,7 +16,7 @@ func NewUsers() interfaces.UserStore {
 
 var _ interfaces.UserStore = &users{}
 
-func (u *users) Get(ctx context.Context, ID uint64) (*do.UserDO, error) {
+func (u *users) Get(ctx context.Context, db *gorm.DB, ID uint64) (*do.UserDO, error) {
 	return &do.UserDO{
 		Mobile:   "13800138000",
 		Password: "password123",
@@ -25,7 +26,7 @@ func (u *users) Get(ctx context.Context, ID uint64) (*do.UserDO, error) {
 	}, nil
 }
 
-func (u *users) GetByMobile(ctx context.Context, mobile string) (*do.UserDO, error) {
+func (u *users) GetByMobile(ctx context.Context, db *gorm.DB, mobile string) (*do.UserDO, error) {
 	return &do.UserDO{
 		Mobile:   mobile,
 		Password: "password123",
@@ -35,7 +36,7 @@ func (u *users) GetByMobile(ctx context.Context, mobile string) (*do.UserDO, err
 	}, nil
 }
 
-func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.UserDOList, error) {
+func (u *users) List(ctx context.Context, db *gorm.DB, orderby []string, opts metav1.ListMeta) (*do.UserDOList, error) {
 	users := []*do.UserDO{
 		{
 			Mobile:   "13800138001",
@@ -59,10 +60,10 @@ func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 	}, nil
 }
 
-func (u *users) Create(ctx context.Context, user *do.UserDO) error {
+func (u *users) Create(ctx context.Context, db *gorm.DB, user *do.UserDO) error {
 	return nil
 }
 
-func (u *users) Update(ctx context.Context, user *do.UserDO) error {
+func (u *users) Update(ctx context.Context, db *gorm.DB, user *do.UserDO) error {
 	return nil
 }

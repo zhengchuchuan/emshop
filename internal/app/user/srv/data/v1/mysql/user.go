@@ -15,18 +15,18 @@ import (
 )
 
 type users struct {
-	factory *mysqlFactory
+	// 无状态结构体，不需要factory字段
 }
 
-func newUsers(factory *mysqlFactory) interfaces.UserStore {
-	return &users{factory: factory}
+func newUsers() interfaces.UserStore {
+	return &users{}
 }
 
 var _ interfaces.UserStore = &users{}
 
-func (u *users) Get(ctx context.Context, ID uint64) (*do.UserDO, error) {
+func (u *users) Get(ctx context.Context, db *gorm.DB, ID uint64) (*do.UserDO, error) {
 	user := do.UserDO{}
-	err := u.factory.db.First(&user, ID).Error
+	err := db.First(&user, ID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.WithCode(code.ErrUserNotFound, "%s", err.Error())
@@ -36,10 +36,10 @@ func (u *users) Get(ctx context.Context, ID uint64) (*do.UserDO, error) {
 	return &user, nil
 }
 
-func (u *users) GetByMobile(ctx context.Context, mobile string) (*do.UserDO, error) {
+func (u *users) GetByMobile(ctx context.Context, db *gorm.DB, mobile string) (*do.UserDO, error) {
 	user := do.UserDO{}
 
-	err := u.factory.db.Where("mobile=?", mobile).First(&user).Error
+	err := db.Where("mobile=?", mobile).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.WithCode(code.ErrUserNotFound, "%s", err.Error())
@@ -49,23 +49,23 @@ func (u *users) GetByMobile(ctx context.Context, mobile string) (*do.UserDO, err
 	return &user, nil
 }
 
-func (u *users) Create(ctx context.Context, user *do.UserDO) error {
-	tx := u.factory.db.Create(user)
+func (u *users) Create(ctx context.Context, db *gorm.DB, user *do.UserDO) error {
+	tx := db.Create(user)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
 
-func (u *users) Update(ctx context.Context, user *do.UserDO) error {
-	tx := u.factory.db.Model(&do.UserDO{}).Where("id = ?", user.ID).Updates(user)
+func (u *users) Update(ctx context.Context, db *gorm.DB, user *do.UserDO) error {
+	tx := db.Model(&do.UserDO{}).Where("id = ?", user.ID).Updates(user)
 	if tx.Error != nil {
 		return errors.WithCode(code2.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
 
-func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta) (*do.UserDOList, error) {
+func (u *users) List(ctx context.Context, db *gorm.DB, orderby []string, opts metav1.ListMeta) (*do.UserDOList, error) {
 	ret := &do.UserDOList{}
 
 	var limit, offset int
@@ -79,7 +79,7 @@ func (u *users) List(ctx context.Context, orderby []string, opts metav1.ListMeta
 		offset = (opts.Page - 1) * limit
 	}
 
-	query := u.factory.db
+	query := db
 	for _, value := range orderby {
 		query = query.Order(value)
 	}

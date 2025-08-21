@@ -51,11 +51,11 @@ type inventoryService struct {
 }
 
 func (is *inventoryService) Create(ctx context.Context, inv *dto.InventoryDTO) error {
-	return is.data.Inventorys().Create(ctx, &inv.InventoryDO)
+	return is.data.Inventorys().Create(ctx, is.data.DB(), &inv.InventoryDO)
 }
 
 func (is *inventoryService) Get(ctx context.Context, goodsID uint64) (*dto.InventoryDTO, error) {
-	inv, err := is.data.Inventorys().Get(ctx, goodsID)
+	inv, err := is.data.Inventorys().Get(ctx, is.data.DB(), goodsID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (is *inventoryService) Sell(ctx context.Context, ordersn string, details []
 			return errors.WithCode(code.ErrConnectDB, "获取分布式锁失败")
 		}
 
-		inv, err := is.data.Inventorys().Get(ctx, uint64(goodsInfo.Goods))
+		inv, err := is.data.Inventorys().Get(ctx, is.data.DB(), uint64(goodsInfo.Goods))
 		if err != nil {
 			mutex.Unlock()
 			txn.Rollback()
@@ -188,7 +188,7 @@ func (is *inventoryService) Reback(ctx context.Context, ordersn string, details 
 	sort.Sort(detail)
 
 	for _, goodsInfo := range detail {
-		inv, err := is.data.Inventorys().Get(ctx, uint64(goodsInfo.Goods))
+		inv, err := is.data.Inventorys().Get(ctx, is.data.DB(), uint64(goodsInfo.Goods))
 		if err != nil {
 			txn.Rollback() //回滚
 			log.Errorf("订单%s获取库存失败", ordersn)
@@ -247,7 +247,7 @@ func (is *inventoryService) TrySell(ctx context.Context, ordersn string, details
 		}
 
 		// 查询库存
-		inv, err := is.data.Inventorys().Get(ctx, uint64(goodsInfo.Goods))
+		inv, err := is.data.Inventorys().Get(ctx, is.data.DB(), uint64(goodsInfo.Goods))
 		if err != nil {
 			mutex.Unlock()
 			txn.Rollback()

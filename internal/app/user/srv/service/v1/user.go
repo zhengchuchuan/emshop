@@ -3,7 +3,7 @@ package v1
 import (
 	"context"
 	"emshop/internal/app/pkg/code"
-	"emshop/internal/app/user/srv/data/v1/interfaces"
+	v1 "emshop/internal/app/user/srv/data/v1"
 	"emshop/internal/app/user/srv/domain/dto"
 	"emshop/internal/app/user/srv/pkg/password"
 	metav1 "emshop/pkg/common/meta/v1"
@@ -12,7 +12,7 @@ import (
 
 
 type userService struct {
-	userStrore interfaces.UserStore
+	factoryManager *v1.FactoryManager
 }
 
 type UserSrv interface {
@@ -25,9 +25,9 @@ type UserSrv interface {
 
 
 
-func NewUserService(us interfaces.UserStore) UserSrv {
+func NewUserService(fm *v1.FactoryManager) UserSrv {
 	return &userService{
-		userStrore: us,
+		factoryManager: fm,
 	}
 }
 var _ UserSrv = &userService{}
@@ -38,7 +38,8 @@ var _ UserSrv = &userService{}
 func (u *userService) Create(ctx context.Context, user *dto.UserDTO) error {
 	// 检查用户是否存在的逻辑在service层实现
 	//先判断用户是否存在
-	_, err := u.userStrore.GetByMobile(ctx, user.Mobile)
+	dataFactory := u.factoryManager.GetDataFactory()
+	_, err := dataFactory.Users().GetByMobile(ctx, dataFactory.DB(), user.Mobile)
 	if err != nil && errors.IsCode(err, code.ErrUserNotFound) {
 		// 密码加密逻辑应该在service层
 		encryptedPassword, err := password.EncryptPassword(user.Password)
@@ -49,7 +50,7 @@ func (u *userService) Create(ctx context.Context, user *dto.UserDTO) error {
 		// 更新用户密码为加密后的密码
 		user.Password = encryptedPassword
 		
-		return u.userStrore.Create(ctx, &user.UserDO)
+		return dataFactory.Users().Create(ctx, dataFactory.DB(), &user.UserDO)
 	}
 
 	//这里应该区别到底是什么错误，用户已经存在？ 数据访问错误？
@@ -58,16 +59,18 @@ func (u *userService) Create(ctx context.Context, user *dto.UserDTO) error {
 
 func (u *userService) Update(ctx context.Context, user *dto.UserDTO) error {
 	//先查询用户是否存在
-	_, err := u.userStrore.Get(ctx, uint64(user.ID))
+	dataFactory := u.factoryManager.GetDataFactory()
+	_, err := dataFactory.Users().Get(ctx, dataFactory.DB(), uint64(user.ID))
 	if err != nil {
 		return err
 	}
 
-	return u.userStrore.Update(ctx, &user.UserDO)
+	return dataFactory.Users().Update(ctx, dataFactory.DB(), &user.UserDO)
 }
 
 func (u *userService) GetByID(ctx context.Context, ID uint64) (*dto.UserDTO, error) {
-	userDO, err := u.userStrore.Get(ctx, ID)
+	dataFactory := u.factoryManager.GetDataFactory()
+	userDO, err := dataFactory.Users().Get(ctx, dataFactory.DB(), ID)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +79,8 @@ func (u *userService) GetByID(ctx context.Context, ID uint64) (*dto.UserDTO, err
 }
 
 func (u *userService) GetByMobile(ctx context.Context, mobile string) (*dto.UserDTO, error) {
-	userDO, err := u.userStrore.GetByMobile(ctx, mobile)
+	dataFactory := u.factoryManager.GetDataFactory()
+	userDO, err := dataFactory.Users().GetByMobile(ctx, dataFactory.DB(), mobile)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +99,8 @@ func (u *userService) List(ctx context.Context, orderby []string, opts metav1.Li
 		3. 如果data层的方法有bug， 坑爹， 我们的代码想要具备好的可测试性
 	*/
 
-	doList, err := u.userStrore.List(ctx, orderby, opts)
+	dataFactory := u.factoryManager.GetDataFactory()
+	doList, err := dataFactory.Users().List(ctx, dataFactory.DB(), orderby, opts)
 	if err != nil {
 		return nil, err
 	}

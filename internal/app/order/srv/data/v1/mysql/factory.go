@@ -31,6 +31,9 @@ type DataFactory interface {
 	// 事务支持
 	Begin() *gorm.DB
 	
+	// DB连接访问
+	DB() *gorm.DB
+	
 	// 关闭连接
 	Close() error
 }
@@ -46,10 +49,18 @@ type mysqlFactory struct {
 
 	invClient   proto2.InventoryClient
 	goodsClient proto.GoodsClient
+	
+	// DAO单例
+	orderDAO interfaces.OrderStore
+	shoppingCartDAO interfaces.ShopCartStore
 }
 
 func (mf *mysqlFactory) Begin() *gorm.DB {
 	return mf.db.Begin()
+}
+
+func (mf *mysqlFactory) DB() *gorm.DB {
+	return mf.db
 }
 
 func (mf *mysqlFactory) Close() error {
@@ -61,11 +72,11 @@ func (mf *mysqlFactory) Close() error {
 }
 
 func (mf *mysqlFactory) Orders() interfaces.OrderStore {
-	return newOrders(mf)
+	return mf.orderDAO
 }
 
 func (mf *mysqlFactory) ShoppingCarts() interfaces.ShopCartStore {
-	return newShoppingCarts(mf)
+	return mf.shoppingCartDAO
 }
 
 func (mf *mysqlFactory) Goods() proto.GoodsClient {
@@ -111,11 +122,18 @@ func NewMySQLFactory(mysqlOpts *options.MySQLOptions, goodsClient proto.GoodsCli
 		}
 
 		sqlDB, _ := db.DB()
-		factory = &mysqlFactory{
+		// 创建临时变量来构建factory
+		tempFactory := &mysqlFactory{
 			db:          db,
 			goodsClient: goodsClient,
 			invClient:   invClient,
 		}
+		
+		// 创建DAO实例
+		tempFactory.orderDAO = newOrders()
+		tempFactory.shoppingCartDAO = newShoppingCarts()
+		
+		factory = tempFactory
 
 		sqlDB.SetMaxOpenConns(mysqlOpts.MaxOpenConnections)
 		sqlDB.SetMaxIdleConns(mysqlOpts.MaxIdleConnections)

@@ -13,14 +13,10 @@ import (
 )
 
 type inventorys struct {
-	factory *mysqlFactory
+	// 无状态结构体，不需要factory字段
 }
 
-func (i *inventorys) UpdateStockSellDetailStatus(ctx context.Context, txn *gorm.DB, ordersn string, status int32) error {
-	db := i.factory.db
-	if txn != nil {
-		db = txn
-	}
+func (i *inventorys) UpdateStockSellDetailStatus(ctx context.Context, db *gorm.DB, ordersn string, status int32) error {
 
 	// update语句如果没有更新的话那么不会报错，但是他会返回一个影响的行数，所以我们可以根据影响的行数来判断是否更新成功
 	result := db.Model(do.StockSellDetailDO{}).Where("order_sn = ?", ordersn).Update("status", status)
@@ -31,11 +27,7 @@ func (i *inventorys) UpdateStockSellDetailStatus(ctx context.Context, txn *gorm.
 	return nil
 }
 
-func (i *inventorys) GetSellDetail(ctx context.Context, txn *gorm.DB, ordersn string) (*do.StockSellDetailDO, error) {
-	db := i.factory.db
-	if txn != nil {
-		db = txn
-	}
+func (i *inventorys) GetSellDetail(ctx context.Context, db *gorm.DB, ordersn string) (*do.StockSellDetailDO, error) {
 	var ordersellDetail do.StockSellDetailDO
 	err := db.Where("order_sn = ?", ordersn).First(&ordersellDetail).Error
 	if err != nil {
@@ -47,28 +39,16 @@ func (i *inventorys) GetSellDetail(ctx context.Context, txn *gorm.DB, ordersn st
 	return &ordersellDetail, err
 }
 
-func (i *inventorys) Reduce(ctx context.Context, txn *gorm.DB, goodsID uint64, num int) error {
-	db := i.factory.db
-	if txn != nil {
-		db = txn
-	}
+func (i *inventorys) Reduce(ctx context.Context, db *gorm.DB, goodsID uint64, num int) error {
 	return db.Model(&do.InventoryDO{}).Where("goods=?", goodsID).Where("stocks >= ?", num).UpdateColumn("stocks", gorm.Expr("stocks - ?", num)).Error
 }
 
-func (i *inventorys) Increase(ctx context.Context, txn *gorm.DB, goodsID uint64, num int) error {
-	db := i.factory.db
-	if txn != nil {
-		db = txn
-	}
+func (i *inventorys) Increase(ctx context.Context, db *gorm.DB, goodsID uint64, num int) error {
 	err := db.Model(&do.InventoryDO{}).Where("goods=?", goodsID).UpdateColumn("stocks", gorm.Expr("stocks + ?", num)).Error
 	return err
 }
 
-func (i *inventorys) CreateStockSellDetail(ctx context.Context, txn *gorm.DB, detail *do.StockSellDetailDO) error {
-	db := i.factory.db
-	if txn != nil {
-		db = txn
-	}
+func (i *inventorys) CreateStockSellDetail(ctx context.Context, db *gorm.DB, detail *do.StockSellDetailDO) error {
 
 	tx := db.Create(&detail)
 	if tx.Error != nil {
@@ -77,18 +57,18 @@ func (i *inventorys) CreateStockSellDetail(ctx context.Context, txn *gorm.DB, de
 	return nil
 }
 
-func (i *inventorys) Create(ctx context.Context, inv *do.InventoryDO) error {
+func (i *inventorys) Create(ctx context.Context, db *gorm.DB, inv *do.InventoryDO) error {
 	// 设置库存， 如果我要更新库存
-	tx := i.factory.db.Create(&inv)
+	tx := db.Create(&inv)
 	if tx.Error != nil {
 		return errors.WithCode(code.ErrDatabase, "%s", tx.Error.Error())
 	}
 	return nil
 }
 
-func (i *inventorys) Get(ctx context.Context, goodsID uint64) (*do.InventoryDO, error) {
+func (i *inventorys) Get(ctx context.Context, db *gorm.DB, goodsID uint64) (*do.InventoryDO, error) {
 	inv := do.InventoryDO{}
-	err := i.factory.db.Where("goods = ?", goodsID).First(&inv).Error
+	err := db.Where("goods = ?", goodsID).First(&inv).Error
 	if err != nil {
 		log.Errorf("get inv err: %v", err)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -101,8 +81,8 @@ func (i *inventorys) Get(ctx context.Context, goodsID uint64) (*do.InventoryDO, 
 	return &inv, nil
 }
 
-func newInventorys(factory *mysqlFactory) *inventorys {
-	return &inventorys{factory: factory}
+func newInventorys() *inventorys {
+	return &inventorys{}
 }
 
 var _ interfaces.InventoryStore = &inventorys{}

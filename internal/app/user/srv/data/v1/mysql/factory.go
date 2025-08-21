@@ -24,6 +24,9 @@ type DataFactory interface {
 	// 事务支持
 	Begin() *gorm.DB
 	
+	// DB连接访问
+	DB() *gorm.DB
+	
 	// 关闭连接
 	Close() error
 }
@@ -36,10 +39,17 @@ var (
 // mysqlFactory MySQL数据工厂实现
 type mysqlFactory struct {
 	db *gorm.DB
+	
+	// DAO单例
+	userDAO interfaces.UserStore
 }
 
 func (mf *mysqlFactory) Begin() *gorm.DB {
 	return mf.db.Begin()
+}
+
+func (mf *mysqlFactory) DB() *gorm.DB {
+	return mf.db
 }
 
 func (mf *mysqlFactory) Close() error {
@@ -51,7 +61,7 @@ func (mf *mysqlFactory) Close() error {
 }
 
 func (mf *mysqlFactory) Users() interfaces.UserStore {
-	return newUsers(mf)
+	return mf.userDAO
 }
 
 var _ DataFactory = &mysqlFactory{}
@@ -89,9 +99,15 @@ func NewMySQLFactory(mysqlOpts *options.MySQLOptions) (DataFactory, error) {
 		}
 
 		sqlDB, _ := db.DB()
-		factory = &mysqlFactory{
+		// 创建临时变量来构建factory
+		tempFactory := &mysqlFactory{
 			db: db,
 		}
+		
+		// 创建DAO实例
+		tempFactory.userDAO = newUsers()
+		
+		factory = tempFactory
 
 		sqlDB.SetMaxOpenConns(mysqlOpts.MaxOpenConnections)
 		sqlDB.SetMaxIdleConns(mysqlOpts.MaxIdleConnections)

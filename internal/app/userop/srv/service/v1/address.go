@@ -50,7 +50,7 @@ func NewAddressService(dataFactory datav1.DataFactory) AddressService {
 }
 
 func (s *addressService) GetAddressList(ctx context.Context, userID int32) ([]*dto.AddressDTO, int64, error) {
-	return s.dataFactory.Address().GetAddressList(ctx, userID)
+	return s.dataFactory.Address().GetAddressList(ctx, s.dataFactory.DB(), userID)
 }
 
 func (s *addressService) CreateAddress(ctx context.Context, req *AddressCreateRequest) (*do.Address, error) {
@@ -63,7 +63,7 @@ func (s *addressService) CreateAddress(ctx context.Context, req *AddressCreateRe
 		SignerName:   req.SignerName,
 		SignerMobile: req.SignerMobile,
 	}
-	return s.dataFactory.Address().CreateAddress(ctx, address)
+	return s.dataFactory.Address().CreateAddress(ctx, s.dataFactory.DB(), address)
 }
 
 func (s *addressService) UpdateAddress(ctx context.Context, req *AddressUpdateRequest) error {
@@ -79,9 +79,9 @@ func (s *addressService) UpdateAddress(ctx context.Context, req *AddressUpdateRe
 		SignerName:   req.SignerName,
 		SignerMobile: req.SignerMobile,
 	}
-	return s.dataFactory.Address().UpdateAddress(ctx, address)
+	return s.dataFactory.Address().UpdateAddress(ctx, s.dataFactory.DB(), address)
 }
 
 func (s *addressService) DeleteAddress(ctx context.Context, addressID int32, userID int32) error {
-	return s.dataFactory.Address().DeleteAddress(ctx, addressID, userID)
+	return s.dataFactory.Address().DeleteAddress(ctx, s.dataFactory.DB(), addressID, userID)
 }
