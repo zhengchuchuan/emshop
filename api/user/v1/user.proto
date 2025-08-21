@@ -11,6 +11,9 @@ service User{
     rpc CreateUser(CreateUserInfo) returns (UserInfoResponse); // 添加用户
     rpc UpdateUser(UpdateUserInfo) returns (google.protobuf.Empty); // 更新用户
     rpc CheckPassWord(PasswordCheckInfo) returns (CheckResponse); //检查密码
+    rpc AdminLogin(AdminLoginRequest) returns (LoginResponse); // 管理员登录
+    rpc UserLogin(UserLoginRequest) returns (LoginResponse); // 用户登录
+    rpc SendSms(SendSmsRequest) returns (SendSmsResponse); // 发送短信验证码
 }
 
 message PasswordCheckInfo {
@@ -62,4 +65,46 @@ message UserInfoResponse {
 message UserListResponse {
     int32 total = 1;
     repeated UserInfoResponse data = 2;
+}
+
+// 管理员登录请求
+message AdminLoginRequest {
+    string mobile = 1;
+    string password = 2;
+    string captcha = 3;
+    string captchaId = 4;
+}
+
+// 用户登录请求
+message UserLoginRequest {
+    string mobile = 1;
+    string password = 2;
+    string captcha = 3;
+    string captchaId = 4;
+}
+
+// 登录响应
+message LoginResponse {
+    bool success = 1;
+    string message = 2;
+    string token = 3;
+    UserInfoResponse userInfo = 4;
+}
+
+// 发送短信验证码请求
+message SendSmsRequest {
+    string mobile = 1;
+    uint32 type = 2; // 1: 注册, 2: 登录
+}
+
+// 发送短信响应
+message SendSmsResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// 更新用户状态请求
+message UpdateUserStatusRequest {
+    int32 userId = 1;
+    int32 status = 2;
 }

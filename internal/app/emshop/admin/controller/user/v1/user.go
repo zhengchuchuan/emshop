@@ -5,18 +5,21 @@ import (
 	"strconv"
 	"time"
 
-	restserver "emshop/gin-micro/server/rest-server"
-	"emshop/internal/app/emshop/admin/service"
-	"emshop/pkg/common/core"
-	gin2 "emshop/internal/app/pkg/translator/gin"
-	"emshop/pkg/errors"
-	"emshop/gin-micro/code"
-	appcode "emshop/internal/app/pkg/code"
-	"emshop/pkg/log"
 	upbv1 "emshop/api/user/v1"
+	"emshop/gin-micro/code"
+	restserver "emshop/gin-micro/server/rest-server"
+	"emshop/internal/app/emshop/admin/domain/dto/request"
+	"emshop/internal/app/emshop/admin/service"
+	appcode "emshop/internal/app/pkg/code"
+	gin2 "emshop/internal/app/pkg/translator/gin"
+	"emshop/pkg/common/core"
+	"emshop/pkg/errors"
+	"emshop/pkg/log"
 
 	"github.com/gin-gonic/gin"
 )
+
+// var store = base64Captcha.DefaultMemStore
 
 type userController struct {
 	trans restserver.I18nTranslator
@@ -152,12 +155,6 @@ func (uc *userController) UpdateUserStatus(ctx *gin.Context) {
 	})
 }
 
-type UpdateUserForm struct {
-	Name     string `form:"name" json:"name" binding:"required,min=3,max=10"`
-	Gender   string `form:"gender" json:"gender" binding:"required,oneof=female male"`
-	Birthday string `form:"birthday" json:"birthday" binding:"required,datetime=2006-01-02"`
-}
-
 // UpdateUser 更新用户信息（管理员专用）
 func (uc *userController) UpdateUser(ctx *gin.Context) {
 	idStr := ctx.Param("id")
@@ -176,15 +173,15 @@ func (uc *userController) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	updateForm := UpdateUserForm{}
-	if err := ctx.ShouldBind(&updateForm); err != nil {
+	var req request.AdminUpdateUserRequest
+
+	if err := ctx.ShouldBind(&req); err != nil {
 		gin2.HandleValidatorError(ctx, err, uc.trans)
 		return
 	}
 
-	// 将前端传递过来的日期格式转换成时间戳
-	loc, _ := time.LoadLocation("Local")
-	birthDay, err := time.ParseInLocation("2006-01-02", updateForm.Birthday, loc)
+	// 将请求数据转换为proto结构
+	updateReq, err := req.ToProto(id)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"msg": "invalid birthday format",
@@ -193,7 +190,7 @@ func (uc *userController) UpdateUser(ctx *gin.Context) {
 	}
 
 	// 只传递需要更新的字段
-	err = uc.sf.Users().UpdateUserInfo(ctx, id, updateForm.Name, updateForm.Gender, uint64(birthDay.Unix()))
+	err = uc.sf.Users().UpdateUserInfo(ctx, id, *updateReq.NickName, *updateReq.Gender, *updateReq.BirthDay)
 	if err != nil {
 		core.WriteResponse(ctx, err, nil)
 		return
@@ -208,27 +205,24 @@ func (uc *userController) UpdateUser(ctx *gin.Context) {
 func (uc *userController) AdminLogin(ctx *gin.Context) {
 	log.Info("admin login function called...")
 
-	type AdminLoginForm struct {
-		Mobile    string `json:"mobile" binding:"required,mobile"`
-		Password  string `json:"password" binding:"required,min=3,max=20"`
-		Captcha   string `json:"captcha" binding:"required,min=5,max=5"`
-		CaptchaId string `json:"captcha_id" binding:"required"`
-	}
+	var req request.AdminLoginRequest
 
-	var loginForm AdminLoginForm
-	if err := ctx.ShouldBindJSON(&loginForm); err != nil {
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		gin2.HandleValidatorError(ctx, err, uc.trans)
 		return
 	}
 
+	// 将请求数据转换为proto结构
+	loginReq := req.ToProto()
+
 	// 验证码验证
-	if !store.Verify(loginForm.CaptchaId, loginForm.Captcha, true) {
+	if !store.Verify(loginReq.CaptchaId, loginReq.Captcha, true) {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrValidation, "验证码错误"), nil)
 		return
 	}
 
 	// 直接通过登录服务验证用户和生成token
-	loginResult, err := uc.sf.Users().MobileLogin(ctx, loginForm.Mobile, loginForm.Password)
+	loginResult, err := uc.sf.Users().MobileLogin(ctx, loginReq.Mobile, loginReq.Password)
 	if err != nil {
 		log.Errorf("Admin login failed: %v", err)
 		core.WriteResponse(ctx, errors.WithCode(appcode.ErrUserNotFound, "管理员登录失败"), nil)
@@ -246,12 +240,12 @@ func (uc *userController) AdminLogin(ctx *gin.Context) {
 
 	// 返回管理员登录结果
 	core.WriteResponse(ctx, nil, gin.H{
-		"id":         loginResult.ID,
+		"id":        loginResult.ID,
 		"nickName":  loginResult.NickName,
-		"mobile":     loginResult.Mobile,
-		"role":       loginResult.Role,
-		"token":      loginResult.Token,
+		"mobile":    loginResult.Mobile,
+		"role":      loginResult.Role,
+		"token":     loginResult.Token,
 		"expiresAt": loginResult.ExpiresAt,
-		"message":    "管理员登录成功",
+		"message":   "管理员登录成功",
 	})
 }

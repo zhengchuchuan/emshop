@@ -1,8 +1,9 @@
 package user
 
 import (
-	gin2 "emshop/internal/app/pkg/translator/gin"
+	upbv1 "emshop/api/user/v1"
 	"emshop/internal/app/pkg/code"
+	gin2 "emshop/internal/app/pkg/translator/gin"
 	"emshop/pkg/errors"
 	"emshop/pkg/log"
 	"net/http"
@@ -10,33 +11,54 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type PassWordLoginForm struct {
-	Mobile    string `form:"mobile" json:"mobile" binding:"required,mobile"` //手机号码格式有规范可寻， 自定义validator
-	PassWord  string `form:"password" json:"password" binding:"required,min=3,max=20"`
-	Captcha   string `form:"captcha" json:"captcha" binding:"required,min=5,max=5"`
-	CaptchaId string `form:"captcha_id" json:"captcha_id" binding:"required"`
-}
+// var store = base64Captcha.DefaultMemStore
 
 func (us *userServer) Login(ctx *gin.Context) {
 	log.Info("login is called")
 
-	
-	passwordLoginForm := PassWordLoginForm{}
+	var loginReq upbv1.UserLoginRequest
+
 	//表单验证
-	if err := ctx.ShouldBind(&passwordLoginForm); err != nil {
+	if err := ctx.ShouldBind(&loginReq); err != nil {
 		gin2.HandleValidatorError(ctx, err, us.trans)
 		return
 	}
 
+	// 手动验证必要字段（由于proto结构体没有binding标签）
+	if loginReq.Mobile == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": us.trans.T("business.mobile_required"),
+		})
+		return
+	}
+	if loginReq.Password == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": us.trans.T("business.password_required"),
+		})
+		return
+	}
+	if loginReq.Captcha == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": us.trans.T("business.captcha_required"),
+		})
+		return
+	}
+	if loginReq.CaptchaId == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": us.trans.T("business.captcha_id_required"),
+		})
+		return
+	}
+
 	//验证码验证
-	if !store.Verify(passwordLoginForm.CaptchaId, passwordLoginForm.Captcha, true) {
+	if !store.Verify(loginReq.CaptchaId, loginReq.Captcha, true) {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"captcha": us.trans.T("business.captcha_error"),
 		})
 		return
 	}
 
-	userDTO, err := us.sf.Users().MobileLogin(ctx, passwordLoginForm.Mobile, passwordLoginForm.PassWord)
+	userDTO, err := us.sf.Users().MobileLogin(ctx, loginReq.Mobile, loginReq.Password)
 	if err != nil {
 		// 根据错误类型返回不同的状态码和错误信息
 		if errors.IsCode(err, code.ErrUserNotFound) {
@@ -45,7 +67,7 @@ func (us *userServer) Login(ctx *gin.Context) {
 			})
 			return
 		}
-		
+
 		if errors.IsCode(err, code.ErrUserPasswordIncorrect) {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"msg": us.trans.T("business.password_incorrect"),
@@ -62,9 +84,9 @@ func (us *userServer) Login(ctx *gin.Context) {
 	}
 	// 返回
 	ctx.JSON(http.StatusOK, gin.H{
-		"id":         userDTO.ID,
+		"id":        userDTO.ID,
 		"nickName":  userDTO.NickName,
-		"token":      userDTO.Token,
+		"token":     userDTO.Token,
 		"expiredAt": userDTO.ExpiresAt,
 	})
 }
