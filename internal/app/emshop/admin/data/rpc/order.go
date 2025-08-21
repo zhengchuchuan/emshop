@@ -2,17 +2,11 @@ package rpc
 
 import (
 	"context"
-	"time"
 	opbv1 "emshop/api/order/v1"
-	"emshop/gin-micro/server/rpc-server"
-	"emshop/gin-micro/server/rpc-server/client-interceptors"
 	"emshop/internal/app/emshop/admin/data"
-	"emshop/gin-micro/registry"
 	"emshop/pkg/log"
-	"google.golang.org/grpc"
 )
 
-const orderServiceName = "discovery:///emshop-order-srv"
 
 type order struct {
 	oc opbv1.OrderClient
@@ -22,24 +16,6 @@ func NewOrder(oc opbv1.OrderClient) *order {
 	return &order{oc}
 }
 
-func NewOrderServiceClient(r registry.Discovery) opbv1.OrderClient {
-	log.Infof("Initializing gRPC connection to service: %s", orderServiceName)
-	conn, err := rpcserver.DialInsecure(
-		context.Background(),
-		rpcserver.WithEndpoint(orderServiceName),
-		rpcserver.WithDiscovery(r),
-		rpcserver.WithClientTimeout(10*time.Second),
-		rpcserver.WithClientOptions(grpc.WithNoProxy()),
-		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
-	)
-	if err != nil {
-		log.Errorf("Failed to create gRPC connection: %v", err)
-		panic(err)
-	}
-	log.Info("gRPC connection established successfully")
-	c := opbv1.NewOrderClient(conn)
-	return c
-}
 
 // 管理员查看所有订单列表（支持多维度筛选）
 func (o *order) AdminOrderList(ctx context.Context, request *opbv1.OrderFilterRequest) (*opbv1.OrderListResponse, error) {

@@ -16,10 +16,7 @@ import (
 	"gorm.io/driver/mysql"
 )
 
-// SearchFactory 搜索工厂接口
-type SearchFactory interface {
-	Goods() interfaces.GoodsSearchStore
-}
+
 
 // DataFactory 数据工厂接口
 type DataFactory interface {
@@ -45,6 +42,11 @@ var (
 	once    sync.Once
 )
 
+
+// SearchFactory 搜索工厂接口
+type SearchFactory interface {
+	Goods() interfaces.GoodsSearchStore
+}
 // mysqlFactory MySQL数据工厂实现
 type mysqlFactory struct {
 	db           *gorm.DB

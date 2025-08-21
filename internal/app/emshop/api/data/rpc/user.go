@@ -2,18 +2,10 @@ package rpc
 
 import (
 	"context"
-	"emshop/gin-micro/server/rpc-server"
-	"emshop/gin-micro/server/rpc-server/client-interceptors"
-	"emshop/pkg/log"
-	"time"
-
 	upbv1 "emshop/api/user/v1"
 	"emshop/internal/app/emshop/api/data"
-	"emshop/gin-micro/registry"
-	"google.golang.org/grpc"
 )
 
-const serviceName = "discovery:///emshop-user-srv"
 
 type users struct {
 	uc upbv1.UserClient		// 直接使用 UserClient 接口
@@ -23,27 +15,6 @@ func NewUsers(uc upbv1.UserClient) *users {
 	return &users{uc}
 }
 
-// NewUserServiceClient 创建用户服务的 gRPC 客户端
-//	@param r 服务发现
-//	@return upbv1.UserClient 用户服务的 gRPC 客户端
-func NewUserServiceClient(r registry.Discovery) upbv1.UserClient {
-	log.Infof("Initializing gRPC connection to service: %s", serviceName)
-	conn, err := rpcserver.DialInsecure(
-		context.Background(),
-		rpcserver.WithEndpoint(serviceName),
-		rpcserver.WithDiscovery(r),	// 使用服务发现
-		rpcserver.WithClientTimeout(10*time.Second), // 增加连接超时时间到10秒
-		rpcserver.WithClientOptions(grpc.WithNoProxy()), // 禁用代理
-		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor), // 添加链路追踪拦截器
-	)
-	if err != nil {
-		log.Errorf("Failed to create gRPC connection: %v", err)
-		panic(err)
-	}
-	log.Info("gRPC connection established successfully")
-	c := upbv1.NewUserClient(conn)
-	return c
-}
 
 func (u *users) CheckPassWord(ctx context.Context, request *upbv1.PasswordCheckInfo) (*upbv1.CheckResponse, error) {
 	return u.uc.CheckPassWord(ctx, request)
