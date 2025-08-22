@@ -1,0 +1,101 @@
+
+services:
+  emshop-mysql:
+    image: mysql:9.3.0   # 必须采用此版本
+    container_name: emshop-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: root
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - emshop-mysql-data:/var/lib/mysql
+      - ./mysql/logs:/var/log/mysql
+      - ./mysql/conf:/etc/mysql/conf.d
+    networks:
+      - emshop-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  emshop-canal-admin:
+    image: canal/canal-admin:v1.1.8
+    container_name: emshop-canal-admin
+    restart: unless-stopped
+    ports:
+      - "18089:8089"
+    environment:
+      # 服务端口
+      server.port: 8089
+      # 数据库配置
+      spring.datasource.address: emshop-mysql:3306
+      spring.datasource.database: canal_manager
+      spring.datasource.username: root
+      spring.datasource.password: root
+      # spring.datasource.driver-class-name: com.mysql.jdbc.Driver
+      # spring.datasource.url: jdbc:mysql://$${spring.datasource.address}/$${spring.datasource.database}?useUnicode=true&characterEncoding=UTF-8&useSSL=false
+      # spring.datasource.hikari.maximum-pool-size: 30
+      # spring.datasource.hikari.minimum-idle: 1
+
+      # 管理员账户配置
+      canal.adminUser: admin
+      canal.adminPasswd: 123456
+    volumes:
+      # - ./canal-admin/conf:/home/admin/canal-admin/conf
+      - ./canal-admin/logs:/home/admin/canal-admin/logs
+    depends_on:
+      - emshop-mysql
+    networks:
+      - emshop-net
+
+  emshop-canal-server:
+    image: canal/canal-server:v1.1.8
+    container_name: emshop-canal-server
+    restart: unless-stopped
+    ports:
+      - "11111:11111"
+    environment:
+
+      # Canal 基础配置
+      canal.instance.mysql.slaveId: 2
+      canal.instance.master.address: emshop-mysql:3306
+      canal.instance.dbUsername: root
+      canal.instance.dbPassword: root
+      canal.instance.connectionCharset: UTF-8
+      canal.instance.tsdb.enable: true
+      canal.instance.gtidon: false
+
+      # Canal Admin 连接配置
+      canal.admin.manager: emshop-canal-admin:8089
+      canal.admin.port: 11110
+      canal.admin.user: admin
+      canal.admin.passwd: 123456
+
+      # RocketMQ 特定配置
+      # canal.serverMode: RocketMQ
+      # canal.mq.servers: emshop-rocketmq-nameserver:9876
+      # rocketmq.producer.group: canal-producer
+      # rocketmq.namesrv.addr: emshop-rocketmq-nameserver:9876
+    volumes:
+      # - ./canal-server/conf:/home/admin/canal-server/conf
+      - ./canal-server/logs:/home/admin/canal-server/logs
+    depends_on:
+      - emshop-mysql
+      - emshop-canal-admin
+    networks:
+      - emshop-net
+
+volumes:
+  # RocketMQ NameServer 数据卷
+  emshop-rocketmq-nameserver-data:
+    name: emshop-rocketmq-nameserver-data
+  
+  # RocketMQ Broker 数据卷
+  emshop-rocketmq-broker-data:
+    name: emshop-rocketmq-broker-data

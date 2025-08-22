@@ -7,6 +7,7 @@
 *.dlls
 *.so
 *.dylib
+*.zip
 bin/*
 
 # Test binary, built with `go test -c`
@@ -40,4 +41,35 @@ logs/*
 cache/*
 backup/*
 
-components/*
+# Components directory - include structure but exclude runtime data
+components/**/logs/
+components/**/logs/**
+components/**/data/
+components/**/data/**
+components/**/*_data/
+components/**/*_data/**
+components/**/tmp/
+components/**/tmp/**
+
+# Specific service data directories
+components/consul/data/
+components/nacos/data/
+components/redis/data/
+components/mysql-canal/mysql/data/
+components/elk/data/
+components/prometheus/data/
+components/rocketmq/data/
+components/kong/kong_data/
+components/kong/kong_prefix_vol/
+components/kong/kong_tmp_vol/
+components/jenkins/jenkins_home/
+
+# Include components configuration and docker-compose files
+!components/
+!components/**/*.yml
+!components/**/*.yaml
+!components/**/*.conf
+!components/**/*.properties
+!components/**/*.json
+!components/**/*.md
+!components/**/README*

@@ -1,0 +1,14 @@
+
+services:
+  emshop-redis:
+    image: redis:8.0.1
+    container_name: emshop-redis
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    volumes:
+      - emshop-redis-data:/data
+      - ./config/redis.conf:/etc/redis/redis.conf:ro
+    networks:
+      - emshop-net
+    command: redis-server /etc/redis/redis.conf

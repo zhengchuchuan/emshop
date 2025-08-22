@@ -1,0 +1,139 @@
+# =================================================================
+# Kong API Gateway - 简化版 Docker Compose 配置
+# =================================================================
+# 功能说明：
+# - kong-migrations: 数据库初始化和迁移（一次性任务）
+# - kong: API网关服务，处理路由、负载均衡、认证等
+# - kong-postgres: Kong的数据库，存储配置信息
+# =================================================================
+
+# 共享环境变量配置
+x-kong-env: &kong-env
+  KONG_DATABASE: ${KONG_DATABASE}
+  KONG_PG_DATABASE: ${KONG_PG_DATABASE}
+  KONG_PG_HOST: ${KONG_PG_HOST}
+  KONG_PG_USER: ${KONG_PG_USER}
+  KONG_PG_PASSWORD: ${KONG_PG_PASSWORD}
+  # 日志输出到标准输出，便于容器日志查看
+  KONG_ADMIN_ACCESS_LOG: ${KONG_ADMIN_ACCESS_LOG}
+  KONG_ADMIN_ERROR_LOG: ${KONG_ADMIN_ERROR_LOG}
+  KONG_PROXY_ACCESS_LOG: ${KONG_PROXY_ACCESS_LOG}
+  KONG_PROXY_ERROR_LOG: ${KONG_PROXY_ERROR_LOG}
+
+services:
+  # =================================================================
+  # Kong 数据库初始化服务
+  # =================================================================
+  # 作用：在Kong主服务启动前，初始化数据库结构
+  # 运行：一次性任务，完成后自动退出
+  kong-migrations:
+    image: ${KONG_DOCKER_TAG}
+    container_name: kong-migrations          # 容器名称
+    command: kong migrations bootstrap       # 初始化数据库命令
+    environment:
+      <<: *kong-env                          # 继承共享环境变量
+    depends_on:
+      kong-postgres:                         # 等待数据库就绪
+        condition: service_healthy
+    networks:
+      - emshop-net                           # 连接到项目网络
+    restart: on-failure                      # 失败时重启
+
+  # =================================================================
+  # Kong 数据库迁移更新服务  
+  # =================================================================
+  # 作用：更新现有数据库结构到最新版本
+  # 运行：版本升级时执行，完成后自动退出
+  kong-migrations-up:
+    image: ${KONG_DOCKER_TAG}
+    container_name: kong-migrations-up       # 容器名称
+    command: kong migrations up && kong migrations finish  # 更新并完成迁移
+    environment:
+      <<: *kong-env                          # 继承共享环境变量
+    depends_on:
+      kong-postgres:                         # 等待数据库就绪
+        condition: service_healthy
+    networks:
+      - emshop-net                           # 连接到项目网络
+    restart: on-failure                      # 失败时重启
+
+  # =================================================================
+  # Kong API Gateway 主服务
+  # =================================================================
+  # 功能：API网关核心服务，处理所有请求路由和转发
+  # 端口：8000(HTTP代理), 8001(管理API), 8002(管理界面)
+  kong:
+    image: ${KONG_DOCKER_TAG}
+    container_name: kong-gateway             # 容器名称
+    user: ${KONG_USER}
+    environment:
+      <<: *kong-env                          # 继承共享环境变量
+      # 服务监听配置
+      KONG_PROXY_LISTEN: ${KONG_PROXY_LISTEN}     # HTTP代理端口
+      KONG_ADMIN_LISTEN: ${KONG_ADMIN_LISTEN}     # 管理API端口
+      KONG_ADMIN_GUI_LISTEN: ${KONG_ADMIN_GUI_LISTEN}  # 管理界面端口
+      # KONG_PREFIX: /var/run/kong            # 工作目录
+      KONG_DECLARATIVE_CONFIG: ${KONG_DECLARATIVE_CONFIG}  # 配置文件路径
+      # DNS 解析器配置（如需要）
+      # KONG_DNS_RESOLVER: ${CONSUL_IP}:${CONSUL_PORT}
+    ports:
+      # 代理端口 - 客户端请求入口
+      - "0.0.0.0:8000:8000"
+      # SSL代理端口 - HTTPS请求入口  
+      - "0.0.0.0:8443:8443"
+      # 管理API端口 - 配置管理接口
+      - "8001:8001"
+      # 管理API SSL端口
+      - "8444:8444"
+      # 管理界面端口 - Web管理控制台
+      - "8002:8002"
+    depends_on:
+      kong-postgres:                         # 依赖数据库服务
+        condition: service_healthy
+      kong-migrations:                       # 依赖数据库初始化完成
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "kong", "health"]       # 健康检查命令
+      interval: 30s                          # 检查间隔
+      timeout: 10s                           # 超时时间
+      retries: 5                             # 重试次数
+    restart: unless-stopped                  # 重启策略
+    volumes:
+      # Kong 运行时数据目录
+      # - ${KONG_PREFIX_VOL}:${KONG_PREFIX}
+      # 临时文件目录
+      # - ${KONG_TMP_VOL}:/tmp
+      # 配置文件目录
+      - ./config:/opt/kong
+    networks:
+      - emshop-net                           # 连接到项目网络
+    security_opt:
+      - no-new-privileges                    # 安全选项：禁止权限提升
+
+  # =================================================================
+  # PostgreSQL 数据库服务
+  # =================================================================
+  # 功能：为Kong提供数据持久化支持
+  # 存储：路由配置、插件设置、消费者信息等
+  kong-postgres:
+    image: ${POSTGRES_IMAGE}                # 使用环境变量中的镜像版本
+    container_name: kong-postgres            # 容器名称
+    environment:
+      # 数据库初始化配置（与Kong配置保持一致）
+      POSTGRES_DB: ${POSTGRES_DB}            # 数据库名
+      POSTGRES_USER: ${POSTGRES_USER}        # 用户名
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # 密码
+    ports:
+      - "${POSTGRES_PORT}:5432"              # 数据库端口（可选，用于外部访问）
+    volumes:
+      - emshop-kong-data:/var/lib/postgresql/data  # 数据持久化
+    healthcheck:
+      # 数据库就绪检查
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s                          # 检查间隔
+      timeout: 10s                           # 超时时间
+      retries: 3                             # 重试次数
+    restart: unless-stopped                  # 重启策略
+    networks:
+      emshop-net:                            # 指定网络和IP地址
+        ipv4_address: ${POSTGRES_IP}

@@ -1,0 +1,22 @@
+
+services:
+  emshop-nacos:
+    image: nacos/nacos-server:v3.0.0
+    container_name: emshop-nacos
+    environment:
+      - MODE=standalone
+      - NACOS_AUTH_IDENTITY_KEY=serverIdentity
+      - NACOS_AUTH_IDENTITY_VALUE=security
+      - NACOS_AUTH_TOKEN=MzQwMjU2MjU1NTUzMjEyMDEyNzY2ODA4MTIxMzM4ODQ=
+    volumes:
+      - ./logs/:/home/nacos/logs
+      - emshop-nacos-data:/home/nacos/data
+      - ./conf/application.properties:/home/nacos/conf/application.properties:ro
+      - ./conf/nacos-logback.xml:/home/nacos/conf/nacos-logback.xml:ro
+    ports:
+      - "8080:8080"
+      - "8848:8848"
+      - "9848:9848"
+    restart: unless-stopped
+    networks:
+      - emshop-net

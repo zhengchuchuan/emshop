@@ -1,0 +1,13 @@
+cluster.name: "emshop-cluster"
+node.name: "emshop-node-1"
+network.host: 0.0.0.0
+discovery.type: single-node
+
+# Disable security for simplicity
+xpack.security.enabled: false
+xpack.security.http.ssl.enabled: false
+xpack.security.transport.ssl.enabled: false
+
+# Path settings
+path.data: /usr/share/elasticsearch/data
+path.logs: /usr/share/elasticsearch/logs

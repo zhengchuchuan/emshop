@@ -1,0 +1,11 @@
+
+services:
+  dtm:
+    image: yedf/dtm:1.19.0
+    container_name: dtm
+    restart: unless-stopped
+    ports:
+      - 36789:36789
+      - 36790:36790
+    networks:
+      - emshop-net

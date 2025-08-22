@@ -1,0 +1,77 @@
+
+include:
+  # Core Services (Always On)
+  - ./consul/docker-compose.yml
+  - ./nacos/docker-compose.yml
+  - ./redis/docker-compose.yml
+  - ./dtm/docker-compose.yml
+  - ./mysql-canal/docker-compose.yml    # sync mysql to es
+  
+  # Optional Services (Uncomment as needed)
+  - ./kong/docker-compose.yml      # API Gateway (Simplified)
+  - ./elk/docker-compose.yml       # Elasticsearch, Logstash, Kibana (Simplified)
+  - ./prometheus/docker-compose.yml # Prometheus, Grafana, Node-Exporter (Simplified)
+  - ./rocketmq/docker-compose.yml  # Message Queue (Simplified)
+  - ./jaeger/docker-compose.yml    # Distributed Tracing
+  - ./jenkins/docker-compose.yml   # CI/CD Pipeline
+
+
+# 一个项目中的所有服务共用一个网络
+networks:
+  emshop-net:
+    name: emshop-net
+    driver: bridge
+    attachable: true  # 允许其他容器连接
+    ipam:
+      config:
+        - subnet: "172.20.0.0/24"
+          gateway: "172.20.0.1"
+          ip_range: "172.20.0.128/25" # 128以及之后的ip自动分配, 1 - 127 保留给手动分配
+
+# 所有服务的数据卷定义
+volumes:
+  # MySQL 数据卷
+  emshop-mysql-data:
+    name: emshop-mysql-data
+  
+  # Redis 数据卷
+  emshop-redis-data:
+    name: emshop-redis-data
+  
+  # Consul 数据卷
+  emshop-consul-data:
+    name: emshop-consul-data
+  
+  # Nacos 数据卷
+  emshop-nacos-data:
+    name: emshop-nacos-data
+  
+  # Elasticsearch 数据卷
+  emshop-elasticsearch-data:
+    name: emshop-elasticsearch-data
+  
+  # Prometheus 数据卷
+  emshop-prometheus-data:
+    name: emshop-prometheus-data
+  
+  # Grafana 数据卷
+  emshop-grafana-data:
+    name: emshop-grafana-data
+  
+
+  # Kong 数据卷
+  emshop-kong-data:
+    name: emshop-kong-data
+  
+  # Jenkins 数据卷
+  emshop-jenkins-data:
+    name: emshop-jenkins-data
+  
+  # Jaeger 数据卷
+  emshop-jaeger-data:
+    name: emshop-jaeger-data
+  
+  # RocketMQ 数据卷
+  emshop-rocketmq-broker-data:
+    name: emshop-rocketmq-broker-data
+  

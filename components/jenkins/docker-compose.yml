@@ -1,0 +1,16 @@
+services:
+  jenkins:
+  
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "28080:8080"
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+    networks:
+      - emshop-net
+    restart: unless-stopped
+  # ssh-agent:
+  #   image: jenkins/ssh-agent
+# volumes:
+#   jenkins_home:
