@@ -12,3 +12,7 @@ services:
     networks:
       - emshop-net
     command: redis-server /etc/redis/redis.conf
+
+volumes:
+  emshop-redis-data:
+    name: emshop-redis-data

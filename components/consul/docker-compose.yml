@@ -3,7 +3,7 @@ services:
   emshop-consul:
     image: consul:1.15.4
     container_name: emshop-consul
-    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0  # 添加启动命令
+    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0
     volumes:
       - ./config:/consul/config:ro
       - emshop-consul-data:/consul/data
@@ -12,26 +12,13 @@ services:
       - "8301:8301"
       - "8302:8302"
       - "8600:8600"
-      - "8600:8600/tcp"  # 明确指定TCP
-      - "8600:8600/udp"  # 明确指定UDP
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
     networks:
       emshop-net:
         ipv4_address: 172.20.0.100
-      # kong-net:  # 加入Kong的网络
-      #   ipv4_address: 172.20.0.3  # 关键：固定Consul的IP
     restart: unless-stopped
 
-# networks:
-#   - emshop-net
-# networks:
-#   kong-net:
-#     external: true  # 使用外部网络
-#     name: kong-net  # 指定网络名称
-#     # 添加子网配置（必须与预先创建的网络一致）
-#     driver_opts:
-#       com.docker.network.bridge.name: kong-net
-#       com.docker.network.subnet: "172.20.0.0/24"
-#       com.docker.network.gateway: "172.20.0.1"
-
-
-# docker network create --driver bridge --subnet 172.20.0.0/24 --gateway 172.20.0.1 kong-net
+volumes:
+  emshop-consul-data:
+    name: emshop-consul-data

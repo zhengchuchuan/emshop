@@ -8,6 +8,8 @@ services:
       - 9876:9876
     volumes:
       - ./data/namesrv/logs:/home/rocketmq/logs
+    networks:
+      - emshop-net
     command: sh mqnamesrv
 
   #Service for broker
@@ -26,6 +28,8 @@ services:
       - ./data/broker/logs:/home/rocketmq/logs
       - emshop-rocketmq-broker-data:/home/rocketmq/store
       - ./data/broker/conf/broker.conf:/opt/rocketmq-${ROCKETMQ_VERSION}/conf/broker.conf
+    networks:
+      - emshop-net
     command: sh mqbroker -c /opt/rocketmq-${ROCKETMQ_VERSION}/conf/broker.conf
 
   #Service for another broker -- broker1
@@ -66,6 +70,8 @@ services:
     volumes:
       - ./proxy/logs:/home/rocketmq/logs
       - ./proxy/conf/rmq-proxy.json:/opt/rocketmq-${ROCKETMQ_VERSION}/conf/rmq-proxy.json
+    networks:
+      - emshop-net
     command: sh mqproxy -pc /opt/rocketmq-${ROCKETMQ_VERSION}/conf/rmq-proxy.json
 
   #Service for console (dashboard)
@@ -78,6 +84,8 @@ services:
       - 18082:8080
     environment:
       - JAVA_OPTS=-Drocketmq.namesrv.addr=rmqnamesrv:9876 -Dcom.rocketmq.sendMessageWithVIPChannel=false -Dlogging.level.org.apache.rocketmq=ERROR
+    networks:
+      - emshop-net
     restart: on-failure
 
   # RocketMQ 数据卷

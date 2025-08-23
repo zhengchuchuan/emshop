@@ -137,3 +137,9 @@ services:
     networks:
       emshop-net:                            # 指定网络和IP地址
         ipv4_address: ${POSTGRES_IP}
+
+volumes:
+  emshop-kong-data:
+    name: emshop-kong-data
+
+

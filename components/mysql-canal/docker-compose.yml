@@ -47,7 +47,7 @@ services:
       canal.adminUser: admin
       canal.adminPasswd: 123456
     volumes:
-      # - ./canal-admin/conf:/home/admin/canal-admin/conf
+      - ./canal-admin/conf:/home/admin/canal-admin/conf
       - ./canal-admin/logs:/home/admin/canal-admin/logs
     depends_on:
       - emshop-mysql
@@ -60,30 +60,11 @@ services:
     restart: unless-stopped
     ports:
       - "11111:11111"
-    environment:
-
-      # Canal 基础配置
-      canal.instance.mysql.slaveId: 2
-      canal.instance.master.address: emshop-mysql:3306
-      canal.instance.dbUsername: root
-      canal.instance.dbPassword: root
-      canal.instance.connectionCharset: UTF-8
-      canal.instance.tsdb.enable: true
-      canal.instance.gtidon: false
-
-      # Canal Admin 连接配置
-      canal.admin.manager: emshop-canal-admin:8089
-      canal.admin.port: 11110
-      canal.admin.user: admin
-      canal.admin.passwd: 123456
-
-      # RocketMQ 特定配置
-      # canal.serverMode: RocketMQ
-      # canal.mq.servers: emshop-rocketmq-nameserver:9876
-      # rocketmq.producer.group: canal-producer
-      # rocketmq.namesrv.addr: emshop-rocketmq-nameserver:9876
     volumes:
-      # - ./canal-server/conf:/home/admin/canal-server/conf
+      # 使用配置文件而不是环境变量 - 更灵活和可维护
+      - ./canal-server/conf/canal.properties:/home/admin/canal-server/conf/canal.properties:ro
+      - ./canal-server/conf/instance.properties:/home/admin/canal-server/conf/example/instance.properties:ro
+      - ./canal-server/conf/startup.sh:/home/admin/canal-server/bin/startup.sh:ro
       - ./canal-server/logs:/home/admin/canal-server/logs
     depends_on:
       - emshop-mysql
@@ -92,6 +73,10 @@ services:
       - emshop-net
 
 volumes:
+  # MySQL 数据卷
+  emshop-mysql-data:
+    name: emshop-mysql-data
+  
   # RocketMQ NameServer 数据卷
   emshop-rocketmq-nameserver-data:
     name: emshop-rocketmq-nameserver-data

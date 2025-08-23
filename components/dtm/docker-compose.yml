@@ -9,3 +9,4 @@ services:
       - 36790:36790
     networks:
       - emshop-net
+

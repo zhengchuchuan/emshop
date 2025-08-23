@@ -60,3 +60,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  emshop-prometheus-data:
+    name: emshop-prometheus-data
+  
+  emshop-grafana-data:
+    name: emshop-grafana-data

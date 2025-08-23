@@ -69,3 +69,7 @@ services:
       - ./config/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - ./config/logstash/pipeline:/usr/share/logstash/pipeline:ro
       - ./logs/logstash:/usr/share/logstash/logs
+
+volumes:
+  emshop-elasticsearch-data:
+    name: emshop-elasticsearch-data

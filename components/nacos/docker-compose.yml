@@ -20,3 +20,7 @@ services:
     restart: unless-stopped
     networks:
       - emshop-net
+
+volumes:
+  emshop-nacos-data:
+    name: emshop-nacos-data
