@@ -196,28 +196,35 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) (*dto.G
 		return nil, err
 	}
 	
-	// 构建搜索对象
-	searchDO := do.GoodsSearchDO{
-		ID:          goods.ID,
-		CategoryID:  goods.CategoryID,
-		BrandsID:    goods.BrandsID,
-		OnSale:      goods.OnSale,
-		ShipFree:    goods.ShipFree,
-		IsNew:       goods.IsNew,
-		IsHot:       goods.IsHot,
-		Name:        goods.Name,
-		ClickNum:    goods.ClickNum,
-		SoldNum:     goods.SoldNum,
-		FavNum:      goods.FavNum,
-		MarketPrice: goods.MarketPrice,
-		GoodsBrief:  goods.GoodsBrief,
-		ShopPrice:   goods.ShopPrice,
-	}
+	// 检查是否启用服务层ES同步
+	esOptions := gs.factoryManager.GetEsOptions()
+	if esOptions.EnableServiceSync {
+		log.Debugf("Service-level ES sync enabled, syncing to Elasticsearch")
+		// 构建搜索对象
+		searchDO := do.GoodsSearchDO{
+			ID:          goods.ID,
+			CategoryID:  goods.CategoryID,
+			BrandsID:    goods.BrandsID,
+			OnSale:      goods.OnSale,
+			ShipFree:    goods.ShipFree,
+			IsNew:       goods.IsNew,
+			IsHot:       goods.IsHot,
+			Name:        goods.Name,
+			ClickNum:    goods.ClickNum,
+			SoldNum:     goods.SoldNum,
+			FavNum:      goods.FavNum,
+			MarketPrice: goods.MarketPrice,
+			GoodsBrief:  goods.GoodsBrief,
+			ShopPrice:   goods.ShopPrice,
+		}
 
-	err = dataFactory.Search().Goods().Create(ctx, &searchDO)
-	if err != nil {
-		txn.Rollback()
-		return nil, err
+		err = dataFactory.Search().Goods().Create(ctx, &searchDO)
+		if err != nil {
+			txn.Rollback()
+			return nil, err
+		}
+	} else {
+		log.Debugf("Service-level ES sync disabled, relying on Canal for synchronization")
 	}
 	
 	txn.Commit()
@@ -263,28 +270,35 @@ func (gs *goodsService) Update(ctx context.Context, goods *dto.GoodsDTO) error {
 		return err
 	}
 
-	// 更新ES数据
-	searchDO := do.GoodsSearchDO{
-		ID:          goods.ID,
-		CategoryID:  goods.CategoryID,
-		BrandsID:    goods.BrandsID,
-		OnSale:      goods.OnSale,
-		ShipFree:    goods.ShipFree,
-		IsNew:       goods.IsNew,
-		IsHot:       goods.IsHot,
-		Name:        goods.Name,
-		ClickNum:    goods.ClickNum,
-		SoldNum:     goods.SoldNum,
-		FavNum:      goods.FavNum,
-		MarketPrice: goods.MarketPrice,
-		GoodsBrief:  goods.GoodsBrief,
-		ShopPrice:   goods.ShopPrice,
-	}
+	// 检查是否启用服务层ES同步
+	esOptions := gs.factoryManager.GetEsOptions()
+	if esOptions.EnableServiceSync {
+		log.Debugf("Service-level ES sync enabled, updating Elasticsearch")
+		// 更新ES数据
+		searchDO := do.GoodsSearchDO{
+			ID:          goods.ID,
+			CategoryID:  goods.CategoryID,
+			BrandsID:    goods.BrandsID,
+			OnSale:      goods.OnSale,
+			ShipFree:    goods.ShipFree,
+			IsNew:       goods.IsNew,
+			IsHot:       goods.IsHot,
+			Name:        goods.Name,
+			ClickNum:    goods.ClickNum,
+			SoldNum:     goods.SoldNum,
+			FavNum:      goods.FavNum,
+			MarketPrice: goods.MarketPrice,
+			GoodsBrief:  goods.GoodsBrief,
+			ShopPrice:   goods.ShopPrice,
+		}
 
-	err = dataFactory.Search().Goods().Update(ctx, &searchDO)
-	if err != nil {
-		txn.Rollback()
-		return err
+		err = dataFactory.Search().Goods().Update(ctx, &searchDO)
+		if err != nil {
+			txn.Rollback()
+			return err
+		}
+	} else {
+		log.Debugf("Service-level ES sync disabled, relying on Canal for synchronization")
 	}
 
 	txn.Commit()
@@ -312,11 +326,18 @@ func (gs *goodsService) Delete(ctx context.Context, ID uint64) error {
 		return err
 	}
 
-	// 删除ES数据
-	err = dataFactory.Search().Goods().Delete(ctx, ID)
-	if err != nil {
-		txn.Rollback()
-		return err
+	// 检查是否启用服务层ES同步
+	esOptions := gs.factoryManager.GetEsOptions()
+	if esOptions.EnableServiceSync {
+		log.Debugf("Service-level ES sync enabled, deleting from Elasticsearch")
+		// 删除ES数据
+		err = dataFactory.Search().Goods().Delete(ctx, ID)
+		if err != nil {
+			txn.Rollback()
+			return err
+		}
+	} else {
+		log.Debugf("Service-level ES sync disabled, relying on Canal for synchronization")
 	}
 
 	txn.Commit()

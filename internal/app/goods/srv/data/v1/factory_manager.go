@@ -12,6 +12,7 @@ import (
 type FactoryManager struct {
 	dataFactory   mysql.DataFactory
 	syncManager   sync.DataSyncManagerInterface
+	esOptions     *options.EsOptions
 }
 
 // NewFactoryManager 创建工厂管理器
@@ -36,6 +37,7 @@ func NewFactoryManager(mysqlOpts *options.MySQLOptions, esOpts *options.EsOption
 	return &FactoryManager{
 		dataFactory: dataFactory,
 		syncManager: syncManager,
+		esOptions:   esOpts,
 	}, nil
 }
 
@@ -47,6 +49,11 @@ func (fm *FactoryManager) GetDataFactory() mysql.DataFactory {
 // GetSyncManager 获取同步管理器
 func (fm *FactoryManager) GetSyncManager() sync.DataSyncManagerInterface {
 	return fm.syncManager
+}
+
+// GetEsOptions 获取ES配置选项
+func (fm *FactoryManager) GetEsOptions() *options.EsOptions {
+	return fm.esOptions
 }
 
 // Close 关闭所有连接
