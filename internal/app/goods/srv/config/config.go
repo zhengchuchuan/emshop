@@ -14,6 +14,7 @@ type Config struct {
 	Registry     *options.RegistryOptions  `json:"registry" mapstructure:"registry"`
 	Telemetry    *options.TelemetryOptions `json:"telemetry" mapstructure:"telemetry"`
 	MySQLOptions *options.MySQLOptions     `json:"mysql" mapstructure:"mysql"`
+	RocketMQ     *options.RocketMQOptions  `json:"rocketmq" mapstructure:"rocketmq"`
 }
 
 func (c *Config) Validate() []error {
@@ -24,6 +25,7 @@ func (c *Config) Validate() []error {
 	errors = append(errors, c.Telemetry.Validate()...)
 	errors = append(errors, c.MySQLOptions.Validate()...)
 	errors = append(errors, c.EsOptions.Validate()...)
+	errors = append(errors, c.RocketMQ.Validate()...)
 	return errors
 }
 
@@ -34,6 +36,7 @@ func (c *Config) Flags() (fss cliflag.NamedFlagSets) {
 	c.Telemetry.AddFlags(fss.FlagSet("telemetry"))
 	c.MySQLOptions.AddFlags(fss.FlagSet("mysql"))
 	c.EsOptions.AddFlags(fss.FlagSet("es"))
+	c.RocketMQ.AddFlags(fss.FlagSet("rocketmq"))
 	return fss
 }
 
@@ -46,5 +49,6 @@ func New() *Config {
 		Telemetry:    options.NewTelemetryOptions(),
 		MySQLOptions: options.NewMySQLOptions(),
 		EsOptions:    options.NewEsOptions(),
+		RocketMQ:     options.NewRocketMQOptions(),
 	}
 }

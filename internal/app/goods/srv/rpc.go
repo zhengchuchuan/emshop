@@ -13,7 +13,7 @@ import (
 	"emshop/pkg/log"
 )
 
-func NewGoodsRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
+func NewGoodsRPCServer(cfg *config.Config) (*rpcserver.Server, *dataV1.FactoryManager, error) {
 	//初始化open-telemetry的exporter
 	trace.InitAgent(trace.Options{
 		Name:     cfg.Telemetry.Name,
@@ -26,7 +26,7 @@ func NewGoodsRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 	factoryManager, err := dataV1.NewFactoryManager(cfg.MySQLOptions, cfg.EsOptions)
 	if err != nil {
 		log.Fatal(err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 
 	// 创建服务层
@@ -40,5 +40,5 @@ func NewGoodsRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 	//r := gin.Default()
 	//upb.RegisterUserServerHTTPServer(userver, r)
 	//r.Run(":8075")
-	return grpcServer, nil
+	return grpcServer, factoryManager, nil
 }

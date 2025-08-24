@@ -1,5 +1,6 @@
 
 services:
+
   emshop-mysql:
     image: mysql:9.3.0   # 必须采用此版本
     container_name: emshop-mysql
@@ -24,35 +25,6 @@ services:
       retries: 5
       start_period: 60s
 
-  emshop-canal-admin:
-    image: canal/canal-admin:v1.1.8
-    container_name: emshop-canal-admin
-    restart: unless-stopped
-    ports:
-      - "18089:8089"
-    environment:
-      # 服务端口
-      server.port: 8089
-      # 数据库配置
-      spring.datasource.address: emshop-mysql:3306
-      spring.datasource.database: canal_manager
-      spring.datasource.username: root
-      spring.datasource.password: root
-      # spring.datasource.driver-class-name: com.mysql.jdbc.Driver
-      # spring.datasource.url: jdbc:mysql://$${spring.datasource.address}/$${spring.datasource.database}?useUnicode=true&characterEncoding=UTF-8&useSSL=false
-      # spring.datasource.hikari.maximum-pool-size: 30
-      # spring.datasource.hikari.minimum-idle: 1
-
-      # 管理员账户配置
-      canal.adminUser: admin
-      canal.adminPasswd: 123456
-    volumes:
-      - ./canal-admin/conf:/home/admin/canal-admin/conf
-      - ./canal-admin/logs:/home/admin/canal-admin/logs
-    depends_on:
-      - emshop-mysql
-    networks:
-      - emshop-net
 
   emshop-canal-server:
     image: canal/canal-server:v1.1.8
@@ -61,26 +33,17 @@ services:
     ports:
       - "11111:11111"
     volumes:
-      # 使用配置文件而不是环境变量 - 更灵活和可维护
-      - ./canal-server/conf/canal.properties:/home/admin/canal-server/conf/canal.properties:ro
-      - ./canal-server/conf/instance.properties:/home/admin/canal-server/conf/example/instance.properties:ro
-      - ./canal-server/conf/startup.sh:/home/admin/canal-server/bin/startup.sh:ro
+      # 启用配置文件挂载以覆盖Docker镜像默认配置
       - ./canal-server/logs:/home/admin/canal-server/logs
+      - ./canal-server/conf:/home/admin/canal-server/conf
     depends_on:
       - emshop-mysql
-      - emshop-canal-admin
     networks:
       - emshop-net
 
 volumes:
-  # MySQL 数据卷
+  # MySQL 数据卷 - 使用外部卷
   emshop-mysql-data:
     name: emshop-mysql-data
-  
-  # RocketMQ NameServer 数据卷
-  emshop-rocketmq-nameserver-data:
-    name: emshop-rocketmq-nameserver-data
-  
-  # RocketMQ Broker 数据卷
-  emshop-rocketmq-broker-data:
-    name: emshop-rocketmq-broker-data
+    external: true
+

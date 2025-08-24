@@ -3,6 +3,7 @@ package srv
 import (
 	"github.com/hashicorp/consul/api"
 	"emshop/internal/app/goods/srv/config"
+	"emshop/internal/app/goods/srv/consumer"
 	"emshop/internal/app/pkg/options"
 	gapp "emshop/gin-micro/app"
 	"emshop/pkg/app"
@@ -44,10 +45,28 @@ func NewGoodsApp(cfg *config.Config) (*gapp.App, error) {
 	register := NewRegistrar(cfg.Registry)
 
 	//生成rpc服务
-	rpcServer, err := NewGoodsRPCServer(cfg)
+	rpcServer, factoryManager, err := NewGoodsRPCServer(cfg)
 	if err != nil {
 		return nil, err
 	}
+
+	// 创建Canal消费者配置
+	canalConsumerConfig := &consumer.CanalConsumerConfig{
+		NameServers:   cfg.RocketMQ.NameServers,
+		ConsumerGroup: cfg.RocketMQ.ConsumerGroup,
+		Topic:         cfg.RocketMQ.Topic,
+		MaxReconsume:  cfg.RocketMQ.MaxReconsume,
+	}
+	
+	canalConsumer := consumer.NewCanalConsumer(canalConsumerConfig, factoryManager.GetSyncManager())
+
+	// 在后台启动Canal消费者
+	go func() {
+		log.Info("starting canal consumer in background")
+		if err := canalConsumer.Start(); err != nil {
+			log.Errorf("failed to start canal consumer: %v", err)
+		}
+	}()
 
 	return gapp.New(
 		gapp.WithName(cfg.Server.Name),

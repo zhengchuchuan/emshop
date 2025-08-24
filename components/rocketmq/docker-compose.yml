@@ -1,7 +1,7 @@
 
 services:
   #Service for nameserver
-  namesrv:
+  rmqnamesrv:
     image: apache/rocketmq:${ROCKETMQ_VERSION}
     container_name: rmqnamesrv
     ports:
@@ -13,65 +13,57 @@ services:
     command: sh mqnamesrv
 
   #Service for broker
-  broker:
+  rmqbroker:
     image: apache/rocketmq:${ROCKETMQ_VERSION}
     container_name: rmqbroker
-    links:
-      - namesrv
+    depends_on:
+      - rmqnamesrv
     ports:
       - 10909:10909
       - 10911:10911
       - 10912:10912
     environment:
-      - NAMESRV_ADDR=namesrv:9876
+      - NAMESRV_ADDR=rmqnamesrv:9876
     volumes:
       - ./data/broker/logs:/home/rocketmq/logs
       - emshop-rocketmq-broker-data:/home/rocketmq/store
       - ./data/broker/conf/broker.conf:/opt/rocketmq-${ROCKETMQ_VERSION}/conf/broker.conf
     networks:
       - emshop-net
+    healthcheck:
+      test: ["CMD-SHELL", "sh mqadmin clusterList -n rmqnamesrv:9876 | grep -q broker || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     command: sh mqbroker -c /opt/rocketmq-${ROCKETMQ_VERSION}/conf/broker.conf
 
-  #Service for another broker -- broker1
-  # broker1:
-  #   image: apache/rocketmq:${ROCKETMQ_VERSION}
-  #   container_name: rmqbroker-1
-  #   links:
-  #     - namesrv
-  #   ports:
-  #     - 10929:10909
-  #     - 10931:10911
-  #     - 10932:10912
-  #   environment:
-  #     - NAMESRV_ADDR=namesrv:9876
-  #   volumes:
-  #     - ./data1/broker/logs:/home/rocketmq/logs
-  #     - ./data1/broker/store:/home/rocketmq/store
-  #     - ./data1/broker/conf/broker.conf:/opt/rocketmq-${ROCKETMQ_VERSION}/conf/broker.conf
-  #   command: sh mqbroker -c /opt/rocketmq-${ROCKETMQ_VERSION}/conf/broker.conf
 
   #Service for proxy
-  proxy:
+  rmqproxy:
     image: apache/rocketmq:${ROCKETMQ_VERSION}
     container_name: rmqproxy
-    links:
-      - namesrv
-      - broker
-      # - broker1
     depends_on:
-      - broker
-      # - broker1
+      rmqbroker:
+        condition: service_healthy
     ports:
       - 18080:8080
       - 18081:8081
-    restart: on-failure
+    restart: on-failure:3
     environment:
-      - NAMESRV_ADDR=namesrv:9876
+      - NAMESRV_ADDR=rmqnamesrv:9876
+      - JAVA_OPTS=-server -Xms512m -Xmx512m -Xmn256m -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=320m
     volumes:
       - ./proxy/logs:/home/rocketmq/logs
       - ./proxy/conf/rmq-proxy.json:/opt/rocketmq-${ROCKETMQ_VERSION}/conf/rmq-proxy.json
     networks:
       - emshop-net
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tln | grep -E '8080|8081' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
     command: sh mqproxy -pc /opt/rocketmq-${ROCKETMQ_VERSION}/conf/rmq-proxy.json
 
   #Service for console (dashboard)
@@ -79,7 +71,7 @@ services:
     image: apacherocketmq/rocketmq-dashboard:1.0.0
     container_name: rmqconsole
     links:
-      - namesrv
+      - rmqnamesrv
     ports:
       - 18082:8080
     environment:

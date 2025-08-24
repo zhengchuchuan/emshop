@@ -48,6 +48,10 @@ components/**/data/
 components/**/data/**
 components/**/*_data/
 components/**/*_data/**
+
+# Canal Admin - not using admin mode, exclude config files
+components/mysql-canal/canal-admin/conf/public/
+components/mysql-canal/canal-admin/conf/*.backup
 components/**/tmp/
 components/**/tmp/**
 
@@ -73,3 +77,28 @@ components/jenkins/jenkins_home/
 !components/**/*.json
 !components/**/*.md
 !components/**/README*
+
+# 备份文件和临时版本
+*.backup
+*.bak
+*.fixed-*
+
+# 临时测试脚本 - 避免提交调试和一次性脚本
+scripts/bulk-sync-*.go
+scripts/count-*.go
+scripts/temp-*.go
+scripts/test-*.go
+
+# 临时JSON文件和数据备份
+*.tmp.json
+*_backup.json
+*_dump.json
+
+# Canal运行时生成文件
+components/mysql-canal/canal-server/conf/example/*.db
+components/mysql-canal/canal-server/conf/example/meta.dat
+
+# 临时Go模块文件(当在scripts目录中进行临时测试时)
+scripts/go.mod
+scripts/go.sum
+

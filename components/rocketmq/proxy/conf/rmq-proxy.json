@@ -1,3 +1,15 @@
 {
-  "rocketMQClusterName": "DefaultCluster"
+  "rocketMQClusterName": "DefaultCluster",
+  "nameSrvAddr": "rmqnamesrv:9876",
+  "grpcServerPort": 8081,
+  "remotingListenPort": 8080,
+  "enableACL": false,
+  "accessKey": "",
+  "secretKey": "",
+  "transactionTimeOut": 3000,
+  "transactionCheckMax": 15,
+  "enablePrintJvmInSendMessageHook": false,
+  "enableSendTraceInHook": false,
+  "enableLocalTransaction": false,
+  "enableTraceInMessageSelector": false
 }
