@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 	proto2 "emshop/api/goods/v1"
 	proto "emshop/api/inventory/v1"
 	proto3 "emshop/api/order/v1"
@@ -30,6 +31,10 @@ type OrderSrv interface {
 	CreateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error
 	UpdateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error
 	DeleteCartItem(ctx context.Context, userID, goodsID uint64) error
+	
+	// Payment status management (for DTM Saga integration)
+	UpdatePaidStatus(ctx context.Context, orderSn string, paymentSn string) error  // 更新订单为已支付
+	RevertPaidStatus(ctx context.Context, orderSn string) error                     // 回滚支付状态（补偿）
 }
 
 type orderService struct {
@@ -250,6 +255,117 @@ func (os *orderService) DeleteCartItem(ctx context.Context, userID, goodsID uint
 		return err
 	}
 	return os.data.ShoppingCarts().Delete(ctx, os.data.DB(), uint64(cartItem.ID))
+}
+
+// UpdatePaidStatus 更新订单为已支付状态 - DTM Saga正向操作
+func (os *orderService) UpdatePaidStatus(ctx context.Context, orderSn string, paymentSn string) error {
+	log.Infof("更新订单支付状态：订单号=%s, 支付单号=%s", orderSn, paymentSn)
+
+	// 查询订单
+	order, err := os.data.Orders().Get(ctx, os.data.DB(), orderSn)
+	if err != nil {
+		log.Errorf("查询订单失败: %v", err)
+		return err
+	}
+
+	// 检查订单状态是否允许支付
+	if order.PaymentStatus == do.PaymentStatusPaid {
+		// 已经是已支付状态，幂等处理
+		log.Infof("订单%s已经是已支付状态，跳过", orderSn)
+		return nil
+	}
+
+	// 开启事务
+	tx := os.data.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 更新订单支付状态
+	updates := map[string]interface{}{
+		"payment_status": do.PaymentStatusPaid,
+		"payment_sn":     paymentSn,
+		"status":         "TRADE_SUCCESS", // 更新主状态为交易成功
+	}
+
+	// 设置支付时间
+	now := time.Now()
+	updates["paid_at"] = &now
+	updates["pay_time"] = &now
+
+	if err := tx.Model(&do.OrderInfoDO{}).Where("order_sn = ?", orderSn).Updates(updates).Error; err != nil {
+		tx.Rollback()
+		log.Errorf("更新订单支付状态失败: %v", err)
+		return errors.WithCode(code.ErrConnectDB, "更新订单支付状态失败")
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		log.Errorf("提交事务失败: %v", err)
+		return errors.WithCode(code.ErrConnectDB, "提交事务失败")
+	}
+
+	log.Infof("订单支付状态更新成功：订单号=%s", orderSn)
+	return nil
+}
+
+// RevertPaidStatus 回滚支付状态 - DTM Saga补偿操作
+func (os *orderService) RevertPaidStatus(ctx context.Context, orderSn string) error {
+	log.Infof("回滚订单支付状态：订单号=%s", orderSn)
+
+	// 查询订单
+	order, err := os.data.Orders().Get(ctx, os.data.DB(), orderSn)
+	if err != nil {
+		if errors.IsCode(err, code.ErrNoGoodsSelect) {
+			// 订单不存在，认为回滚成功（幂等性）
+			log.Infof("订单%s不存在，回滚操作成功", orderSn)
+			return nil
+		}
+		return err
+	}
+
+	// 检查是否需要回滚
+	if order.PaymentStatus == do.PaymentStatusNone || order.PaymentStatus == do.PaymentStatusCreated {
+		// 已经是未支付状态，幂等处理
+		log.Infof("订单%s已经是未支付状态，跳过回滚", orderSn)
+		return nil
+	}
+
+	// 开启事务
+	tx := os.data.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 回滚订单状态
+	updates := map[string]interface{}{
+		"payment_status": do.PaymentStatusNone,
+		"payment_sn":     "",
+		"status":         "TRADE_CLOSED", // 更新主状态为交易关闭
+		"paid_at":        nil,
+		"pay_time":       nil,
+	}
+
+	if err := tx.Model(&do.OrderInfoDO{}).Where("order_sn = ?", orderSn).Updates(updates).Error; err != nil {
+		tx.Rollback()
+		log.Errorf("回滚订单支付状态失败: %v", err)
+		return errors.WithCode(code.ErrConnectDB, "回滚订单支付状态失败")
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		log.Errorf("提交事务失败: %v", err)
+		return errors.WithCode(code.ErrConnectDB, "提交事务失败")
+	}
+
+	log.Infof("订单支付状态回滚成功：订单号=%s", orderSn)
+	return nil
 }
 
 func newOrderService(sv *service) *orderService {

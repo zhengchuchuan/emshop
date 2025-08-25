@@ -1,0 +1,203 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+option go_package = ".;proto";
+
+//protoc -I. --proto_path=../../../third_party --go_out=. --go-grpc_out=. logistics.proto
+
+service Logistics {
+    // 创建物流订单
+    rpc CreateLogisticsOrder(CreateLogisticsOrderRequest) returns (CreateLogisticsOrderResponse);
+    
+    // 查询物流信息
+    rpc GetLogisticsInfo(GetLogisticsInfoRequest) returns (GetLogisticsInfoResponse);
+    
+    // 查询物流轨迹
+    rpc GetLogisticsTracks(GetLogisticsTracksRequest) returns (GetLogisticsTracksResponse);
+    
+    // 更新物流状态（内部调用）
+    rpc UpdateLogisticsStatus(UpdateLogisticsStatusRequest) returns (google.protobuf.Empty);
+    
+    // 模拟发货
+    rpc SimulateShipment(SimulateShipmentRequest) returns (google.protobuf.Empty);
+    
+    // 模拟签收
+    rpc SimulateDelivery(SimulateDeliveryRequest) returns (google.protobuf.Empty);
+    
+    // 计算运费
+    rpc CalculateShippingFee(CalculateShippingFeeRequest) returns (CalculateShippingFeeResponse);
+    
+    // 获取物流公司列表
+    rpc GetLogisticsCompanies(google.protobuf.Empty) returns (LogisticsCompaniesResponse);
+    
+    // 获取配送员列表
+    rpc GetCouriers(GetCouriersRequest) returns (GetCouriersResponse);
+}
+
+// 创建物流订单请求
+message CreateLogisticsOrderRequest {
+    string order_sn = 1;
+    int32 user_id = 2;
+    int32 logistics_company = 3;
+    int32 shipping_method = 4;
+    
+    // 发货信息
+    string sender_name = 5;
+    string sender_phone = 6;
+    string sender_address = 7;
+    
+    // 收货信息
+    string receiver_name = 8;
+    string receiver_phone = 9;
+    string receiver_address = 10;
+    
+    // 商品信息
+    repeated OrderItem items = 11;
+    
+    string remark = 12;
+}
+
+// 订单商品项
+message OrderItem {
+    int32 goods_id = 1;
+    string goods_name = 2;
+    int32 quantity = 3;
+    double weight = 4; // 重量(kg)
+    double volume = 5; // 体积(cm³)
+}
+
+// 创建物流订单响应
+message CreateLogisticsOrderResponse {
+    string logistics_sn = 1;
+    string tracking_number = 2;
+    double shipping_fee = 3;
+    int64 estimated_delivery_at = 4;
+}
+
+// 查询物流信息请求
+message GetLogisticsInfoRequest {
+    oneof query {
+        string logistics_sn = 1;
+        string order_sn = 2;
+        string tracking_number = 3;
+    }
+}
+
+// 物流信息响应
+message GetLogisticsInfoResponse {
+    string logistics_sn = 1;
+    string order_sn = 2;
+    string tracking_number = 3;
+    int32 logistics_company = 4;
+    int32 shipping_method = 5;
+    int32 logistics_status = 6;
+    
+    string sender_name = 7;
+    string sender_phone = 8;
+    string sender_address = 9;
+    
+    string receiver_name = 10;
+    string receiver_phone = 11;
+    string receiver_address = 12;
+    
+    double shipping_fee = 13;
+    int64 shipped_at = 14;
+    int64 delivered_at = 15;
+    int64 estimated_delivery_at = 16;
+    
+    string remark = 17;
+}
+
+// 查询物流轨迹请求
+message GetLogisticsTracksRequest {
+    oneof query {
+        string logistics_sn = 1;
+        string tracking_number = 2;
+    }
+}
+
+// 物流轨迹
+message LogisticsTrack {
+    string location = 1;
+    string description = 2;
+    int64 track_time = 3;
+    string operator_name = 4;
+}
+
+// 物流轨迹响应
+message GetLogisticsTracksResponse {
+    string logistics_sn = 1;
+    string tracking_number = 2;
+    repeated LogisticsTrack tracks = 3;
+}
+
+// 更新物流状态请求
+message UpdateLogisticsStatusRequest {
+    string logistics_sn = 1;
+    int32 new_status = 2;
+    string remark = 3;
+}
+
+// 模拟发货请求
+message SimulateShipmentRequest {
+    string logistics_sn = 1;
+    string courier_name = 2;
+    string courier_phone = 3;
+}
+
+// 模拟签收请求
+message SimulateDeliveryRequest {
+    string logistics_sn = 1;
+    string receiver_name = 2;
+    string delivery_remark = 3;
+}
+
+// 计算运费请求
+message CalculateShippingFeeRequest {
+    string sender_address = 1;
+    string receiver_address = 2;
+    int32 shipping_method = 3;
+    double total_weight = 4;
+    double total_volume = 5;
+    double goods_value = 6;
+    bool need_insurance = 7;
+}
+
+// 计算运费响应
+message CalculateShippingFeeResponse {
+    double shipping_fee = 1;
+    double insurance_fee = 2;
+    double total_fee = 3;
+    int32 estimated_days = 4;
+}
+
+// 物流公司信息
+message LogisticsCompany {
+    int32 company_id = 1;
+    string company_name = 2;
+    string company_code = 3;
+}
+
+// 物流公司列表响应
+message LogisticsCompaniesResponse {
+    repeated LogisticsCompany companies = 1;
+}
+
+// 获取配送员请求
+message GetCouriersRequest {
+    int32 logistics_company = 1;
+    string service_area = 2;
+}
+
+// 配送员信息
+message Courier {
+    string courier_code = 1;
+    string courier_name = 2;
+    string phone = 3;
+    int32 logistics_company = 4;
+    string service_area = 5;
+}
+
+// 配送员列表响应
+message GetCouriersResponse {
+    repeated Courier couriers = 1;
+}

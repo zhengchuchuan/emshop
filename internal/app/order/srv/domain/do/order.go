@@ -34,6 +34,11 @@ type OrderInfoDO struct {
 	OrderMount float32
 	PayTime    *time.Time `gorm:"type:datetime"`
 
+	// 新增支付相关字段
+	PaymentStatus int32       `gorm:"type:tinyint;default:0;index;comment:支付子状态:0-无,1-支付订单已创建,2-支付中,3-支付成功,4-支付失败,5-支付过期"`
+	PaymentSn     string      `gorm:"type:varchar(64);index;comment:支付单号"`
+	PaidAt        *time.Time  `gorm:"type:timestamp;comment:支付时间"`
+
 	Address      string  `gorm:"type:varchar(100)"`
 	SignerName   string  `gorm:"type:varchar(20)"`
 	SingerMobile string  `gorm:"type:varchar(11)"`
@@ -66,3 +71,13 @@ type OrderInfoDOList struct {
 	TotalCount int64          `json:"totalCount,omitempty"`
 	Items      []*OrderInfoDO `json:"items"`
 }
+
+// 支付状态常量定义
+const (
+	PaymentStatusNone       int32 = 0 // 无支付状态
+	PaymentStatusCreated    int32 = 1 // 支付订单已创建
+	PaymentStatusPaying     int32 = 2 // 支付中
+	PaymentStatusPaid       int32 = 3 // 支付成功
+	PaymentStatusFailed     int32 = 4 // 支付失败
+	PaymentStatusExpired    int32 = 5 // 支付过期
+)

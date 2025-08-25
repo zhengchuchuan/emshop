@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/zcc/project/golang/emshop/emshop/api/order/v1/**)",
+      "Read(//home/zcc/project/golang/emshop/emshop/internal/app/order/srv/data/v1/mysql/**)",
+      "Read(//home/zcc/project/golang/emshop/emshop/internal/app/order/srv/service/v1/**)",
+      "Read(//home/zcc/project/golang/emshop/emshop/internal/app/inventory/srv/service/v1/**)",
+      "Read(//home/zcc/project/golang/emshop/emshop/internal/app/**)",
+      "Read(//home/zcc/project/golang/emshop/emshop/api/userop/v1/**)",
+      "Read(//home/zcc/project/golang/emshop/emshop/**)",
+      "Bash(protoc:*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "/home/zcc/project/golang/emshop/emshop/internal/app/payment",
+      "/home/zcc/project/golang/emshop/emshop/api/payment",
+      "/home/zcc/project/golang/emshop/emshop/cmd",
+      "/home/zcc/project/golang/emshop/emshop/configs",
+      "/home/zcc/project/golang/emshop/emshop"
+    ]
+  }
+}

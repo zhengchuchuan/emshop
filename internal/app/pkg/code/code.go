@@ -1,3 +1,7 @@
+// cd internal/app/pkg/code && ../../../../tools/codegen/codegen -type=int 
+// 可选 -doc -output ../../../../docs/error_code_generated.md
+
+
 package code
 
 import (

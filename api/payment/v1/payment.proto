@@ -1,0 +1,100 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+option go_package = ".;proto";
+
+//protoc -I. --proto_path=../../../third_party --go_out=. --go-grpc_out=. --gin_out=. payment.proto
+
+service Payment {
+    // Saga正向操作 - 订单提交事务
+    rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse); // 创建支付订单
+    rpc CancelPayment(CancelPaymentRequest) returns (google.protobuf.Empty); // 取消支付订单（补偿）
+    
+    // Saga正向操作 - 支付成功事务  
+    rpc ConfirmPayment(ConfirmPaymentRequest) returns (google.protobuf.Empty); // 确认支付成功
+    rpc RefundPayment(RefundPaymentRequest) returns (google.protobuf.Empty); // 退款（补偿）
+    
+    // 查询操作
+    rpc GetPaymentStatus(GetPaymentStatusRequest) returns (PaymentStatusResponse); // 查询支付状态
+    
+    // 模拟操作（用于演示和测试）
+    rpc SimulatePaymentSuccess(SimulatePaymentRequest) returns (google.protobuf.Empty); // 模拟支付成功
+    rpc SimulatePaymentFailure(SimulatePaymentRequest) returns (google.protobuf.Empty); // 模拟支付失败
+    
+    // 新增库存预留接口（用于分布式事务）
+    rpc ReserveStock(ReserveStockRequest) returns (google.protobuf.Empty); // 预留库存（订单提交事务用）
+    rpc ReleaseReserved(ReleaseReservedRequest) returns (google.protobuf.Empty); // 释放预留库存（补偿）
+}
+
+// 创建支付订单请求
+message CreatePaymentRequest {
+    string order_sn = 1;           // 订单号
+    int32 user_id = 2;             // 用户ID
+    double amount = 3;             // 支付金额
+    int32 payment_method = 4;      // 支付方式
+    optional int32 expired_minutes = 5; // 支付过期时间（分钟，默认15分钟）
+}
+
+// 创建支付订单响应
+message CreatePaymentResponse {
+    string payment_sn = 1;         // 支付单号
+    optional string payment_url = 2; // 模拟支付链接
+    int64 expired_at = 3;          // 支付过期时间戳
+}
+
+// 取消支付订单请求
+message CancelPaymentRequest {
+    string payment_sn = 1;      // 支付单号
+}
+
+// 确认支付成功请求
+message ConfirmPaymentRequest {
+    string payment_sn = 1;      // 支付单号
+    optional string third_party_sn = 2; // 第三方支付单号（模拟）
+}
+
+// 退款请求
+message RefundPaymentRequest {
+    string payment_sn = 1;        // 支付单号
+    double refund_amount = 2;     // 退款金额
+    optional string reason = 3;   // 退款原因
+}
+
+// 查询支付状态请求
+message GetPaymentStatusRequest {
+    string payment_sn = 1;      // 支付单号
+}
+
+// 支付状态响应
+message PaymentStatusResponse {
+    string payment_sn = 1;        // 支付单号
+    string order_sn = 2;          // 订单号
+    int32 payment_status = 3;     // 支付状态
+    double amount = 4;            // 支付金额
+    int32 payment_method = 5;     // 支付方式
+    optional int64 paid_at = 6;   // 支付时间
+    int64 expired_at = 7;         // 过期时间
+}
+
+// 模拟支付请求
+message SimulatePaymentRequest {
+    string payment_sn = 1;              // 支付单号
+    optional string third_party_sn = 2; // 第三方支付单号（模拟）
+}
+
+// 预留库存请求
+message ReserveStockRequest {
+    repeated GoodsStockInfo goods_info = 1; // 商品库存信息
+    string order_sn = 2;                    // 订单号
+}
+
+// 释放预留库存请求
+message ReleaseReservedRequest {
+    repeated GoodsStockInfo goods_info = 1; // 商品库存信息
+    string order_sn = 2;                    // 订单号
+}
+
+// 商品库存信息
+message GoodsStockInfo {
+    int32 goods_id = 1;     // 商品ID
+    int32 num = 2;          // 数量
+}
