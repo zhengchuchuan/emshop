@@ -1,31 +1,18 @@
 package main
 
 import (
-	"context"
-	"emshop/internal/app/logistics/srv/app"
-	apputil "emshop/pkg/app"
-	"emshop/pkg/log"
-	"math/rand"
-	"time"
+	"emshop/internal/app/logistics/srv"
+	"os"
+	"runtime"
 )
 
-// Name 定义服务名称
-const Name = "emshop-logistics-srv"
-
 func main() {
-	rand.Seed(time.Now().UTC().UnixNano())
-
-	logisticsApp := apputil.NewApp(Name,
-		apputil.WithDescription("E-commerce logistics service"),
-		apputil.WithOptions(app.NewLogisticsOptions()),
-		apputil.WithRunFunc(run),
-	).BuildCommand()
-
-	if err := logisticsApp.Execute(); err != nil {
-		log.Fatalw(err.Error())
+	// Go 1.20 开始，math/rand包的全局随机数生成器在首次使用时会自动设置随机种子，不再需要手动调用 rand.Seed。
+	// rand.Seed(time.Now().UnixNano())
+	
+	// 设置最大CPU数
+	if len(os.Getenv("GOMAXPROCS")) == 0 {
+		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
-}
-
-func run(ctx context.Context, basename string, opts interface{}) error {
-	return app.Run(ctx, opts)
+	srv.NewApp("logistics-server").Run()
 }

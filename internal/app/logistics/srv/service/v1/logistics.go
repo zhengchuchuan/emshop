@@ -34,6 +34,9 @@ type LogisticsSrv interface {
 	CalculateShippingFee(ctx context.Context, req *dto.CalculateShippingFeeDTO) (*dto.ShippingFeeDTO, error)
 	GetLogisticsCompanies(ctx context.Context) ([]dto.LogisticsCompanyDTO, error)
 	GetCouriers(ctx context.Context, req *dto.GetCouriersDTO) ([]dto.CourierDTO, error)
+	
+	// DTM分布式事务补偿
+	CancelLogisticsOrder(ctx context.Context, orderSn, reason string) error
 }
 
 type logisticsService struct {
@@ -556,4 +559,52 @@ func (ls *logisticsService) generateLogisticsTracks(logisticsSn string) {
 	
 	// 可以在这里添加更多轨迹生成逻辑
 	log.Infof("异步生成物流轨迹: %s", logisticsSn)
+}
+
+// CancelLogisticsOrder 取消物流订单 - DTM分布式事务补偿方法
+func (ls *logisticsService) CancelLogisticsOrder(ctx context.Context, orderSn, reason string) error {
+	log.Infof("开始取消物流订单, 订单号: %s, 原因: %s", orderSn, reason)
+	
+	// 查找物流订单
+	logisticsInfo, err := ls.data.LogisticsOrders().GetByOrderSn(ctx, ls.data.DB(), orderSn)
+	if err != nil {
+		log.Warnf("未找到物流订单 %s: %v", orderSn, err)
+		// 对于补偿方法，如果记录不存在，不应该报错
+		return nil
+	}
+	
+	// 检查当前状态是否允许取消
+	if logisticsInfo.LogisticsStatus == int32(do.LogisticsStatusShipped) ||
+	   logisticsInfo.LogisticsStatus == int32(do.LogisticsStatusDelivered) {
+		log.Warnf("物流订单 %s 状态为 %d，无法取消", orderSn, logisticsInfo.LogisticsStatus)
+		return errors.WithCode(code.ErrLogisticsCancelFailed, "物流订单已发货或已签收，无法取消")
+	}
+	
+	// 更新状态为已取消
+	logisticsInfo.LogisticsStatus = int32(do.LogisticsStatusCanceled)
+	logisticsInfo.Remark = fmt.Sprintf("%s [补偿取消: %s]", logisticsInfo.Remark, reason)
+	
+	err = ls.data.LogisticsOrders().Update(ctx, ls.data.DB(), logisticsInfo)
+	if err != nil {
+		log.Errorf("更新物流订单状态失败: %v", err)
+		return errors.WithCode(code.ErrLogisticsOrderUpdateFailed, "取消物流订单失败")
+	}
+	
+	// 记录取消轨迹
+	track := &do.LogisticsTrackDO{
+		LogisticsSn: logisticsInfo.LogisticsSn,
+		Location:    "系统",
+		Description: fmt.Sprintf("订单已取消: %s", reason),
+		TrackTime:   time.Now(),
+		OperatorName: "系统自动",
+	}
+	
+	err = ls.data.LogisticsTracks().Create(ctx, ls.data.DB(), track)
+	if err != nil {
+		log.Errorf("创建取消轨迹失败: %v", err)
+		// 轨迹记录失败不影响主流程
+	}
+	
+	log.Infof("成功取消物流订单 %s", orderSn)
+	return nil
 }

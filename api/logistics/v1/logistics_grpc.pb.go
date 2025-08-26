@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: logistics.proto
+// source: api/logistics/v1/logistics.proto
 
 package proto
 
@@ -29,6 +29,7 @@ const (
 	Logistics_CalculateShippingFee_FullMethodName  = "/Logistics/CalculateShippingFee"
 	Logistics_GetLogisticsCompanies_FullMethodName = "/Logistics/GetLogisticsCompanies"
 	Logistics_GetCouriers_FullMethodName           = "/Logistics/GetCouriers"
+	Logistics_CancelLogisticsOrder_FullMethodName  = "/Logistics/CancelLogisticsOrder"
 )
 
 // LogisticsClient is the client API for Logistics service.
@@ -53,6 +54,8 @@ type LogisticsClient interface {
 	GetLogisticsCompanies(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LogisticsCompaniesResponse, error)
 	// 获取配送员列表
 	GetCouriers(ctx context.Context, in *GetCouriersRequest, opts ...grpc.CallOption) (*GetCouriersResponse, error)
+	// DTM分布式事务补偿方法
+	CancelLogisticsOrder(ctx context.Context, in *CancelLogisticsOrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type logisticsClient struct {
@@ -153,6 +156,16 @@ func (c *logisticsClient) GetCouriers(ctx context.Context, in *GetCouriersReques
 	return out, nil
 }
 
+func (c *logisticsClient) CancelLogisticsOrder(ctx context.Context, in *CancelLogisticsOrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Logistics_CancelLogisticsOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LogisticsServer is the server API for Logistics service.
 // All implementations must embed UnimplementedLogisticsServer
 // for forward compatibility.
@@ -175,6 +188,8 @@ type LogisticsServer interface {
 	GetLogisticsCompanies(context.Context, *emptypb.Empty) (*LogisticsCompaniesResponse, error)
 	// 获取配送员列表
 	GetCouriers(context.Context, *GetCouriersRequest) (*GetCouriersResponse, error)
+	// DTM分布式事务补偿方法
+	CancelLogisticsOrder(context.Context, *CancelLogisticsOrderRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedLogisticsServer()
 }
 
@@ -211,6 +226,9 @@ func (UnimplementedLogisticsServer) GetLogisticsCompanies(context.Context, *empt
 }
 func (UnimplementedLogisticsServer) GetCouriers(context.Context, *GetCouriersRequest) (*GetCouriersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCouriers not implemented")
+}
+func (UnimplementedLogisticsServer) CancelLogisticsOrder(context.Context, *CancelLogisticsOrderRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelLogisticsOrder not implemented")
 }
 func (UnimplementedLogisticsServer) mustEmbedUnimplementedLogisticsServer() {}
 func (UnimplementedLogisticsServer) testEmbeddedByValue()                   {}
@@ -395,6 +413,24 @@ func _Logistics_GetCouriers_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Logistics_CancelLogisticsOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelLogisticsOrderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogisticsServer).CancelLogisticsOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logistics_CancelLogisticsOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogisticsServer).CancelLogisticsOrder(ctx, req.(*CancelLogisticsOrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Logistics_ServiceDesc is the grpc.ServiceDesc for Logistics service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -438,7 +474,11 @@ var Logistics_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetCouriers",
 			Handler:    _Logistics_GetCouriers_Handler,
 		},
+		{
+			MethodName: "CancelLogisticsOrder",
+			Handler:    _Logistics_CancelLogisticsOrder_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "logistics.proto",
+	Metadata: "api/logistics/v1/logistics.proto",
 }

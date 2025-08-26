@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: order.proto
+// source: api/order/v1/order.proto
 
 package proto
 
@@ -20,16 +20,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Order_CartItemList_FullMethodName      = "/Order/CartItemList"
-	Order_CreateCartItem_FullMethodName    = "/Order/CreateCartItem"
-	Order_UpdateCartItem_FullMethodName    = "/Order/UpdateCartItem"
-	Order_DeleteCartItem_FullMethodName    = "/Order/DeleteCartItem"
-	Order_CreateOrder_FullMethodName       = "/Order/CreateOrder"
-	Order_CreateOrderCom_FullMethodName    = "/Order/CreateOrderCom"
-	Order_SubmitOrder_FullMethodName       = "/Order/SubmitOrder"
-	Order_OrderList_FullMethodName         = "/Order/OrderList"
-	Order_OrderDetail_FullMethodName       = "/Order/OrderDetail"
-	Order_UpdateOrderStatus_FullMethodName = "/Order/UpdateOrderStatus"
+	Order_CartItemList_FullMethodName        = "/Order/CartItemList"
+	Order_CreateCartItem_FullMethodName      = "/Order/CreateCartItem"
+	Order_UpdateCartItem_FullMethodName      = "/Order/UpdateCartItem"
+	Order_DeleteCartItem_FullMethodName      = "/Order/DeleteCartItem"
+	Order_CreateOrder_FullMethodName         = "/Order/CreateOrder"
+	Order_CreateOrderCom_FullMethodName      = "/Order/CreateOrderCom"
+	Order_SubmitOrder_FullMethodName         = "/Order/SubmitOrder"
+	Order_OrderList_FullMethodName           = "/Order/OrderList"
+	Order_OrderDetail_FullMethodName         = "/Order/OrderDetail"
+	Order_UpdateOrderStatus_FullMethodName   = "/Order/UpdateOrderStatus"
+	Order_UpdatePaymentStatus_FullMethodName = "/Order/UpdatePaymentStatus"
+	Order_RevertPaymentStatus_FullMethodName = "/Order/RevertPaymentStatus"
 )
 
 // OrderClient is the client API for Order service.
@@ -48,6 +50,9 @@ type OrderClient interface {
 	OrderList(ctx context.Context, in *OrderFilterRequest, opts ...grpc.CallOption) (*OrderListResponse, error)
 	OrderDetail(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (*OrderInfoDetailResponse, error)
 	UpdateOrderStatus(ctx context.Context, in *OrderStatus, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// 支付相关接口（用于分布式事务）
+	UpdatePaymentStatus(ctx context.Context, in *UpdatePaymentStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	RevertPaymentStatus(ctx context.Context, in *RevertPaymentStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type orderClient struct {
@@ -158,6 +163,26 @@ func (c *orderClient) UpdateOrderStatus(ctx context.Context, in *OrderStatus, op
 	return out, nil
 }
 
+func (c *orderClient) UpdatePaymentStatus(ctx context.Context, in *UpdatePaymentStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Order_UpdatePaymentStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderClient) RevertPaymentStatus(ctx context.Context, in *RevertPaymentStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Order_RevertPaymentStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrderServer is the server API for Order service.
 // All implementations must embed UnimplementedOrderServer
 // for forward compatibility.
@@ -174,6 +199,9 @@ type OrderServer interface {
 	OrderList(context.Context, *OrderFilterRequest) (*OrderListResponse, error)
 	OrderDetail(context.Context, *OrderRequest) (*OrderInfoDetailResponse, error)
 	UpdateOrderStatus(context.Context, *OrderStatus) (*emptypb.Empty, error)
+	// 支付相关接口（用于分布式事务）
+	UpdatePaymentStatus(context.Context, *UpdatePaymentStatusRequest) (*emptypb.Empty, error)
+	RevertPaymentStatus(context.Context, *RevertPaymentStatusRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedOrderServer()
 }
 
@@ -213,6 +241,12 @@ func (UnimplementedOrderServer) OrderDetail(context.Context, *OrderRequest) (*Or
 }
 func (UnimplementedOrderServer) UpdateOrderStatus(context.Context, *OrderStatus) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateOrderStatus not implemented")
+}
+func (UnimplementedOrderServer) UpdatePaymentStatus(context.Context, *UpdatePaymentStatusRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdatePaymentStatus not implemented")
+}
+func (UnimplementedOrderServer) RevertPaymentStatus(context.Context, *RevertPaymentStatusRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RevertPaymentStatus not implemented")
 }
 func (UnimplementedOrderServer) mustEmbedUnimplementedOrderServer() {}
 func (UnimplementedOrderServer) testEmbeddedByValue()               {}
@@ -415,6 +449,42 @@ func _Order_UpdateOrderStatus_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Order_UpdatePaymentStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdatePaymentStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServer).UpdatePaymentStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Order_UpdatePaymentStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServer).UpdatePaymentStatus(ctx, req.(*UpdatePaymentStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Order_RevertPaymentStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevertPaymentStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServer).RevertPaymentStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Order_RevertPaymentStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServer).RevertPaymentStatus(ctx, req.(*RevertPaymentStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Order_ServiceDesc is the grpc.ServiceDesc for Order service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -462,7 +532,15 @@ var Order_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "UpdateOrderStatus",
 			Handler:    _Order_UpdateOrderStatus_Handler,
 		},
+		{
+			MethodName: "UpdatePaymentStatus",
+			Handler:    _Order_UpdatePaymentStatus_Handler,
+		},
+		{
+			MethodName: "RevertPaymentStatus",
+			Handler:    _Order_RevertPaymentStatus_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "order.proto",
+	Metadata: "api/order/v1/order.proto",
 }

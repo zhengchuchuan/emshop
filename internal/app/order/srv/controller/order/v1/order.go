@@ -305,4 +305,28 @@ func (os *orderServer) UpdateOrderStatus(ctx context.Context, status *pb.OrderSt
 	return &emptypb.Empty{}, nil
 }
 
+// UpdatePaymentStatus 更新支付状态 - DTM分布式事务调用
+func (os *orderServer) UpdatePaymentStatus(ctx context.Context, request *pb.UpdatePaymentStatusRequest) (*emptypb.Empty, error) {
+	err := os.srv.Orders().UpdatePaidStatus(ctx, request.OrderSn, request.PaymentSn)
+	if err != nil {
+		log.Errorf("更新订单支付状态失败: %v", err)
+		return nil, err
+	}
+	
+	log.Infof("成功更新订单支付状态, 订单号: %s, 支付单号: %s", request.OrderSn, request.PaymentSn)
+	return &emptypb.Empty{}, nil
+}
+
+// RevertPaymentStatus 回滚支付状态 - DTM分布式事务补偿
+func (os *orderServer) RevertPaymentStatus(ctx context.Context, request *pb.RevertPaymentStatusRequest) (*emptypb.Empty, error) {
+	err := os.srv.Orders().RevertPaidStatus(ctx, request.OrderSn)
+	if err != nil {
+		log.Errorf("回滚订单支付状态失败: %v", err)
+		return nil, err
+	}
+	
+	log.Infof("成功回滚订单支付状态, 订单号: %s", request.OrderSn)
+	return &emptypb.Empty{}, nil
+}
+
 var _ pb.OrderServer = &orderServer{}

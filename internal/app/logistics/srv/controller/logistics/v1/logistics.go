@@ -279,3 +279,15 @@ func (lc *LogisticsController) GetCouriers(ctx context.Context, req *logisticspb
 		Couriers: pbCouriers,
 	}, nil
 }
+
+// CancelLogisticsOrder 取消物流订单 - DTM分布式事务补偿方法
+func (lc *LogisticsController) CancelLogisticsOrder(ctx context.Context, request *logisticspb.CancelLogisticsOrderRequest) (*emptypb.Empty, error) {
+	err := lc.logisticsSrv.CancelLogisticsOrder(ctx, request.OrderSn, request.Reason)
+	if err != nil {
+		log.Errorf("取消物流订单失败: %v", err)
+		return nil, err
+	}
+	
+	log.Infof("成功取消物流订单, 订单号: %s", request.OrderSn)
+	return &emptypb.Empty{}, nil
+}

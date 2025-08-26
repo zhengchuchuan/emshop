@@ -1,8 +1,8 @@
 server:
   name: emshop-logistics-srv #服务名，注册到consul使用的名称
   host: "0.0.0.0" #host, 默认使用 0.0.0.0
-  port: 28056 # grpc 安全模式的端口号，默认 8081
-  http-port: 8056
+  port: 28057 # grpc 安全模式的端口号，默认 8081
+  http-port: 8057
   healthz: true # 是否开启健康检查，如果开启会安装 /healthz 路由，默认 true
   enable-metrics: true # 开启 metrics, router:  /metrics
   profiling: true # 开启性能分析, 可以通过 <host>:<port>/debug/pprof/地址查看程序栈、线程等系统信息，默认值为 true
@@ -32,7 +32,7 @@ telemetry:
 mysql:
   host: "127.0.0.1" # MySQL 机器 ip，默认 127.0.0.1
   port: "3306"
-  password: "123456" # MySQL 用户密码
+  password: "root" # MySQL 用户密码
   username: "root" # MySQL 用户名(建议授权最小权限集)
   database: "emshop_logistics_srv" # logistics 系统所用的数据库名
   max-idle-connections: 100 # MySQL 最大空闲连接数，默认 100

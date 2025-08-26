@@ -78,5 +78,11 @@ const (
 	ErrLogisticsDataIntegrityError 
 	// ErrLogisticsOperationTimeout - 500: Logistics operation timeout.
 	ErrLogisticsOperationTimeout 
+
+	// ErrLogisticsCancelFailed - 500: Logistics cancellation failed.
+	ErrLogisticsCancelFailed
+
+	// ErrLogisticsOrderUpdateFailed - 500: Logistics order update failed.
+	ErrLogisticsOrderUpdateFailed
 )
 

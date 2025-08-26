@@ -92,3 +92,9 @@ func (mo *MySQLOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&mo.LogLevel, "mysql.log-mode", mo.LogLevel, ""+
 		"Specify gorm log level.")
 }
+
+// DSN 生成MySQL数据源名称
+func (mo *MySQLOptions) DSN() string {
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		mo.Username, mo.Password, mo.Host, mo.Port, mo.Database)
+}

@@ -14,6 +14,7 @@ const (
 	LogisticsStatusRejected    LogisticsStatus = 6 // 拒收
 	LogisticsStatusReturning   LogisticsStatus = 7 // 退货中
 	LogisticsStatusReturned    LogisticsStatus = 8 // 已退货
+	LogisticsStatusCanceled    LogisticsStatus = 9 // 已取消
 )
 
 // ShippingMethod 配送方式枚举

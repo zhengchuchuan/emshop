@@ -6,7 +6,7 @@ import (
 	"emshop/internal/app/pkg/options"
 	"emshop/pkg/log"
 
-	"gorm.io/driver/mysql"
+	mysqlDriver "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -74,7 +74,7 @@ func createDBConnection(opts *options.MySQLOptions) (*gorm.DB, error) {
 	}
 
 	// 创建数据库连接
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(mysqlDriver.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logLevel),
 	})
 	if err != nil {
@@ -90,7 +90,7 @@ func createDBConnection(opts *options.MySQLOptions) (*gorm.DB, error) {
 
 	sqlDB.SetMaxIdleConns(opts.MaxIdleConnections)
 	sqlDB.SetMaxOpenConns(opts.MaxOpenConnections)
-	sqlDB.SetConnMaxLifetime(opts.MaxConnectionLifeTime)
+	sqlDB.SetConnMaxLifetime(opts.MaxConnectionLifetime)
 
 	log.Infof("Successfully connected to MySQL database: %s", opts.Database)
 	return db, nil

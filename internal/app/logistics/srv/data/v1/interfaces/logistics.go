@@ -35,6 +35,9 @@ type LogisticsOrdersRepo interface {
 	
 	// 根据状态查询物流订单
 	FindByStatus(ctx context.Context, db *gorm.DB, status int32) ([]*do.LogisticsOrderDO, error)
+	
+	// 更新物流订单 (通用更新方法)
+	Update(ctx context.Context, db *gorm.DB, order *do.LogisticsOrderDO) error
 }
 
 // LogisticsTracksRepo 物流轨迹数据访问接口

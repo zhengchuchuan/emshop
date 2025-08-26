@@ -155,3 +155,12 @@ func (r *logisticsOrdersRepo) FindByStatus(ctx context.Context, db *gorm.DB, sta
 	}
 	return orders, nil
 }
+
+// Update 更新物流订单 (通用更新方法)
+func (r *logisticsOrdersRepo) Update(ctx context.Context, db *gorm.DB, order *do.LogisticsOrderDO) error {
+	err := db.WithContext(ctx).Save(order).Error
+	if err != nil {
+		return errors.WithCode(code.ErrConnectDB, "更新物流订单失败: %v", err)
+	}
+	return nil
+}

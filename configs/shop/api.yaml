@@ -31,6 +31,7 @@ redis:
   port: 6379
   password: ""
   database: 0
+  enable-cluster: false
 
 sms:
   key: "LTAI5t73Pvqvb1GDZySv7t7m"

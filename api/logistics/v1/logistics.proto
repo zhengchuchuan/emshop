@@ -31,6 +31,9 @@ service Logistics {
     
     // 获取配送员列表
     rpc GetCouriers(GetCouriersRequest) returns (GetCouriersResponse);
+    
+    // DTM分布式事务补偿方法
+    rpc CancelLogisticsOrder(CancelLogisticsOrderRequest) returns (google.protobuf.Empty);
 }
 
 // 创建物流订单请求
@@ -200,4 +203,10 @@ message Courier {
 // 配送员列表响应
 message GetCouriersResponse {
     repeated Courier couriers = 1;
+}
+
+// 取消物流订单请求（DTM补偿方法）
+message CancelLogisticsOrderRequest {
+    string order_sn = 1;
+    string reason = 2;
 }

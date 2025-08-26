@@ -7,7 +7,7 @@
 server:
   name: "goods" # 服务名，注册到consul使用的名称，与Canal配置保持一致
   host: "0.0.0.0" # host, 默认使用 0.0.0.0,docker容器中不能使用127.0.0.1
-  port: 9002 # grpc端口，使用Canal配置的端口保持一致性
+  port: 28053 # grpc端口，使用Canal配置的端口保持一致性
   http-port: 8053 # HTTP端口
   healthz: true # 是否开启健康检查，如果开启会安装 /healthz 路由，默认 true
   enable-metrics: true # 开启 metrics, router:  /metrics  

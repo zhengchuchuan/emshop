@@ -18,6 +18,10 @@ service Order {
     rpc OrderList(OrderFilterRequest) returns (OrderListResponse); // 订单列表
     rpc OrderDetail(OrderRequest) returns (OrderInfoDetailResponse); // 订单详情
     rpc UpdateOrderStatus(OrderStatus) returns (google.protobuf.Empty); // 修改订单状态
+    
+    // 支付相关接口（用于分布式事务）
+    rpc UpdatePaymentStatus(UpdatePaymentStatusRequest) returns (google.protobuf.Empty); // 更新支付状态
+    rpc RevertPaymentStatus(RevertPaymentStatusRequest) returns (google.protobuf.Empty); // 回滚支付状态
 }
 
 message UserInfo {
@@ -104,5 +108,19 @@ message OrderListResponse {
 message CartItemListResponse {
     int32 total = 1;
     repeated ShopCartInfoResponse data = 2;
+}
+
+// 支付状态更新请求
+message UpdatePaymentStatusRequest {
+    string orderSn = 1;
+    string paymentSn = 2;
+    string paymentStatus = 3;
+    int64 paidAt = 4;
+}
+
+// 支付状态回滚请求
+message RevertPaymentStatusRequest {
+    string orderSn = 1;
+    string paymentSn = 2;
 }
 

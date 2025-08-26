@@ -54,7 +54,7 @@ func NewPaymentApp(cfg *config.Config) (*gapp.App, error) {
 		gapp.WithRegistrar(register),
 		gapp.WithRPCServer(rpcServer),
 	}
-	return gapp.New(opts...)
+	return gapp.New(opts...), nil
 }
 
 func run(cfg *config.Config) app.RunFunc {
@@ -64,7 +64,7 @@ func run(cfg *config.Config) app.RunFunc {
 			return err
 		}
 
-		if err := paymentApp.Start(); err != nil {
+		if err := paymentApp.Run(); err != nil {
 			log.Fatalf("start payment server failed: %s", err.Error())
 		}
 

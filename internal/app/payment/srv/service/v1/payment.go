@@ -35,12 +35,17 @@ type PaymentSrv interface {
 	// 库存预留接口（用于分布式事务）
 	ReserveStock(ctx context.Context, req *dto.ReserveStockDTO) error
 	ReleaseReserved(ctx context.Context, req *dto.ReleaseReservedDTO) error
+
+	// 分布式事务接口
+	ProcessOrderSubmission(ctx context.Context, req *OrderSubmissionRequest) error
+	ProcessPaymentSuccess(ctx context.Context, req *PaymentSuccessRequest) error
 }
 
 type paymentService struct {
 	data         interfaces.DataFactory
 	dtmOpts      *options.DtmOptions
 	redisOptions *options.RedisOptions
+	dtmManager   *DTMManager
 }
 
 // NewPaymentService 创建支付服务实例
@@ -49,6 +54,7 @@ func NewPaymentService(data interfaces.DataFactory, dtmOpts *options.DtmOptions,
 		data:         data,
 		dtmOpts:      dtmOpts,
 		redisOptions: redisOpts,
+		dtmManager:   NewDTMManager(dtmOpts),
 	}
 }
 
@@ -554,4 +560,14 @@ func (ps *paymentService) ReleaseReserved(ctx context.Context, req *dto.ReleaseR
 
 	log.Infof("释放预留库存成功: 订单号=%s", req.OrderSn)
 	return nil
+}
+
+// ProcessOrderSubmission 处理订单提交分布式事务
+func (ps *paymentService) ProcessOrderSubmission(ctx context.Context, req *OrderSubmissionRequest) error {
+	return ps.dtmManager.ProcessOrderSubmission(ctx, req)
+}
+
+// ProcessPaymentSuccess 处理支付成功分布式事务
+func (ps *paymentService) ProcessPaymentSuccess(ctx context.Context, req *PaymentSuccessRequest) error {
+	return ps.dtmManager.ProcessPaymentSuccess(ctx, req)
 }
