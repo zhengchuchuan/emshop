@@ -2,7 +2,8 @@ server:
   name: emshop-user-srv #服务名，注册到consul使用的名称
   limit: true     # 是否开启限流，默认 true
   host: "0.0.0.0" #host, 默认使用 0.0.0.0
-  port: 28052 # grpc 安全模式的端口号，默认 8081
+  # port: 28052 # grpc 安全模式的端口号，默认 8081
+  port: 0
   http-port: 8052
   healthz: true # 是否开启健康检查，如果开启会安装 /healthz 路由，默认 true
   enable-metrics: true # 开启 metrics, router:  /metrics
