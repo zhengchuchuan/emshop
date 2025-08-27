@@ -9,11 +9,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"emshop/pkg/errors"
+
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	redis "github.com/redis/go-redis/v9"
 	uuid "github.com/satori/go.uuid"
 	"github.com/spf13/viper"
-	"emshop/pkg/errors"
 
 	"emshop/pkg/log"
 )
@@ -118,17 +119,20 @@ type RedisCluster struct {
 
 func clusterConnectionIsOpen(ctx context.Context, cluster RedisCluster) bool {
 	c := singleton(cluster.IsCache)
-	testKey := "redis-test-" + uuid.Must(uuid.NewV4(), nil).String()
+	id, err := uuid.NewV4()
+	if err != nil {
+		log.Warnf("Error generating UUID: %s", err.Error())
+		return false
+	}
+	testKey := "redis-test-" + id.String()
 	if err := c.Set(ctx, testKey, "test", time.Second).Err(); err != nil {
 		log.Warnf("Error trying to set test key: %s", err.Error())
 		return false
 	}
 	if _, err := c.Get(ctx, testKey).Result(); err != nil {
 		log.Warnf("Error trying to get test key: %s", err.Error())
-
 		return false
 	}
-
 	return true
 }
 

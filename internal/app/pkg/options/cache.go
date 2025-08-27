@@ -1,6 +1,9 @@
 package options
 
-import "github.com/spf13/pflag"
+import (
+	"time"
+	"github.com/spf13/pflag"
+)
 
 type RedisOptions struct {
 	Host                  string   `mapstructure:"host" json:"host"`
@@ -78,4 +81,85 @@ func (o *RedisOptions) AddFlags(fs *pflag.FlagSet) {
 
 	fs.BoolVar(&o.SSLInsecureSkipVerify, "redis.ssl-insecure-skip-verify", o.SSLInsecureSkipVerify, ""+
 		"Allows usage of self-signed certificates when connecting to an encrypted Redis database.")
+}
+
+// RistrettoOptions Ristretto缓存配置选项
+type RistrettoOptions struct {
+	NumCounters int64 `mapstructure:"num_counters" json:"num_counters"`
+	MaxCost     int64 `mapstructure:"max_cost" json:"max_cost"`
+	BufferItems int64 `mapstructure:"buffer_items" json:"buffer_items"`
+	Metrics     bool  `mapstructure:"metrics" json:"metrics"`
+}
+
+// CacheOptions 缓存配置选项
+type CacheOptions struct {
+	Ristretto   RistrettoOptions `mapstructure:"ristretto" json:"ristretto"`
+	L1TTL       time.Duration    `mapstructure:"l1_ttl" json:"l1_ttl"`
+	L2TTL       time.Duration    `mapstructure:"l2_ttl" json:"l2_ttl"`
+	WarmupCount int              `mapstructure:"warmup_count" json:"warmup_count"`
+	EnableWarmup bool            `mapstructure:"enable_warmup" json:"enable_warmup"`
+}
+
+// CanalOptions Canal配置选项
+type CanalOptions struct {
+	ConsumerGroup string   `mapstructure:"consumer_group" json:"consumer_group"`
+	Topic         string   `mapstructure:"topic" json:"topic"`
+	WatchTables   []string `mapstructure:"watch_tables" json:"watch_tables"`
+	BatchSize     int      `mapstructure:"batch_size" json:"batch_size"`
+}
+
+// BusinessOptions 业务配置选项
+type BusinessOptions struct {
+	FlashSale FlashSaleBusinessOptions `mapstructure:"flashsale" json:"flashsale"`
+	Coupon    CouponBusinessOptions    `mapstructure:"coupon" json:"coupon"`
+	Cache     CacheOptions             `mapstructure:"cache" json:"cache"`
+}
+
+// FlashSaleBusinessOptions 秒杀业务配置
+type FlashSaleBusinessOptions struct {
+	MaxQPSPerUser  int           `mapstructure:"max_qps_per_user" json:"max_qps_per_user"`
+	StockCacheTTL  time.Duration `mapstructure:"stock_cache_ttl" json:"stock_cache_ttl"`
+	UserLimitTTL   time.Duration `mapstructure:"user_limit_ttl" json:"user_limit_ttl"`
+	BatchSize      int           `mapstructure:"batch_size" json:"batch_size"`
+}
+
+// CouponBusinessOptions 优惠券业务配置
+type CouponBusinessOptions struct {
+	MaxStackCount int           `mapstructure:"max_stack_count" json:"max_stack_count"`
+	LockTTL       time.Duration `mapstructure:"lock_ttl" json:"lock_ttl"`
+	CalcTimeout   time.Duration `mapstructure:"calc_timeout" json:"calc_timeout"`
+}
+
+// NewCacheOptions 创建缓存配置
+func NewCacheOptions() *CacheOptions {
+	return &CacheOptions{
+		Ristretto: RistrettoOptions{
+			NumCounters: 1000000,   // 1M个key的统计信息
+			MaxCost:     104857600, // 100MB最大内存
+			BufferItems: 64,        // 缓冲区大小
+			Metrics:     true,      // 开启监控指标
+		},
+		L1TTL:        10 * time.Minute, // L1缓存TTL
+		L2TTL:        30 * time.Minute, // L2缓存TTL
+		WarmupCount:  100,              // 预热优惠券数量
+		EnableWarmup: true,             // 是否开启预热
+	}
+}
+
+// NewBusinessOptions 创建业务配置
+func NewBusinessOptions() *BusinessOptions {
+	return &BusinessOptions{
+		FlashSale: FlashSaleBusinessOptions{
+			MaxQPSPerUser:  5,
+			StockCacheTTL:  300 * time.Second,
+			UserLimitTTL:   1800 * time.Second,
+			BatchSize:      100,
+		},
+		Coupon: CouponBusinessOptions{
+			MaxStackCount: 5,
+			LockTTL:       900 * time.Second,
+			CalcTimeout:   5 * time.Second,
+		},
+		Cache: *NewCacheOptions(),
+	}
 }

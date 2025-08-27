@@ -1,0 +1,110 @@
+# 优惠券服务配置文件 (调试模式 - 使用固定端口)
+# 服务器配置
+server:
+  name: "coupon"
+  host: "0.0.0.0"
+  port: 8078 # 固定端口用于调试
+  http-port: 8079 # 固定HTTP端口
+  healthz: true
+  enable-metrics: true
+  profiling: true
+
+# 日志配置  
+log:
+  name: emshop-coupon-srv
+  development: true
+  level: debug
+  format: json
+  enable-color: true  # 调试模式启用颜色
+  disable-caller: false
+  disable-stacktrace: false
+  output-paths: logs/emshop-coupon-srv.log,stdout
+  error-output-paths: logs/emshop-coupon-srv.error.log
+
+# 服务注册与发现
+registry:
+  address: localhost:8500
+  scheme: http
+
+# 链路追踪配置
+telemetry:
+  name: coupon
+  endpoint: http://localhost:14268/api/traces
+  sampler: 1.0
+  batcher: jaeger
+
+# MySQL配置
+mysql:
+  host: "localhost"
+  port: 3306
+  password: "root" 
+  username: "root"
+  database: "emshop_coupon_srv"
+  max_idle_connections: 10
+  max_open_connections: 100
+  max_connection_life_time: "1h"
+  log_level: 4
+
+# Redis配置 (调试模式使用独立DB)
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 2  # 使用专用DB避免冲突
+  pool_size: 50
+  min_idle_conns: 10
+  dial_timeout: "5s"
+  read_timeout: "3s"
+  write_timeout: "3s"
+
+# RocketMQ配置
+rocketmq:
+  nameservers: ["localhost:9876"]
+  producer_group: "coupon-producer-group-debug"
+  consumer_group: "coupon-consumer-group-debug"
+  topic: "coupon-events-debug"
+  max_reconsume: 3
+
+# DTM配置
+dtm:
+  grpc_server: "localhost:36790"
+  http_server: "localhost:36789"
+  timeout: "30s"
+
+# Ristretto本地缓存配置
+ristretto:
+  num_counters: 1000000           # 1M个key的统计信息
+  max_cost: 104857600             # 100MB最大内存
+  buffer_items: 64                # 缓冲区大小
+  metrics: true                   # 开启监控指标
+  
+# Canal缓存一致性配置  
+canal:
+  consumer_group: "coupon-cache-sync-consumer-debug"  # Canal消费者组
+  topic: "coupon-binlog-topic-debug"                  # Canal消息主题
+  watch_tables:                                 # 监听的表
+    - "coupon_templates"
+    - "user_coupons" 
+    - "flash_sale_activities"
+  batch_size: 32                               # 批量处理大小
+  
+# 业务配置
+business:
+  # 秒杀配置
+  flashsale:
+    max_qps_per_user: 5           # 单用户最大QPS
+    stock_cache_ttl: "300s"       # 库存缓存TTL
+    user_limit_ttl: "1800s"       # 用户限制TTL
+    batch_size: 100               # 批量处理大小
+    
+  # 优惠券配置
+  coupon:
+    max_stack_count: 5            # 最大叠加数量
+    lock_ttl: "900s"              # 锁定TTL（15分钟）
+    calc_timeout: "5s"            # 计算超时时间
+    
+  # 缓存配置
+  cache:
+    l1_ttl: "10m"                 # L1缓存TTL
+    l2_ttl: "30m"                 # L2缓存TTL  
+    warmup_count: 100             # 预热优惠券数量
+    enable_warmup: true           # 是否开启预热

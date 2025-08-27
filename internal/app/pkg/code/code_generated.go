@@ -74,4 +74,23 @@ func init() {
 	register(ErrCodeNotExist, 400, "Sms code incorrect or expired")
 	register(ErrCodeInCorrect, 400, "Sms code incorrect")
 	register(ErrEncryptionFailed, 500, "Password encryption failed")
+	// 优惠券服务错误代码注册 (101001-101099) - 使用语义化HTTP状态码
+	register(101001, 404, "Resource not found")
+	register(101002, 400, "Invalid request parameters")
+	register(101003, 503, "Resource not available")          // 服务不可用更准确
+	register(101004, 429, "Resource limit exceeded")         // 限流场景
+	register(101005, 500, "Database operation error")
+	register(101006, 500, "Redis operation error")
+	register(101007, 404, "Coupon template not found")
+	register(101008, 422, "Coupon template is inactive")     // 业务逻辑验证失败
+	register(101009, 404, "User coupon not found")
+	register(101010, 422, "Coupon has expired")              // 业务逻辑验证失败
+	register(101011, 409, "Coupon has been used")            // 冲突状态
+	register(101012, 422, "Coupon not available for use")    // 业务逻辑验证失败
+	register(101013, 429, "Coupon usage limit exceeded")     // 限流场景
+	register(101014, 404, "Flash sale activity not found")
+	register(101015, 422, "Flash sale activity is not active") // 业务逻辑验证失败
+	register(101016, 409, "Flash sale stock is empty")       // 库存冲突
+	register(101017, 429, "User flash sale participation limit exceeded") // 限流场景
+	register(101018, 409, "User has already participated in this flash sale") // 冲突状态
 }

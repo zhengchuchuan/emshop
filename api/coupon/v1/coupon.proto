@@ -1,0 +1,319 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+option go_package = ".;proto";
+
+//protoc -I. --proto_path=../../../third_party --go_out=. --go-grpc_out=. --gin_out=. coupon.proto
+
+service Coupon {
+    // 优惠券模板管理
+    rpc CreateCouponTemplate(CreateCouponTemplateRequest) returns (CouponTemplateResponse);
+    rpc GetCouponTemplate(GetCouponTemplateRequest) returns (CouponTemplateResponse);
+    rpc UpdateCouponTemplate(UpdateCouponTemplateRequest) returns (CouponTemplateResponse);
+    rpc ListCouponTemplates(ListCouponTemplatesRequest) returns (ListCouponTemplatesResponse);
+    
+    // 用户优惠券操作
+    rpc ReceiveCoupon(ReceiveCouponRequest) returns (UserCouponResponse); // 领取优惠券
+    rpc GetUserCoupons(GetUserCouponsRequest) returns (ListUserCouponsResponse); // 获取用户优惠券列表
+    rpc GetAvailableCoupons(GetAvailableCouponsRequest) returns (ListUserCouponsResponse); // 获取用户可用优惠券
+    
+    // 优惠券使用（支付时调用）
+    rpc CalculateCouponDiscount(CalculateCouponDiscountRequest) returns (CalculateCouponDiscountResponse); // 计算优惠金额
+    rpc UseCoupons(UseCouponsRequest) returns (UseCouponsResponse); // 使用优惠券（DTM事务）
+    rpc ReleaseCoupons(ReleaseCouponsRequest) returns (google.protobuf.Empty); // 释放优惠券（DTM补偿）
+    
+    // 秒杀活动管理
+    rpc CreateFlashSaleActivity(CreateFlashSaleActivityRequest) returns (FlashSaleActivityResponse);
+    rpc GetFlashSaleActivity(GetFlashSaleActivityRequest) returns (FlashSaleActivityResponse);
+    rpc ListFlashSaleActivities(ListFlashSaleActivitiesRequest) returns (ListFlashSaleActivitiesResponse);
+    rpc GetActiveFlashSales(google.protobuf.Empty) returns (ListFlashSaleActivitiesResponse); // 获取进行中的秒杀
+    
+    // 秒杀参与
+    rpc ParticipateFlashSale(ParticipateFlashSaleRequest) returns (ParticipateFlashSaleResponse); // 参与秒杀
+    rpc GetFlashSaleStock(GetFlashSaleStockRequest) returns (FlashSaleStockResponse); // 获取秒杀库存
+    rpc GetUserFlashSaleRecord(GetUserFlashSaleRecordRequest) returns (ListFlashSaleRecordsResponse); // 用户秒杀记录
+    
+    // DTM分布式事务接口
+    rpc SubmitOrderWithCoupons(SubmitOrderWithCouponsRequest) returns (SubmitOrderWithCouponsResponse); // 订单-优惠券分布式事务
+    rpc ProcessFlashSaleWithInventory(ProcessFlashSaleWithInventoryRequest) returns (ProcessFlashSaleWithInventoryResponse); // 秒杀-库存分布式事务
+    rpc GetTransactionStatus(GetTransactionStatusRequest) returns (GetTransactionStatusResponse); // 获取事务状态
+    
+    // DTM TCC回调接口
+    rpc TryFlashSale(ParticipateFlashSaleRequest) returns (google.protobuf.Empty); // TCC Try: 预占秒杀
+    rpc ConfirmFlashSale(ParticipateFlashSaleRequest) returns (google.protobuf.Empty); // TCC Confirm: 确认秒杀
+    rpc CancelFlashSale(ParticipateFlashSaleRequest) returns (google.protobuf.Empty); // TCC Cancel: 取消秒杀
+}
+
+// ========== 优惠券模板相关 ==========
+message CreateCouponTemplateRequest {
+    string name = 1;                    // 优惠券名称
+    int32 type = 2;                     // 优惠券类型
+    int32 discount_type = 3;            // 折扣类型
+    double discount_value = 4;          // 折扣值
+    double min_order_amount = 5;        // 最小订单金额
+    double max_discount_amount = 6;     // 最大折扣金额
+    int32 total_count = 7;              // 总发放数量
+    int32 per_user_limit = 8;           // 每用户限领数量
+    int64 valid_start_time = 9;         // 有效期开始时间
+    int64 valid_end_time = 10;          // 有效期结束时间
+    int32 valid_days = 11;              // 有效天数
+    string description = 12;            // 使用说明
+}
+
+message UpdateCouponTemplateRequest {
+    int64 id = 1;                       // 模板ID
+    optional string name = 2;           // 优惠券名称
+    optional int32 status = 3;          // 状态
+    optional string description = 4;    // 使用说明
+}
+
+message GetCouponTemplateRequest {
+    int64 id = 1;                       // 模板ID
+}
+
+message ListCouponTemplatesRequest {
+    optional int32 status = 1;          // 状态筛选
+    int32 page = 2;                     // 页码
+    int32 page_size = 3;                // 页大小
+}
+
+message CouponTemplateResponse {
+    int64 id = 1;                       // 模板ID
+    string name = 2;                    // 优惠券名称
+    int32 type = 3;                     // 优惠券类型
+    int32 discount_type = 4;            // 折扣类型
+    double discount_value = 5;          // 折扣值
+    double min_order_amount = 6;        // 最小订单金额
+    double max_discount_amount = 7;     // 最大折扣金额
+    int32 total_count = 8;              // 总发放数量
+    int32 used_count = 9;               // 已使用数量
+    int32 per_user_limit = 10;          // 每用户限领数量
+    int64 valid_start_time = 11;        // 有效期开始时间
+    int64 valid_end_time = 12;          // 有效期结束时间
+    int32 valid_days = 13;              // 有效天数
+    int32 status = 14;                  // 状态
+    string description = 15;            // 使用说明
+    int64 created_at = 16;              // 创建时间
+}
+
+message ListCouponTemplatesResponse {
+    int64 total_count = 1;              // 总数量
+    repeated CouponTemplateResponse items = 2; // 模板列表
+}
+
+// ========== 用户优惠券相关 ==========
+message ReceiveCouponRequest {
+    int64 user_id = 1;                  // 用户ID
+    int64 coupon_template_id = 2;       // 优惠券模板ID
+}
+
+message GetUserCouponsRequest {
+    int64 user_id = 1;                  // 用户ID
+    optional int32 status = 2;          // 状态筛选
+    int32 page = 3;                     // 页码
+    int32 page_size = 4;                // 页大小
+}
+
+message GetAvailableCouponsRequest {
+    int64 user_id = 1;                  // 用户ID
+    double order_amount = 2;            // 订单金额
+}
+
+message UserCouponResponse {
+    int64 id = 1;                       // 用户优惠券ID
+    int64 coupon_template_id = 2;       // 模板ID
+    int64 user_id = 3;                  // 用户ID
+    string coupon_code = 4;             // 优惠券码
+    int32 status = 5;                   // 状态
+    optional string order_sn = 6;       // 使用的订单号
+    int64 received_at = 7;              // 领取时间
+    optional int64 used_at = 8;         // 使用时间
+    int64 expired_at = 9;               // 过期时间
+    CouponTemplateResponse template = 10; // 关联的模板信息
+}
+
+message ListUserCouponsResponse {
+    int64 total_count = 1;              // 总数量
+    repeated UserCouponResponse items = 2; // 用户优惠券列表
+}
+
+// ========== 优惠券计算和使用 ==========
+message CalculateCouponDiscountRequest {
+    int64 user_id = 1;                  // 用户ID
+    repeated int64 coupon_ids = 2;      // 要使用的优惠券ID列表
+    double order_amount = 3;            // 订单原始金额
+    repeated OrderItem order_items = 4;  // 订单商品明细
+}
+
+message OrderItem {
+    int64 goods_id = 1;                 // 商品ID
+    int32 quantity = 2;                 // 数量
+    double price = 3;                   // 单价
+}
+
+message CalculateCouponDiscountResponse {
+    double original_amount = 1;         // 原始金额
+    double discount_amount = 2;         // 优惠金额
+    double final_amount = 3;            // 最终金额
+    repeated int64 applied_coupons = 4; // 已应用的优惠券ID
+    repeated CouponRejection rejected_coupons = 5; // 被拒绝的优惠券
+}
+
+message CouponRejection {
+    int64 coupon_id = 1;                // 优惠券ID
+    string reason = 2;                  // 拒绝原因
+}
+
+message UseCouponsRequest {
+    int64 user_id = 1;                  // 用户ID
+    string order_sn = 2;                // 订单号
+    repeated int64 coupon_ids = 3;      // 要使用的优惠券ID列表
+    double order_amount = 4;            // 订单金额
+}
+
+message UseCouponsResponse {
+    double discount_amount = 1;         // 优惠金额
+    repeated int64 used_coupons = 2;    // 已使用的优惠券ID
+}
+
+message ReleaseCouponsRequest {
+    string order_sn = 1;                // 订单号
+}
+
+// ========== 秒杀活动相关 ==========
+message CreateFlashSaleActivityRequest {
+    int64 coupon_template_id = 1;       // 关联的优惠券模板ID
+    string name = 2;                    // 秒杀活动名称
+    int64 start_time = 3;               // 秒杀开始时间
+    int64 end_time = 4;                 // 秒杀结束时间
+    int32 flash_sale_count = 5;         // 秒杀数量
+    int32 per_user_limit = 6;           // 每用户限抢数量
+}
+
+message GetFlashSaleActivityRequest {
+    int64 id = 1;                       // 秒杀活动ID
+}
+
+message ListFlashSaleActivitiesRequest {
+    optional int32 status = 1;          // 状态筛选
+    int32 page = 2;                     // 页码
+    int32 page_size = 3;                // 页大小
+}
+
+message FlashSaleActivityResponse {
+    int64 id = 1;                       // 秒杀活动ID
+    int64 coupon_template_id = 2;       // 关联的优惠券模板ID
+    string name = 3;                    // 秒杀活动名称
+    int64 start_time = 4;               // 秒杀开始时间
+    int64 end_time = 5;                 // 秒杀结束时间
+    int32 flash_sale_count = 6;         // 秒杀数量
+    int32 sold_count = 7;               // 已售数量
+    int32 per_user_limit = 8;           // 每用户限抢数量
+    int32 status = 9;                   // 状态
+    CouponTemplateResponse template = 10; // 关联的优惠券模板
+    int64 created_at = 11;              // 创建时间
+}
+
+message ListFlashSaleActivitiesResponse {
+    int64 total_count = 1;              // 总数量
+    repeated FlashSaleActivityResponse items = 2; // 秒杀活动列表
+}
+
+// ========== 秒杀参与相关 ==========
+message ParticipateFlashSaleRequest {
+    int64 user_id = 1;                  // 用户ID
+    int64 flash_sale_id = 2;            // 秒杀活动ID
+}
+
+message ParticipateFlashSaleResponse {
+    int32 status = 1;                   // 参与状态: 1-成功, 2-失败
+    optional string fail_reason = 2;    // 失败原因
+    optional int64 user_coupon_id = 3;  // 生成的用户优惠券ID
+}
+
+message GetFlashSaleStockRequest {
+    int64 flash_sale_id = 1;            // 秒杀活动ID
+}
+
+message FlashSaleStockResponse {
+    int64 flash_sale_id = 1;            // 秒杀活动ID
+    int32 total_stock = 2;              // 总库存
+    int32 remaining_stock = 3;          // 剩余库存
+    int32 sold_count = 4;               // 已售数量
+}
+
+message GetUserFlashSaleRecordRequest {
+    int64 user_id = 1;                  // 用户ID
+    optional int64 flash_sale_id = 2;   // 秒杀活动ID(可选)
+    int32 page = 3;                     // 页码
+    int32 page_size = 4;                // 页大小
+}
+
+message FlashSaleRecordResponse {
+    int64 id = 1;                       // 记录ID
+    int64 flash_sale_id = 2;            // 秒杀活动ID
+    int64 user_id = 3;                  // 用户ID
+    optional int64 user_coupon_id = 4;  // 生成的用户优惠券ID
+    int32 status = 5;                   // 状态
+    optional string fail_reason = 6;    // 失败原因
+    int64 created_at = 7;               // 创建时间
+    FlashSaleActivityResponse activity = 8; // 关联的秒杀活动
+}
+
+message ListFlashSaleRecordsResponse {
+    int64 total_count = 1;              // 总数量
+    repeated FlashSaleRecordResponse items = 2; // 秒杀记录列表
+}
+
+// ========== DTM分布式事务相关 ==========
+
+// 订单-优惠券分布式事务请求
+message SubmitOrderWithCouponsRequest {
+    string order_sn = 1;                // 订单号
+    int64 user_id = 2;                  // 用户ID
+    repeated int64 coupon_ids = 3;      // 使用的优惠券ID列表
+    double original_amount = 4;         // 原价金额
+    double discount_amount = 5;         // 折扣金额
+    double final_amount = 6;            // 最终金额
+    int32 payment_method = 7;           // 支付方式
+    repeated OrderGoodsDetail goods_details = 8; // 商品详情
+    string address = 9;                 // 收货地址
+}
+
+message SubmitOrderWithCouponsResponse {
+    bool success = 1;                   // 是否成功
+    string message = 2;                 // 响应消息
+    optional string transaction_id = 3; // 分布式事务ID
+}
+
+// 秒杀-库存分布式事务请求
+message ProcessFlashSaleWithInventoryRequest {
+    int64 user_id = 1;                  // 用户ID
+    int64 flash_sale_id = 2;            // 秒杀活动ID
+    int64 goods_id = 3;                 // 商品ID
+    int32 quantity = 4;                 // 数量
+}
+
+message ProcessFlashSaleWithInventoryResponse {
+    bool success = 1;                   // 是否成功
+    string message = 2;                 // 响应消息
+    optional string transaction_id = 3; // 分布式事务ID
+}
+
+// 获取分布式事务状态
+message GetTransactionStatusRequest {
+    string gid = 1;                     // DTM全局事务ID
+}
+
+message GetTransactionStatusResponse {
+    string gid = 1;                     // DTM全局事务ID
+    string status = 2;                  // 事务状态: prepared, aborting, succeeded, failed
+    int64 created_at = 3;               // 创建时间
+    int64 updated_at = 4;               // 更新时间
+}
+
+// 订单商品详情
+message OrderGoodsDetail {
+    int64 goods_id = 1;                 // 商品ID
+    int32 quantity = 2;                 // 数量
+    double price = 3;                   // 价格
+}
