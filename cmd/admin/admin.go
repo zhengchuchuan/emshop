@@ -1,7 +1,7 @@
 package main
 
 import (
-	"emshop/internal/app/emshop/admin"
+	"emshop/internal/app/api/admin"
 	"os"
 	"runtime"
 )
