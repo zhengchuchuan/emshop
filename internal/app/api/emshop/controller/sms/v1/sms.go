@@ -45,17 +45,17 @@ func (sc *SmsController) SendSms(c *gin.Context) {
 	}
 
 	smsCode := v1.GenerateSmsCode(6)
-	
+
 	// 开发环境：跳过实际短信发送，但保持完整的验证码生成和存储逻辑
 	// 生产环境时需要取消注释下面的真实发送代码
 	/*
-	err := sc.sf.Sms().SendSms(c, smsReq.Mobile, "SMS_181850725", "{\"code\":"+smsCode+"}")
-	if err != nil {
-		core.WriteResponse(c, errors.WithCode(code.ErrSmsSend, "%s", err.Error()), nil)
-		return
-	}
+		err := sc.sf.Sms().SendSms(c, smsReq.Mobile, "SMS_181850725", "{\"code\":"+smsCode+"}")
+		if err != nil {
+			core.WriteResponse(c, errors.WithCode(code.ErrSmsSend, "%s", err.Error()), nil)
+			return
+		}
 	*/
-	
+
 	// 开发环境：在控制台输出验证码，方便测试
 	fmt.Printf("==> 开发环境短信验证码 [%s]: %s\n", smsReq.Mobile, smsCode)
 

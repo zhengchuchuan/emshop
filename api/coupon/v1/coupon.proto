@@ -141,10 +141,10 @@ message CalculateCouponDiscountRequest {
     int64 user_id = 1;                  // 用户ID
     repeated int64 coupon_ids = 2;      // 要使用的优惠券ID列表
     double order_amount = 3;            // 订单原始金额
-    repeated OrderItem order_items = 4;  // 订单商品明细
+    repeated CouponOrderItem order_items = 4;  // 订单商品明细
 }
 
-message OrderItem {
+message CouponOrderItem {
     int64 goods_id = 1;                 // 商品ID
     int32 quantity = 2;                 // 数量
     double price = 3;                   // 单价

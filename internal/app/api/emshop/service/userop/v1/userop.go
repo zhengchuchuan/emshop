@@ -12,13 +12,13 @@ type UserOpSrv interface {
 	CreateUserFav(ctx context.Context, request *proto.UserFavRequest) (*proto.UserFavResponse, error)
 	DeleteUserFav(ctx context.Context, request *proto.UserFavRequest) error
 	GetUserFavDetail(ctx context.Context, request *proto.UserFavRequest) (*proto.UserFavResponse, error)
-	
+
 	// 用户地址管理
 	GetAddressList(ctx context.Context, request *proto.AddressRequest) (*proto.AddressListResponse, error)
 	CreateAddress(ctx context.Context, request *proto.AddressRequest) (*proto.AddressResponse, error)
 	UpdateAddress(ctx context.Context, request *proto.AddressRequest) error
 	DeleteAddress(ctx context.Context, request *proto.DeleteAddressRequest) error
-	
+
 	// 用户留言管理
 	MessageList(ctx context.Context, request *proto.MessageRequest) (*proto.MessageListResponse, error)
 	CreateMessage(ctx context.Context, request *proto.MessageRequest) (*proto.MessageResponse, error)

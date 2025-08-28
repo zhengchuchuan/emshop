@@ -14,7 +14,6 @@ require (
 	github.com/buger/jsonparser v1.1.1
 	github.com/dgraph-io/ristretto v0.2.0
 	github.com/dtm-labs/client v1.18.7
-	github.com/dtm-labs/dtm v1.19.0
 	github.com/fatih/color v1.18.0
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-kratos/kratos/v2 v2.8.4

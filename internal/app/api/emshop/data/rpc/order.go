@@ -7,7 +7,6 @@ import (
 	"emshop/pkg/log"
 )
 
-
 type order struct {
 	oc opbv1.OrderClient
 }
@@ -15,7 +14,6 @@ type order struct {
 func NewOrder(oc opbv1.OrderClient) *order {
 	return &order{oc}
 }
-
 
 // ==================== 订单管理 ====================
 

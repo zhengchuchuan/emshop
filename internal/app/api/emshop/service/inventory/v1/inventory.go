@@ -20,11 +20,11 @@ func (is *inventoryService) GetStocks(ctx context.Context, goodsID string) (*ipb
 	if err != nil {
 		return nil, err
 	}
-	
+
 	request := &ipb.GoodsInvInfo{
 		GoodsId: int32(goodsIDInt),
 	}
-	
+
 	return is.data.Inventory().InvDetail(ctx, request)
 }
 

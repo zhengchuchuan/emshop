@@ -198,18 +198,3 @@ func getLogisticsCompanyName(company int32) string {
 	}
 }
 
-// getShippingMethodName 获取配送方式名称（简单映射，实际应该从配置或数据库获取）
-func getShippingMethodName(method int32) string {
-	switch method {
-	case 1:
-		return "标准快递"
-	case 2:
-		return "次日达"
-	case 3:
-		return "当日达"
-	case 4:
-		return "上门自提"
-	default:
-		return "未知配送方式"
-	}
-}

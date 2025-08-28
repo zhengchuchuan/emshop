@@ -2,25 +2,25 @@ package response
 
 // GoodsItemResponse 商品列表项响应
 type GoodsItemResponse struct {
-	ID         int32   `json:"id"`
-	Name       string  `json:"name"`
-	GoodsBrief string  `json:"goodsBrief"`
-	Desc       string  `json:"desc"`
-	ShipFree   bool    `json:"shipFree"`
-	Images     []string `json:"images"`
-	DescImages []string `json:"descImages"`
-	FrontImage string  `json:"frontImage"`
-	ShopPrice  float32 `json:"shopPrice"`
+	ID         int32            `json:"id"`
+	Name       string           `json:"name"`
+	GoodsBrief string           `json:"goodsBrief"`
+	Desc       string           `json:"desc"`
+	ShipFree   bool             `json:"shipFree"`
+	Images     []string         `json:"images"`
+	DescImages []string         `json:"descImages"`
+	FrontImage string           `json:"frontImage"`
+	ShopPrice  float32          `json:"shopPrice"`
 	Category   CategoryResponse `json:"category"`
 	Brand      BrandResponse    `json:"brand"`
-	IsHot      bool    `json:"isHot"`
-	IsNew      bool    `json:"isNew"`
-	OnSale     bool    `json:"onSale"`
+	IsHot      bool             `json:"isHot"`
+	IsNew      bool             `json:"isNew"`
+	OnSale     bool             `json:"onSale"`
 }
 
 // GoodsListResponse 商品列表响应
 type GoodsListResponse struct {
-	Total int64                `json:"total"`
+	Total int64               `json:"total"`
 	Items []GoodsItemResponse `json:"data"`
 }
 
@@ -39,7 +39,7 @@ type BrandResponse struct {
 
 // CategoryItemResponse 分类项响应
 type CategoryItemResponse struct {
-	ID             int32 `json:"id"`
+	ID             int32  `json:"id"`
 	Name           string `json:"name"`
 	Level          int32  `json:"level"`
 	ParentCategory int32  `json:"parentCategory"`
@@ -48,12 +48,12 @@ type CategoryItemResponse struct {
 
 // CategoryDetailResponse 分类详情响应
 type CategoryDetailResponse struct {
-	ID              int32                     `json:"id"`
-	Name            string                    `json:"name"`
-	Level           int32                     `json:"level"`
-	ParentCategory  int32                     `json:"parentCategory"`
-	IsTab           bool                      `json:"isTab"`
-	SubCategories   []CategoryItemResponse    `json:"subCategories"`
+	ID             int32                  `json:"id"`
+	Name           string                 `json:"name"`
+	Level          int32                  `json:"level"`
+	ParentCategory int32                  `json:"parentCategory"`
+	IsTab          bool                   `json:"isTab"`
+	SubCategories  []CategoryItemResponse `json:"subCategories"`
 }
 
 // BrandListResponse 品牌列表响应

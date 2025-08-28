@@ -1,0 +1,246 @@
+# EMShop增强API服务 Prometheus告警规则
+# 包含服务可用性、性能和业务指标告警
+# Author: Claude Code
+# Version: 1.0
+
+groups:
+  # 服务可用性告警组
+  - name: emshop-api-availability
+    interval: 30s
+    rules:
+      # API服务宕机告警
+      - alert: EMShopAPIDown
+        expr: up{service="emshop-enhanced-api"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: emshop-enhanced-api
+          category: availability
+        annotations:
+          summary: "EMShop增强API服务宕机"
+          description: "EMShop增强API服务已宕机超过30秒，实例: {{ $labels.instance }}"
+          runbook_url: "https://wiki.emshop.com/runbooks/api-down"
+          action: "立即检查服务状态并重启"
+
+      # 健康检查失败告警
+      - alert: EMShopAPIHealthCheckFail
+        expr: probe_success{job="emshop-api-health"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: health
+        annotations:
+          summary: "EMShop API健康检查失败"
+          description: "EMShop API健康检查连续失败1分钟，实例: {{ $labels.instance }}"
+          action: "检查应用程序状态和依赖服务"
+
+  # 性能指标告警组
+  - name: emshop-api-performance
+    interval: 15s
+    rules:
+      # 高响应时间告警
+      - alert: EMShopAPIHighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{service="emshop-enhanced-api"}[5m])) > 1
+        for: 2m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: performance
+        annotations:
+          summary: "EMShop API响应时间过高"
+          description: "EMShop API 95百分位响应时间超过1秒，当前值: {{ $value }}s，实例: {{ $labels.instance }}"
+          action: "检查应用性能和数据库连接"
+
+      # 高错误率告警
+      - alert: EMShopAPIHighErrorRate
+        expr: rate(http_requests_total{service="emshop-enhanced-api",code=~"5.."}[5m]) / rate(http_requests_total{service="emshop-enhanced-api"}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: emshop-enhanced-api
+          category: error-rate
+        annotations:
+          summary: "EMShop API错误率过高"
+          description: "EMShop API 5xx错误率超过5%，当前值: {{ $value | humanizePercentage }}，实例: {{ $labels.instance }}"
+          action: "立即检查应用日志和错误原因"
+
+      # 请求量激增告警
+      - alert: EMShopAPIHighTraffic
+        expr: rate(http_requests_total{service="emshop-enhanced-api"}[5m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: traffic
+        annotations:
+          summary: "EMShop API请求量激增"
+          description: "EMShop API每秒请求量超过1000，当前值: {{ $value }}，实例: {{ $labels.instance }}"
+          action: "监控系统资源使用情况，考虑扩容"
+
+  # 资源使用告警组
+  - name: emshop-api-resources
+    interval: 30s
+    rules:
+      # CPU使用率过高告警
+      - alert: EMShopAPICPUHigh
+        expr: rate(process_cpu_seconds_total{service="emshop-enhanced-api"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: resources
+        annotations:
+          summary: "EMShop API CPU使用率过高"
+          description: "EMShop API CPU使用率超过80%，当前值: {{ $value }}%，实例: {{ $labels.instance }}"
+          action: "检查CPU密集型操作，考虑性能优化"
+
+      # 内存使用率过高告警
+      - alert: EMShopAPIMemoryHigh
+        expr: process_resident_memory_bytes{service="emshop-enhanced-api"} / 1024 / 1024 > 1024
+        for: 10m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: resources
+        annotations:
+          summary: "EMShop API内存使用过高"
+          description: "EMShop API内存使用超过1GB，当前值: {{ $value | humanizeBytes }}，实例: {{ $labels.instance }}"
+          action: "检查内存泄漏，考虑重启服务"
+
+      # 文件描述符使用率过高告警
+      - alert: EMShopAPIFDHigh
+        expr: process_open_fds{service="emshop-enhanced-api"} / process_max_fds{service="emshop-enhanced-api"} > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: resources
+        annotations:
+          summary: "EMShop API文件描述符使用率过高"
+          description: "EMShop API文件描述符使用率超过80%，当前值: {{ $value | humanizePercentage }}，实例: {{ $labels.instance }}"
+          action: "检查连接泄漏，优化连接池配置"
+
+  # 业务指标告警组
+  - name: emshop-api-business
+    interval: 60s
+    rules:
+      # 优惠券领取失败率过高
+      - alert: CouponReceiveFailureHigh
+        expr: rate(emshop_coupon_receive_failures_total[10m]) / rate(emshop_coupon_receive_attempts_total[10m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: business
+          feature: coupon
+        annotations:
+          summary: "优惠券领取失败率过高"
+          description: "优惠券领取失败率超过10%，当前值: {{ $value | humanizePercentage }}"
+          action: "检查优惠券服务和库存状态"
+
+      # 支付失败率过高
+      - alert: PaymentFailureHigh
+        expr: rate(emshop_payment_failures_total[10m]) / rate(emshop_payment_attempts_total[10m]) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          service: emshop-enhanced-api
+          category: business
+          feature: payment
+        annotations:
+          summary: "支付失败率过高"
+          description: "支付失败率超过5%，当前值: {{ $value | humanizePercentage }}"
+          action: "立即检查支付服务和第三方支付接口"
+
+      # 物流查询失败率过高
+      - alert: LogisticsQueryFailureHigh
+        expr: rate(emshop_logistics_query_failures_total[10m]) / rate(emshop_logistics_query_attempts_total[10m]) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: business
+          feature: logistics
+        annotations:
+          summary: "物流查询失败率过高"
+          description: "物流查询失败率超过20%，当前值: {{ $value | humanizePercentage }}"
+          action: "检查物流服务和第三方物流接口"
+
+  # 依赖服务告警组
+  - name: emshop-api-dependencies
+    interval: 30s
+    rules:
+      # Redis连接失败告警
+      - alert: EMShopAPIRedisConnectionFail
+        expr: emshop_redis_connection_errors_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: emshop-enhanced-api
+          category: dependency
+          dependency: redis
+        annotations:
+          summary: "EMShop API Redis连接失败"
+          description: "EMShop API Redis连接出现错误，错误数: {{ $value }}"
+          action: "检查Redis服务状态和网络连接"
+
+      # RPC服务调用失败告警
+      - alert: EMShopAPIRPCCallFailure
+        expr: rate(emshop_rpc_call_failures_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: dependency
+          dependency: rpc
+        annotations:
+          summary: "EMShop API RPC调用失败率过高"
+          description: "EMShop API RPC调用失败率过高，失败率: {{ $value }}/秒，服务: {{ $labels.rpc_service }}"
+          action: "检查后端RPC服务状态"
+
+      # 数据库连接池耗尽告警
+      - alert: EMShopAPIDBPoolExhausted
+        expr: emshop_db_connections_in_use / emshop_db_connections_max > 0.9
+        for: 2m
+        labels:
+          severity: critical
+          service: emshop-enhanced-api
+          category: dependency
+          dependency: database
+        annotations:
+          summary: "EMShop API数据库连接池即将耗尽"
+          description: "EMShop API数据库连接池使用率超过90%，当前值: {{ $value | humanizePercentage }}"
+          action: "检查数据库连接泄漏，考虑增加连接池大小"
+
+  # 安全告警组
+  - name: emshop-api-security
+    interval: 60s
+    rules:
+      # 异常高频请求告警（可能的DDoS攻击）
+      - alert: EMShopAPIPotentialDDoS
+        expr: rate(http_requests_total{service="emshop-enhanced-api"}[1m]) > 5000
+        for: 30s
+        labels:
+          severity: critical
+          service: emshop-enhanced-api
+          category: security
+          attack_type: ddos
+        annotations:
+          summary: "EMShop API疑似遭受DDoS攻击"
+          description: "EMShop API每分钟请求量超过5000，当前值: {{ $value }}，可能遭受DDoS攻击"
+          action: "立即启用限流和防护措施"
+
+      # 认证失败率过高告警
+      - alert: EMShopAPIAuthFailureHigh
+        expr: rate(http_requests_total{service="emshop-enhanced-api",code="401"}[10m]) > 50
+        for: 5m
+        labels:
+          severity: warning
+          service: emshop-enhanced-api
+          category: security
+          attack_type: brute-force
+        annotations:
+          summary: "EMShop API认证失败率过高"
+          description: "EMShop API 401错误过多，可能遭受暴力破解攻击，失败率: {{ $value }}/秒"
+          action: "检查IP来源，考虑启用账户锁定机制"

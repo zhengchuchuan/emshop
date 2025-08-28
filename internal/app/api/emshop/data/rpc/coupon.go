@@ -77,14 +77,14 @@ func (c *coupon) GetAvailableCoupons(ctx context.Context, request *cpbv1.GetAvai
 
 // CalculateCouponDiscount 计算优惠券折扣
 func (c *coupon) CalculateCouponDiscount(ctx context.Context, request *cpbv1.CalculateCouponDiscountRequest) (*cpbv1.CalculateCouponDiscountResponse, error) {
-	log.Infof("Calling CalculateCouponDiscount gRPC for user: %d, orderAmount: %.2f, coupons: %v", 
+	log.Infof("Calling CalculateCouponDiscount gRPC for user: %d, orderAmount: %.2f, coupons: %v",
 		request.UserId, request.OrderAmount, request.CouponIds)
 	response, err := c.cc.CalculateCouponDiscount(ctx, request)
 	if err != nil {
 		log.Errorf("CalculateCouponDiscount gRPC call failed: %v", err)
 		return nil, err
 	}
-	log.Infof("CalculateCouponDiscount gRPC call successful, discountAmount: %.2f, finalAmount: %.2f", 
+	log.Infof("CalculateCouponDiscount gRPC call successful, discountAmount: %.2f, finalAmount: %.2f",
 		response.DiscountAmount, response.FinalAmount)
 	return response, nil
 }

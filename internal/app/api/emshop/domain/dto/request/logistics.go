@@ -7,14 +7,14 @@ import (
 // GetLogisticsInfoRequest 获取物流信息请求
 type GetLogisticsInfoRequest struct {
 	OrderSN        *string `form:"order_sn" json:"order_sn"`               // 订单号
-	LogisticsSN    *string `form:"logistics_sn" json:"logistics_sn"`       // 物流单号  
+	LogisticsSN    *string `form:"logistics_sn" json:"logistics_sn"`       // 物流单号
 	TrackingNumber *string `form:"tracking_number" json:"tracking_number"` // 快递单号
 }
 
 // ToProto 转换为protobuf请求
 func (r *GetLogisticsInfoRequest) ToProto() *lpbv1.GetLogisticsInfoRequest {
 	req := &lpbv1.GetLogisticsInfoRequest{}
-	
+
 	// 根据提供的参数设置查询条件（oneof字段）
 	if r.OrderSN != nil {
 		req.Query = &lpbv1.GetLogisticsInfoRequest_OrderSn{
@@ -29,7 +29,7 @@ func (r *GetLogisticsInfoRequest) ToProto() *lpbv1.GetLogisticsInfoRequest {
 			TrackingNumber: *r.TrackingNumber,
 		}
 	}
-	
+
 	return req
 }
 
@@ -43,14 +43,14 @@ func (r *GetLogisticsInfoRequest) Validate() error {
 
 // GetLogisticsTracksRequest 获取物流轨迹请求
 type GetLogisticsTracksRequest struct {
-	OrderSN     *string `form:"order_sn" json:"order_sn"`           // 订单号
-	LogisticsSN *string `form:"logistics_sn" json:"logistics_sn"`   // 物流单号
+	OrderSN     *string `form:"order_sn" json:"order_sn"`         // 订单号
+	LogisticsSN *string `form:"logistics_sn" json:"logistics_sn"` // 物流单号
 }
 
-// ToProto 转换为protobuf请求  
+// ToProto 转换为protobuf请求
 func (r *GetLogisticsTracksRequest) ToProto() *lpbv1.GetLogisticsTracksRequest {
 	req := &lpbv1.GetLogisticsTracksRequest{}
-	
+
 	// 根据提供的参数设置查询条件（oneof字段）
 	// GetLogisticsTracksRequest 只支持 LogisticsSn 和 TrackingNumber
 	if r.LogisticsSN != nil {
@@ -58,7 +58,7 @@ func (r *GetLogisticsTracksRequest) ToProto() *lpbv1.GetLogisticsTracksRequest {
 			LogisticsSn: *r.LogisticsSN,
 		}
 	}
-	
+
 	return req
 }
 
@@ -72,10 +72,10 @@ func (r *GetLogisticsTracksRequest) Validate() error {
 
 // CalculateShippingFeeRequest 计算运费请求
 type CalculateShippingFeeRequest struct {
-	ReceiverAddress   string          `json:"receiver_address" binding:"required,min=5"`    // 收货地址
-	Items             []LogisticsItem `json:"items" binding:"required,dive"`               // 商品列表
-	LogisticsCompany  int32           `json:"logistics_company" binding:"required,min=1"`  // 物流公司
-	ShippingMethod    int32           `json:"shipping_method" binding:"required,min=1"`    // 配送方式
+	ReceiverAddress  string          `json:"receiver_address" binding:"required,min=5"`  // 收货地址
+	Items            []LogisticsItem `json:"items" binding:"required,dive"`              // 商品列表
+	LogisticsCompany int32           `json:"logistics_company" binding:"required,min=1"` // 物流公司
+	ShippingMethod   int32           `json:"shipping_method" binding:"required,min=1"`   // 配送方式
 }
 
 // LogisticsItem 物流商品项
@@ -96,9 +96,9 @@ func (r *CalculateShippingFeeRequest) ToProto() *lpbv1.CalculateShippingFeeReque
 		totalVolume += item.Volume * float64(item.Quantity)
 		// 这里可能需要从商品服务获取价格来计算goodsValue
 	}
-	
+
 	return &lpbv1.CalculateShippingFeeRequest{
-		SenderAddress:   "",                // 需要从配置或请求中获取
+		SenderAddress:   "", // 需要从配置或请求中获取
 		ReceiverAddress: r.ReceiverAddress,
 		ShippingMethod:  r.ShippingMethod,
 		TotalWeight:     totalWeight,

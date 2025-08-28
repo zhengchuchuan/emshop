@@ -2,10 +2,9 @@ package rpc
 
 import (
 	"context"
-	"emshop/internal/app/api/emshop/data"
 	ppbv1 "emshop/api/payment/v1"
+	"emshop/internal/app/api/emshop/data"
 	"emshop/pkg/log"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type payment struct {
@@ -18,14 +17,14 @@ func NewPayment(pc ppbv1.PaymentClient) *payment {
 
 // CreatePayment 创建支付订单
 func (p *payment) CreatePayment(ctx context.Context, request *ppbv1.CreatePaymentRequest) (*ppbv1.CreatePaymentResponse, error) {
-	log.Infof("Calling CreatePayment gRPC for order: %s, amount: %.2f, method: %d", 
+	log.Infof("Calling CreatePayment gRPC for order: %s, amount: %.2f, method: %d",
 		request.OrderSn, request.Amount, request.PaymentMethod)
 	response, err := p.pc.CreatePayment(ctx, request)
 	if err != nil {
 		log.Errorf("CreatePayment gRPC call failed: %v", err)
 		return nil, err
 	}
-	log.Infof("CreatePayment gRPC call successful, paymentSn: %s, expiredAt: %d", 
+	log.Infof("CreatePayment gRPC call successful, paymentSn: %s, expiredAt: %d",
 		response.PaymentSn, response.ExpiredAt)
 	return response, nil
 }
@@ -38,7 +37,7 @@ func (p *payment) GetPaymentStatus(ctx context.Context, request *ppbv1.GetPaymen
 		log.Errorf("GetPaymentStatus gRPC call failed: %v", err)
 		return nil, err
 	}
-	log.Infof("GetPaymentStatus gRPC call successful, status: %d, amount: %.2f", 
+	log.Infof("GetPaymentStatus gRPC call successful, status: %d, amount: %.2f",
 		response.PaymentStatus, response.Amount)
 	return response, nil
 }

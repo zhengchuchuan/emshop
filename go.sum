@@ -123,8 +123,6 @@ github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/r
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/dtm-labs/client v1.18.7 h1:JOvw1loWhjY5w0gyasHs+BeEyWFBgHvSNl/MNsVQZIA=
 github.com/dtm-labs/client v1.18.7/go.mod h1:szt/7b2fY5ho4N3SAbEChjWvI7l0RMHjrjfF6KoD0pg=
-github.com/dtm-labs/dtm v1.19.0 h1:TKRf21MkelOR6PPGLT9QzNs0ZJF/RLz+zZPkeOwzPPU=
-github.com/dtm-labs/dtm v1.19.0/go.mod h1:BuHKNCWBfDaDMcdUb95DuVkqMeP730sVRGfAXf/5Vnc=
 github.com/dtm-labs/dtmdriver v0.0.6 h1:Iz6xnO+hE2TKDHI2TX4BKCzMtgXYgeQFBEGvvaNhbs8=
 github.com/dtm-labs/dtmdriver v0.0.6/go.mod h1:V5E1uFsExb6Do32ezpB8bMX6be+izLhkcboniLP5shU=
 github.com/dtm-labs/logger v0.0.1/go.mod h1:0woMQZ6ljx9wZIl7hW8cuV2PRQmwEKxhqYtab7zVNWg=

@@ -6,15 +6,13 @@ import (
 	"emshop/internal/app/api/emshop/data"
 )
 
-
 type users struct {
-	uc upbv1.UserClient		// 直接使用 UserClient 接口
+	uc upbv1.UserClient // 直接使用 UserClient 接口
 }
 
 func NewUsers(uc upbv1.UserClient) *users {
 	return &users{uc}
 }
-
 
 func (u *users) CheckPassWord(ctx context.Context, request *upbv1.PasswordCheckInfo) (*upbv1.CheckResponse, error) {
 	return u.uc.CheckPassWord(ctx, request)

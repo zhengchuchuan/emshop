@@ -3,7 +3,7 @@ package rpc
 import (
 	"context"
 	"time"
-	
+
 	cpbv1 "emshop/api/coupon/v1"
 	gpbv1 "emshop/api/goods/v1"
 	ipb "emshop/api/inventory/v1"
@@ -103,11 +103,11 @@ func NewGoodsServiceClient(r registry.Discovery) gpbv1.GoodsClient {
 // NewInventoryServiceClient 创建库存服务的 gRPC 客户端，支持健壮的重试和fallback机制
 func NewInventoryServiceClient(r registry.Discovery) ipb.InventoryClient {
 	log.Infof("Initializing gRPC connection to service: %s", clientInventoryServiceName)
-	
+
 	// 首先尝试服务发现连接，使用更健壮的配置
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	log.Infof("Attempting service discovery connection to: %s", clientInventoryServiceName)
 	conn, err := rpcserver.DialInsecure(
 		ctx,
@@ -116,13 +116,13 @@ func NewInventoryServiceClient(r registry.Discovery) ipb.InventoryClient {
 		rpcserver.WithClientTimeout(15*time.Second),
 		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 	)
-	
+
 	if err != nil {
 		log.Warnf("Service discovery connection failed: %v, falling back to direct connection", err)
 		// fallback到直连
 		ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel2()
-		
+
 		log.Infof("Attempting direct connection to: %s", clientFallbackInventoryAddress)
 		conn, err = rpcserver.DialInsecure(
 			ctx2,
@@ -130,7 +130,7 @@ func NewInventoryServiceClient(r registry.Discovery) ipb.InventoryClient {
 			rpcserver.WithClientTimeout(15*time.Second),
 			rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 		)
-		
+
 		if err != nil {
 			log.Fatalf("Both service discovery and direct connection failed: %v", err)
 		}
@@ -140,21 +140,21 @@ func NewInventoryServiceClient(r registry.Discovery) ipb.InventoryClient {
 		// 即使服务发现成功，也要测试连接是否真的可用
 		// 如果连接有问题，立即切换到localhost fallback
 		log.Infof("Testing service discovery connection...")
-		
+
 		testCtx, testCancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer testCancel()
-		
+
 		testClient := ipb.NewInventoryClient(conn)
 		_, testErr := testClient.InvDetail(testCtx, &ipb.GoodsInvInfo{GoodsId: 1})
-		
+
 		if testErr != nil {
 			log.Warnf("Service discovery connection test failed: %v, switching to localhost fallback", testErr)
-			conn.Close()
-			
+			_ = conn.Close()
+
 			// 立即尝试localhost连接
 			fallbackCtx, fallbackCancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer fallbackCancel()
-			
+
 			log.Infof("Attempting localhost fallback connection to: %s", clientFallbackInventoryAddress)
 			conn, err = rpcserver.DialInsecure(
 				fallbackCtx,
@@ -162,7 +162,7 @@ func NewInventoryServiceClient(r registry.Discovery) ipb.InventoryClient {
 				rpcserver.WithClientTimeout(15*time.Second),
 				rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 			)
-			
+
 			if err != nil {
 				log.Fatalf("Localhost fallback connection also failed: %v", err)
 			}
@@ -171,7 +171,7 @@ func NewInventoryServiceClient(r registry.Discovery) ipb.InventoryClient {
 			log.Infof("Service discovery connection test successful")
 		}
 	}
-	
+
 	return ipb.NewInventoryClient(conn)
 }
 

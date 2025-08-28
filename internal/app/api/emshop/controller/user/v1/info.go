@@ -1,9 +1,9 @@
 package user
 
 import (
-	"github.com/gin-gonic/gin"
 	"emshop/internal/app/pkg/jwt"
 	"emshop/pkg/common/core"
+	"github.com/gin-gonic/gin"
 )
 
 func (us *userServer) GetUserDetail(ctx *gin.Context) {

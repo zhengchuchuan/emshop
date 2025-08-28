@@ -14,7 +14,7 @@ import (
 
 func (us *userServer) UpdateUser(ctx *gin.Context) {
 	var req request.UpdateUserRequest
-	
+
 	// 表单验证
 	if err := ctx.ShouldBind(&req); err != nil {
 		gin2.HandleValidatorError(ctx, err, us.trans)
@@ -24,7 +24,7 @@ func (us *userServer) UpdateUser(ctx *gin.Context) {
 	// 获取当前用户ID
 	userID, _ := ctx.Get(jwt.KeyUserID)
 	userIDInt := uint64(userID.(int))
-	
+
 	// 将请求数据转换为proto结构
 	updateReq, err := req.ToProto(userIDInt)
 	if err != nil {
@@ -38,7 +38,7 @@ func (us *userServer) UpdateUser(ctx *gin.Context) {
 		core.WriteResponse(ctx, err, nil)
 		return
 	}
-	
+
 	// 更新用户信息
 	if updateReq.NickName != nil {
 		userDTO.NickName = *updateReq.NickName
@@ -47,13 +47,13 @@ func (us *userServer) UpdateUser(ctx *gin.Context) {
 		userDTO.Gender = *updateReq.Gender
 	}
 	if updateReq.BirthDay != nil {
-		userDTO.Birthday = jtime.Time{time.Unix(int64(*updateReq.BirthDay), 0)}
+		userDTO.Birthday = jtime.Time{Time: time.Unix(int64(*updateReq.BirthDay), 0)}
 	}
-	
+
 	err = us.sf.Users().Update(ctx, userDTO)
 	if err != nil {
 		core.WriteResponse(ctx, err, nil)
 		return
 	}
-	core.WriteResponse(ctx, nil, nil)
+	core.WriteResponse(ctx, nil, gin.H{"Message": "用户信息更新成功"})
 }

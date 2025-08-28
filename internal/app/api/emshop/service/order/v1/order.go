@@ -12,7 +12,7 @@ type OrderSrv interface {
 	CreateOrder(ctx context.Context, request *proto.OrderRequest) (*proto.OrderInfoResponse, error)
 	OrderDetail(ctx context.Context, request *proto.OrderRequest) (*proto.OrderInfoDetailResponse, error)
 	UpdateOrderStatus(ctx context.Context, request *proto.OrderStatus) error
-	
+
 	// 购物车管理
 	CartItemList(ctx context.Context, request *proto.UserInfo) (*proto.CartItemListResponse, error)
 	CreateCartItem(ctx context.Context, request *proto.CartItemRequest) (*proto.ShopCartInfoResponse, error)

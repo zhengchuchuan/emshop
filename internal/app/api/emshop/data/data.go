@@ -19,20 +19,20 @@ type GoodsData interface {
 	GetGoodsDetail(ctx context.Context, request *gpb.GoodInfoRequest) (*gpb.GoodsInfoResponse, error)
 	DeleteGoods(ctx context.Context, info *gpb.DeleteGoodsInfo) (*gpb.GoodsInfoResponse, error)
 	UpdateGoods(ctx context.Context, info *gpb.CreateGoodsInfo) (*gpb.GoodsInfoResponse, error)
-	
+
 	// 分类管理
 	GetAllCategorysList(ctx context.Context) (*gpb.CategoryListResponse, error)
 	GetSubCategory(ctx context.Context, request *gpb.CategoryListRequest) (*gpb.SubCategoryListResponse, error)
 	CreateCategory(ctx context.Context, request *gpb.CategoryInfoRequest) (*gpb.CategoryInfoResponse, error)
 	UpdateCategory(ctx context.Context, request *gpb.CategoryInfoRequest) (*gpb.CategoryInfoResponse, error)
 	DeleteCategory(ctx context.Context, request *gpb.DeleteCategoryRequest) (*gpb.CategoryInfoResponse, error)
-	
+
 	// 品牌管理
 	BrandList(ctx context.Context, request *gpb.BrandFilterRequest) (*gpb.BrandListResponse, error)
 	CreateBrand(ctx context.Context, request *gpb.BrandRequest) (*gpb.BrandInfoResponse, error)
 	UpdateBrand(ctx context.Context, request *gpb.BrandRequest) (*gpb.BrandInfoResponse, error)
 	DeleteBrand(ctx context.Context, request *gpb.BrandRequest) (*gpb.BrandInfoResponse, error)
-	
+
 	// 轮播图管理
 	BannerList(ctx context.Context) (*gpb.BannerListResponse, error)
 	CreateBanner(ctx context.Context, request *gpb.BannerRequest) (*gpb.BannerResponse, error)
@@ -46,7 +46,7 @@ type OrderData interface {
 	CreateOrder(ctx context.Context, request *opb.OrderRequest) (*opb.OrderInfoResponse, error)
 	OrderDetail(ctx context.Context, request *opb.OrderRequest) (*opb.OrderInfoDetailResponse, error)
 	UpdateOrderStatus(ctx context.Context, request *opb.OrderStatus) (*opb.OrderInfoResponse, error)
-	
+
 	// 购物车管理
 	CartItemList(ctx context.Context, request *opb.UserInfo) (*opb.CartItemListResponse, error)
 	CreateCartItem(ctx context.Context, request *opb.CartItemRequest) (*opb.ShopCartInfoResponse, error)
@@ -60,13 +60,13 @@ type UserOpData interface {
 	CreateUserFav(ctx context.Context, request *uoppb.UserFavRequest) (*uoppb.UserFavResponse, error)
 	DeleteUserFav(ctx context.Context, request *uoppb.UserFavRequest) (*uoppb.UserFavResponse, error)
 	GetUserFavDetail(ctx context.Context, request *uoppb.UserFavRequest) (*uoppb.UserFavResponse, error)
-	
+
 	// 用户地址管理
 	GetAddressList(ctx context.Context, request *uoppb.AddressRequest) (*uoppb.AddressListResponse, error)
 	CreateAddress(ctx context.Context, request *uoppb.AddressRequest) (*uoppb.AddressResponse, error)
 	UpdateAddress(ctx context.Context, request *uoppb.AddressRequest) (*uoppb.AddressResponse, error)
 	DeleteAddress(ctx context.Context, request *uoppb.DeleteAddressRequest) (*uoppb.AddressResponse, error)
-	
+
 	// 用户留言管理
 	MessageList(ctx context.Context, request *uoppb.MessageRequest) (*uoppb.MessageListResponse, error)
 	CreateMessage(ctx context.Context, request *uoppb.MessageRequest) (*uoppb.MessageResponse, error)
@@ -91,12 +91,12 @@ type CouponData interface {
 	// 优惠券模板管理（用于展示可领取的优惠券）
 	ListCouponTemplates(ctx context.Context, request *cpb.ListCouponTemplatesRequest) (*cpb.ListCouponTemplatesResponse, error)
 	GetCouponTemplate(ctx context.Context, request *cpb.GetCouponTemplateRequest) (*cpb.CouponTemplateResponse, error)
-	
+
 	// 用户优惠券操作
 	ReceiveCoupon(ctx context.Context, request *cpb.ReceiveCouponRequest) (*cpb.UserCouponResponse, error)
 	GetUserCoupons(ctx context.Context, request *cpb.GetUserCouponsRequest) (*cpb.ListUserCouponsResponse, error)
 	GetAvailableCoupons(ctx context.Context, request *cpb.GetAvailableCouponsRequest) (*cpb.ListUserCouponsResponse, error)
-	
+
 	// 优惠券计算和使用
 	CalculateCouponDiscount(ctx context.Context, request *cpb.CalculateCouponDiscountRequest) (*cpb.CalculateCouponDiscountResponse, error)
 }
@@ -105,7 +105,7 @@ type PaymentData interface {
 	// 支付订单管理
 	CreatePayment(ctx context.Context, request *ppb.CreatePaymentRequest) (*ppb.CreatePaymentResponse, error)
 	GetPaymentStatus(ctx context.Context, request *ppb.GetPaymentStatusRequest) (*ppb.PaymentStatusResponse, error)
-	
+
 	// 模拟支付操作（测试用）
 	SimulatePaymentSuccess(ctx context.Context, request *ppb.SimulatePaymentRequest) error
 	SimulatePaymentFailure(ctx context.Context, request *ppb.SimulatePaymentRequest) error
@@ -115,10 +115,10 @@ type LogisticsData interface {
 	// 物流信息查询
 	GetLogisticsInfo(ctx context.Context, request *lpb.GetLogisticsInfoRequest) (*lpb.GetLogisticsInfoResponse, error)
 	GetLogisticsTracks(ctx context.Context, request *lpb.GetLogisticsTracksRequest) (*lpb.GetLogisticsTracksResponse, error)
-	
+
 	// 运费计算
 	CalculateShippingFee(ctx context.Context, request *lpb.CalculateShippingFeeRequest) (*lpb.CalculateShippingFeeResponse, error)
-	
+
 	// 基础数据获取
 	GetLogisticsCompanies(ctx context.Context) (*lpb.LogisticsCompaniesResponse, error)
 }

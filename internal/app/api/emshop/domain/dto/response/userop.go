@@ -43,4 +43,3 @@ type MessageListResponse struct {
 	Total int64                 `json:"total"`
 	Items []MessageItemResponse `json:"data"`
 }
-

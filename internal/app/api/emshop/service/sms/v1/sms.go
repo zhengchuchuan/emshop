@@ -2,9 +2,9 @@ package v1
 
 import (
 	"context"
+	"emshop/internal/app/pkg/options"
 	"fmt"
 	"math/rand"
-	"emshop/internal/app/pkg/options"
 	"strings"
 	"time"
 
@@ -52,7 +52,7 @@ func (s *smsService) SendSms(ctx context.Context, mobile string, tpc, tp string)
 	request.ApiName = "SendSms"
 	request.QueryParams["RegionId"] = "cn-beijing"
 	request.QueryParams["PhoneNumbers"] = mobile //手机号
-	request.QueryParams["SignName"] = "易美购"     //阿里云验证过的项目名 自己设置
+	request.QueryParams["SignName"] = "易美购"      //阿里云验证过的项目名 自己设置
 	request.QueryParams["TemplateCode"] = tpc    //阿里云的短信模板号 自己设置
 	request.QueryParams["TemplateParam"] = tp    //短信模板中的验证码内容 自己生成   之前试过直接返回，但是失败，加上code成功。
 	response, err := client.ProcessCommonRequest(request)

@@ -51,7 +51,7 @@ type CartItemResponse struct {
 	Checked bool  `json:"checked"`
 }
 
-// CartListResponse 购物车列表响应  
+// CartListResponse 购物车列表响应
 type CartListResponse struct {
 	Total int64              `json:"total"`
 	Items []CartItemResponse `json:"data"`

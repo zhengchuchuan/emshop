@@ -13,20 +13,20 @@ type GoodsSrv interface {
 	Detail(ctx context.Context, request *gpb.GoodInfoRequest) (*gpb.GoodsInfoResponse, error)
 	Delete(ctx context.Context, info *gpb.DeleteGoodsInfo) (*gpb.GoodsInfoResponse, error)
 	Update(ctx context.Context, info *gpb.CreateGoodsInfo) (*gpb.GoodsInfoResponse, error)
-	
+
 	// 分类管理
 	CategoryList(ctx context.Context) (*gpb.CategoryListResponse, error)
 	CategoryDetail(ctx context.Context, request *gpb.CategoryListRequest) (*gpb.SubCategoryListResponse, error)
 	CreateCategory(ctx context.Context, request *gpb.CategoryInfoRequest) (*gpb.CategoryInfoResponse, error)
 	UpdateCategory(ctx context.Context, request *gpb.CategoryInfoRequest) (*gpb.CategoryInfoResponse, error)
 	DeleteCategory(ctx context.Context, request *gpb.DeleteCategoryRequest) (*gpb.CategoryInfoResponse, error)
-	
+
 	// 品牌管理
 	BrandList(ctx context.Context, request *gpb.BrandFilterRequest) (*gpb.BrandListResponse, error)
 	CreateBrand(ctx context.Context, request *gpb.BrandRequest) (*gpb.BrandInfoResponse, error)
 	UpdateBrand(ctx context.Context, request *gpb.BrandRequest) (*gpb.BrandInfoResponse, error)
 	DeleteBrand(ctx context.Context, request *gpb.BrandRequest) (*gpb.BrandInfoResponse, error)
-	
+
 	// 轮播图管理
 	BannerList(ctx context.Context) (*gpb.BannerListResponse, error)
 	CreateBanner(ctx context.Context, request *gpb.BannerRequest) (*gpb.BannerResponse, error)
@@ -151,8 +151,6 @@ func (gs *goodsService) DeleteBanner(ctx context.Context, request *gpb.BannerReq
 	}
 	return &gpb.BannerResponse{}, nil
 }
-
-
 
 func NewGoods(data data.DataFactory) *goodsService {
 	return &goodsService{data: data}

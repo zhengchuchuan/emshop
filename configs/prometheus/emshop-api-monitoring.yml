@@ -1,0 +1,118 @@
+# EMShop增强API服务 Prometheus监控配置
+# 包含服务发现、指标收集和告警规则
+# Author: Claude Code
+# Version: 1.0
+
+global:
+  scrape_interval: 15s # 全局抓取间隔
+  evaluation_interval: 15s # 告警规则评估间隔
+  external_labels:
+    monitor: 'emshop-enhanced-api'
+    environment: 'development'
+
+# 告警管理器配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# 告警规则文件
+rule_files:
+  - "/etc/prometheus/rules/emshop-api-alerts.yml"
+
+# 抓取配置
+scrape_configs:
+  # EMShop增强API服务监控
+  - job_name: 'emshop-enhanced-api'
+    static_configs:
+      - targets: ['emshop-enhanced-api:8052']
+    metrics_path: '/metrics'
+    scrape_interval: 10s # API服务更频繁的监控
+    scrape_timeout: 5s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: emshop-enhanced-api:8052
+      - target_label: service
+        replacement: emshop-enhanced-api
+      - target_label: api_type
+        replacement: enhanced
+
+  # Consul服务发现（动态发现EMShop相关服务）
+  - job_name: 'consul-emshop-services'
+    consul_sd_configs:
+      - server: 'consul:8500'
+        services: ['emshop-enhanced-api', 'coupon-service', 'payment-service', 'logistics-service']
+        tags: ['api', 'emshop']
+    relabel_configs:
+      # 只保留健康的服务实例
+      - source_labels: [__meta_consul_health]
+        regex: passing
+        action: keep
+      # 设置实例标签
+      - source_labels: [__meta_consul_service]
+        target_label: service
+      - source_labels: [__meta_consul_node]
+        target_label: node
+      - source_labels: [__meta_consul_tags]
+        target_label: tags
+      # 设置指标路径
+      - source_labels: [__meta_consul_service]
+        regex: (.*)
+        target_label: __metrics_path__
+        replacement: /metrics
+
+  # 应用程序特定指标
+  - job_name: 'emshop-api-custom-metrics'
+    static_configs:
+      - targets: ['emshop-enhanced-api:8052']
+    metrics_path: '/api/v1/metrics/custom'
+    scrape_interval: 30s
+    honor_labels: true
+    metric_relabel_configs:
+      # 过滤掉不需要的指标
+      - source_labels: [__name__]
+        regex: 'go_.*|process_.*|promhttp_.*'
+        action: drop
+      # 添加业务标签
+      - target_label: business_domain
+        replacement: ecommerce
+      - target_label: api_version
+        replacement: v1
+
+  # 健康检查监控
+  - job_name: 'emshop-api-health'
+    static_configs:
+      - targets: ['emshop-enhanced-api:8052']
+    metrics_path: '/healthz'
+    scrape_interval: 5s # 健康检查更频繁
+    scrape_timeout: 3s
+    honor_labels: true
+
+  # 业务指标监控（通过自定义端点）
+  - job_name: 'emshop-business-metrics'
+    static_configs:
+      - targets: ['emshop-enhanced-api:8052']
+    metrics_path: '/api/v1/metrics/business'
+    scrape_interval: 60s # 业务指标可以稍慢
+    honor_labels: true
+    params:
+      module: ['business']
+    relabel_configs:
+      - target_label: metric_type
+        replacement: business
+
+# 远程写入配置（可选，用于长期存储）
+remote_write:
+  - url: "http://prometheus-remote-storage:9201/write"
+    queue_config:
+      max_samples_per_send: 10000
+      max_shards: 200
+      capacity: 500000

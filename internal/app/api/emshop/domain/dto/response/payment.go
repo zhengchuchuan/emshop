@@ -1,15 +1,15 @@
 package response
 
 import (
-	"time"
 	ppbv1 "emshop/api/payment/v1"
+	"time"
 )
 
 // CreatePaymentResponse 创建支付订单响应
 type CreatePaymentResponse struct {
-	PaymentSN  string     `json:"payment_sn"`  // 支付单号
-	PaymentURL *string    `json:"payment_url"` // 模拟支付链接（可选）
-	ExpiredAt  time.Time  `json:"expired_at"`  // 支付过期时间
+	PaymentSN  string    `json:"payment_sn"`  // 支付单号
+	PaymentURL *string   `json:"payment_url"` // 模拟支付链接（可选）
+	ExpiredAt  time.Time `json:"expired_at"`  // 支付过期时间
 }
 
 // FromProto 从protobuf转换
@@ -39,12 +39,12 @@ func (r *PaymentStatusResponse) FromProto(pb *ppbv1.PaymentStatusResponse) {
 	r.Amount = pb.Amount
 	r.PaymentMethod = pb.PaymentMethod
 	r.ExpiredAt = time.Unix(pb.ExpiredAt, 0)
-	
+
 	if pb.PaidAt != nil {
 		paidAt := time.Unix(*pb.PaidAt, 0)
 		r.PaidAt = &paidAt
 	}
-	
+
 	// 设置状态描述
 	r.StatusText = getPaymentStatusText(pb.PaymentStatus)
 }

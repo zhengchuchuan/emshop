@@ -3,8 +3,11 @@ package admin
 import (
 	restserver "emshop/gin-micro/server/rest-server"
 	"emshop/internal/app/api/emshop/config"
+	"emshop/internal/app/api/emshop/controller/coupon/v1"
 	"emshop/internal/app/api/emshop/controller/goods/v1"
+	"emshop/internal/app/api/emshop/controller/logistics/v1"
 	"emshop/internal/app/api/emshop/controller/order/v1"
+	"emshop/internal/app/api/emshop/controller/payment/v1"
 	v12 "emshop/internal/app/api/emshop/controller/sms/v1"
 	"emshop/internal/app/api/emshop/controller/user/v1"
 	"emshop/internal/app/api/emshop/controller/userop/v1"
@@ -28,19 +31,6 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 	serviceFactory := service.NewService(data, cfg.Sms, cfg.Jwt)
 
 	jwtAuth := middleware.JWTAuth(cfg.Jwt)
-	uController := user.NewUserController(g.Translator(), serviceFactory)
-	{
-		ugroup.POST("pwd_login", uController.Login)
-		ugroup.POST("register", uController.Register)
-
-		ugroup.GET("detail", jwtAuth, uController.GetUserDetail)
-		ugroup.PATCH("update", jwtAuth, uController.UpdateUser)
-
-		// 注意：管理员功能已迁移到Admin应用
-		// ugroup.GET("list", jwtAuth.AuthFunc(), uController.GetUserList) // 已迁移到 /v1/admin/users
-		// ugroup.GET("mobile",jwtAuth.AuthFunc(), uController.GetByMobile) // 已迁移到 /v1/admin/users/by-mobile
-		// ugroup.GET("id",jwtAuth.AuthFunc(), uController.GetById)        // 已迁移到 /v1/admin/users/:id
-	}
 
 	// 基础服务api
 	baseRouter := v1.Group("base")
@@ -49,6 +39,18 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		baseRouter.POST("send_sms", smsCtl.SendSms)
 		baseRouter.GET("captcha", user.GetCaptcha)
 	}
+	// 用户服务
+	uController := user.NewUserController(g.Translator(), serviceFactory)
+	{
+		ugroup.POST("pwd_login", uController.Login)
+		ugroup.POST("register", uController.Register)
+
+		ugroup.GET("detail", jwtAuth, uController.GetUserDetail)
+		ugroup.PATCH("update", jwtAuth, uController.UpdateUser)
+
+	}
+
+
 
 	//商品服务api（C端用户浏览功能）
 	goodsRouter := v1.Group("goods")
@@ -58,12 +60,6 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		goodsRouter.GET("/:id", goodsController.Detail)        //获取商品的详情
 		goodsRouter.GET("/:id/stocks", goodsController.Stocks) //获取商品的库存
 
-		// 注意：管理员功能已迁移到Admin应用
-		// goodsRouter.POST("", jwtAuth.AuthFunc(), goodsController.New)          		// 已迁移到 /v1/admin/goods
-		// goodsRouter.POST("/sync", jwtAuth.AuthFunc(), goodsController.Sync)    		// 已迁移到 /v1/admin/goods/sync
-		// goodsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.Delete) 		// 已迁移到 /v1/admin/goods/:id
-		// goodsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.Update)			// 已迁移到 /v1/admin/goods/:id
-		// goodsRouter.PATCH("/:id", jwtAuth.AuthFunc(), goodsController.UpdateStatus)	// 已迁移到 /v1/admin/goods/:id/status
 	}
 
 	//商品分类api（C端用户浏览功能）
@@ -73,10 +69,6 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		categorysRouter.GET("", goodsController.CategoryList)       // 分类列表（前端展示）
 		categorysRouter.GET("/:id", goodsController.CategoryDetail) // 获取分类详情
 
-		// 注意：管理员功能已迁移到Admin应用
-		// categorysRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteCategory)   // 已迁移到 /v1/admin/categories/:id
-		// categorysRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateCategory)         // 已迁移到 /v1/admin/categories
-		// categorysRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateCategory)      // 已迁移到 /v1/admin/categories/:id
 	}
 
 	//品牌api（C端用户浏览功能）
@@ -85,10 +77,6 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
 		brandsRouter.GET("", goodsController.BrandList) // 品牌列表（前端展示）
 
-		// 注意：管理员功能已迁移到Admin应用
-		// brandsRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateBrand)              // 已迁移到 /v1/admin/brands
-		// brandsRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateBrand)           // 已迁移到 /v1/admin/brands/:id
-		// brandsRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteBrand)        // 已迁移到 /v1/admin/brands/:id
 	}
 
 	//轮播图api（C端用户浏览功能）
@@ -97,10 +85,6 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		goodsController := goods.NewGoodsController(serviceFactory, g.Translator())
 		bannersRouter.GET("", goodsController.BannerList) // 轮播图列表（前端展示）
 
-		// 注意：管理员功能已迁移到Admin应用
-		// bannersRouter.POST("", jwtAuth.AuthFunc(), goodsController.CreateBanner)            // 已迁移到 /v1/admin/banners
-		// bannersRouter.PUT("/:id", jwtAuth.AuthFunc(), goodsController.UpdateBanner)         // 已迁移到 /v1/admin/banners/:id
-		// bannersRouter.DELETE("/:id", jwtAuth.AuthFunc(), goodsController.DeleteBanner)      // 已迁移到 /v1/admin/banners/:id
 	}
 
 	//订单管理api
@@ -148,5 +132,35 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		userOpController := userop.NewUserOpController(serviceFactory, g.Translator())
 		messageRouter.GET("", jwtAuth, userOpController.MessageList)    // 留言列表
 		messageRouter.POST("", jwtAuth, userOpController.CreateMessage) // 创建留言
+	}
+
+	//优惠券管理api
+	couponRouter := v1.Group("coupons")
+	{
+		couponController := coupon.NewCouponController(g.Translator(), serviceFactory)
+		couponRouter.GET("templates", couponController.ListTemplates)                        // 获取优惠券模板列表
+		couponRouter.POST("receive", jwtAuth, couponController.ReceiveCoupon)                // 用户领取优惠券
+		couponRouter.GET("user", jwtAuth, couponController.GetUserCoupons)                   // 获取用户优惠券列表
+		couponRouter.GET("available", jwtAuth, couponController.GetAvailableCoupons)         // 获取用户可用优惠券
+		couponRouter.POST("calculate-discount", jwtAuth, couponController.CalculateDiscount) // 计算优惠券折扣
+	}
+
+	//支付管理api
+	paymentRouter := v1.Group("payments")
+	{
+		paymentController := payment.NewPaymentController(g.Translator(), serviceFactory)
+		paymentRouter.POST("", jwtAuth, paymentController.CreatePayment)              // 创建支付订单
+		paymentRouter.GET("/:paymentSN/status", paymentController.GetPaymentStatus)   // 获取支付状态
+		paymentRouter.POST("/:paymentSN/simulate", paymentController.SimulatePayment) // 模拟支付
+	}
+
+	//物流管理api
+	logisticsRouter := v1.Group("logistics")
+	{
+		logisticsController := logistics.NewLogisticsController(g.Translator(), serviceFactory)
+		logisticsRouter.GET("info", logisticsController.GetLogisticsInfo)              // 获取物流信息
+		logisticsRouter.GET("tracks", logisticsController.GetLogisticsTracks)          // 获取物流轨迹
+		logisticsRouter.POST("shipping-fee", logisticsController.CalculateShippingFee) // 计算运费
+		logisticsRouter.GET("companies", logisticsController.GetLogisticsCompanies)    // 获取物流公司列表
 	}
 }

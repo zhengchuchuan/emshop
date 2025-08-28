@@ -17,20 +17,20 @@ import (
 )
 
 type User struct {
-	ID       uint64    `json:"id"`
-	Mobile   string    `json:"mobile"`
-	NickName string    `json:"nick_name"`
+	ID       uint64     `json:"id"`
+	Mobile   string     `json:"mobile"`
+	NickName string     `json:"nick_name"`
 	Birthday itime.Time `json:"birthday"`
-	Gender   string    `json:"gender"`
-	Role     int32     `json:"role"`
-	PassWord string    `json:"password"`
+	Gender   string     `json:"gender"`
+	Role     int32      `json:"role"`
+	PassWord string     `json:"password"`
 }
 
 type UserDTO struct {
 	User
 
-	Token     string `json:"token"`			// JWT Token
-	ExpiresAt int64  `json:"expires_at"`	// token过期时间
+	Token     string `json:"token"`      // JWT Token
+	ExpiresAt int64  `json:"expires_at"` // token过期时间
 }
 
 type UserListDTO struct {
@@ -53,7 +53,6 @@ type userService struct {
 	data data.DataFactory
 
 	jwtOpts *options.JwtOptions
-	
 }
 
 func NewUserService(data data.DataFactory, jwtOpts *options.JwtOptions) UserSrv {
@@ -72,7 +71,6 @@ func protoToUser(pb *upb.UserInfoResponse) User {
 		PassWord: pb.PassWord,
 	}
 }
-
 
 func (us *userService) MobileLogin(ctx context.Context, mobile, password string) (*UserDTO, error) {
 	userResp, err := us.data.Users().GetUserByMobile(ctx, &upb.MobileRequest{Mobile: mobile})
@@ -102,7 +100,7 @@ func (us *userService) MobileLogin(ctx context.Context, mobile, password string)
 		jwtpkg.IssuerEmshopAPI,
 		us.jwtOpts.Timeout,
 	)
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -152,14 +150,14 @@ func (us *userService) Register(ctx context.Context, mobile, password, codes str
 
 	return &UserDTO{
 		User:      user,
-		Token:     token,	// 向上传递token
+		Token:     token, // 向上传递token
 		ExpiresAt: (time.Now().Local().Add(us.jwtOpts.Timeout)).Unix(),
 	}, nil
 }
 
-func (u *userService) Update(ctx context.Context, userDTO *UserDTO) error {
+func (us *userService) Update(ctx context.Context, userDTO *UserDTO) error {
 	birthDay := uint64(userDTO.Birthday.Unix())
-	_, err := u.data.Users().UpdateUser(ctx, &upb.UpdateUserInfo{
+	_, err := us.data.Users().UpdateUser(ctx, &upb.UpdateUserInfo{
 		Id:       int32(userDTO.ID),
 		NickName: &userDTO.NickName,
 		Gender:   &userDTO.Gender,
@@ -177,8 +175,8 @@ func (us *userService) Get(ctx context.Context, userID uint64) (*UserDTO, error)
 	return &UserDTO{User: user}, nil
 }
 
-func (u *userService) GetByMobile(ctx context.Context, mobile string) (*UserDTO, error) {
-	userResp, err := u.data.Users().GetUserByMobile(ctx, &upb.MobileRequest{Mobile: mobile})
+func (us *userService) GetByMobile(ctx context.Context, mobile string) (*UserDTO, error) {
+	userResp, err := us.data.Users().GetUserByMobile(ctx, &upb.MobileRequest{Mobile: mobile})
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +184,8 @@ func (u *userService) GetByMobile(ctx context.Context, mobile string) (*UserDTO,
 	return &UserDTO{User: user}, nil
 }
 
-func (u *userService) CheckPassWord(ctx context.Context, password, EncryptedPassword string) (bool, error) {
-	checkResp, err := u.data.Users().CheckPassWord(ctx, &upb.PasswordCheckInfo{
+func (us *userService) CheckPassWord(ctx context.Context, password, EncryptedPassword string) (bool, error) {
+	checkResp, err := us.data.Users().CheckPassWord(ctx, &upb.PasswordCheckInfo{
 		Password:          password,
 		EncryptedPassword: EncryptedPassword,
 	})
@@ -197,8 +195,8 @@ func (u *userService) CheckPassWord(ctx context.Context, password, EncryptedPass
 	return checkResp.Success, nil
 }
 
-func (u *userService) GetUserList(ctx context.Context, pn, pSize uint32) (*UserListDTO, error) {
-	userListResp, err := u.data.Users().GetUserList(ctx, &upb.PageInfo{
+func (us *userService) GetUserList(ctx context.Context, pn, pSize uint32) (*UserListDTO, error) {
+	userListResp, err := us.data.Users().GetUserList(ctx, &upb.PageInfo{
 		Pn:    &pn,
 		PSize: &pSize,
 	})

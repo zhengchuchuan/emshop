@@ -3,13 +3,12 @@ package user
 import (
 	"net/http"
 
+	"emshop/pkg/log"
 	"github.com/gin-gonic/gin"
 	"github.com/mojocn/base64Captcha"
-	"emshop/pkg/log"
 )
 
 var store = base64Captcha.DefaultMemStore
-
 
 func GetCaptcha(ctx *gin.Context) {
 	driver := base64Captcha.NewDriverDigit(80, 240, 5, 0.7, 80)

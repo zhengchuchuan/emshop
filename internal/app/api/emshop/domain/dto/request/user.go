@@ -1,8 +1,8 @@
 package request
 
 import (
-	"time"
 	upbv1 "emshop/api/user/v1"
+	"time"
 )
 
 // UpdateUserRequest 用户更新请求结构体
@@ -25,12 +25,12 @@ func (r *UpdateUserRequest) ToProto(userID uint64) (*upbv1.UpdateUserInfo, error
 	if err != nil {
 		return nil, err
 	}
-	
+
 	birthDay, err := time.ParseInLocation("2006-01-02", r.Birthday, loc)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	birthDayUnix := uint64(birthDay.Unix())
 	updateReq.BirthDay = &birthDayUnix
 

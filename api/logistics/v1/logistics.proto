@@ -54,13 +54,13 @@ message CreateLogisticsOrderRequest {
     string receiver_address = 10;
     
     // 商品信息
-    repeated OrderItem items = 11;
+    repeated LogisticsOrderItem items = 11;
     
     string remark = 12;
 }
 
-// 订单商品项
-message OrderItem {
+// 物流订单商品项
+message LogisticsOrderItem {
     int32 goods_id = 1;
     string goods_name = 2;
     int32 quantity = 3;

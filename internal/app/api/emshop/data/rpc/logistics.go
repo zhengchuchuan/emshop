@@ -2,8 +2,8 @@ package rpc
 
 import (
 	"context"
-	"emshop/internal/app/api/emshop/data"
 	lpbv1 "emshop/api/logistics/v1"
+	"emshop/internal/app/api/emshop/data"
 	"emshop/pkg/log"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -24,7 +24,7 @@ func (l *logistics) GetLogisticsInfo(ctx context.Context, request *lpbv1.GetLogi
 		log.Errorf("GetLogisticsInfo gRPC call failed: %v", err)
 		return nil, err
 	}
-	log.Infof("GetLogisticsInfo gRPC call successful, logisticsSn: %s, status: %d", 
+	log.Infof("GetLogisticsInfo gRPC call successful, logisticsSn: %s, status: %d",
 		response.LogisticsSn, response.LogisticsStatus)
 	return response, nil
 }
@@ -43,8 +43,8 @@ func (l *logistics) GetLogisticsTracks(ctx context.Context, request *lpbv1.GetLo
 
 // CalculateShippingFee 计算运费
 func (l *logistics) CalculateShippingFee(ctx context.Context, request *lpbv1.CalculateShippingFeeRequest) (*lpbv1.CalculateShippingFeeResponse, error) {
-	log.Infof("Calling CalculateShippingFee gRPC with items count: %d, company: %d", 
-		len(request.Items), request.LogisticsCompany)
+	log.Infof("Calling CalculateShippingFee gRPC with weight: %.2f, volume: %.2f",
+		request.TotalWeight, request.TotalVolume)
 	response, err := l.lc.CalculateShippingFee(ctx, request)
 	if err != nil {
 		log.Errorf("CalculateShippingFee gRPC call failed: %v", err)

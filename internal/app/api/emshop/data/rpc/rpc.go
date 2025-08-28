@@ -14,14 +14,14 @@ import (
 )
 
 type grpcData struct {
-	ud data.UserData
-	gd data.GoodsData
-	id data.InventoryData
-	od data.OrderData
+	ud   data.UserData
+	gd   data.GoodsData
+	id   data.InventoryData
+	od   data.OrderData
 	uopd data.UserOpData
-	cd data.CouponData
-	pd data.PaymentData
-	ld data.LogisticsData
+	cd   data.CouponData
+	pd   data.PaymentData
+	ld   data.LogisticsData
 }
 
 func (g grpcData) Goods() data.GoodsData {
@@ -97,14 +97,14 @@ func GetDataFactoryOr(options *options.RegistryOptions) (data.DataFactory, error
 		logisticsData := NewLogistics(clients.logisticsClient)
 
 		dbFactory = &grpcData{
-			ud: userData,
-			gd: goodsData,
-			id: inventoryData,
-			od: orderData,
+			ud:   userData,
+			gd:   goodsData,
+			id:   inventoryData,
+			od:   orderData,
 			uopd: userOpData,
-			cd: couponData,
-			pd: paymentData,
-			ld: logisticsData,
+			cd:   couponData,
+			pd:   paymentData,
+			ld:   logisticsData,
 		}
 	})
 

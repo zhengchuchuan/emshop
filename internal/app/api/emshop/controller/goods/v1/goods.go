@@ -6,7 +6,6 @@ import (
 	restserver "emshop/gin-micro/server/rest-server"
 	"emshop/internal/app/api/emshop/domain/dto/request"
 	"emshop/internal/app/api/emshop/service"
-	v1 "emshop/internal/app/api/emshop/service/goods/v1"
 	gin2 "emshop/internal/app/pkg/translator/gin"
 	"emshop/pkg/common/core"
 	"emshop/pkg/errors"
@@ -17,9 +16,8 @@ import (
 )
 
 type goodsController struct {
-	trans    restserver.I18nTranslator
-	srv      service.ServiceFactory
-	goodssrv v1.GoodsSrv
+	trans restserver.I18nTranslator
+	srv   service.ServiceFactory
 }
 
 func NewGoodsController(srv service.ServiceFactory, trans restserver.I18nTranslator) *goodsController {
@@ -40,7 +38,7 @@ func (gc *goodsController) List(ctx *gin.Context) {
 	}
 
 	gfr := proto.GoodsFilterRequest{}
-	
+
 	// 条件参数 - 只有非空时才设置
 	if r.IsNew != nil {
 		gfr.IsNew = r.IsNew
@@ -66,7 +64,7 @@ func (gc *goodsController) List(ctx *gin.Context) {
 	if r.KeyWords != nil {
 		gfr.KeyWords = r.KeyWords
 	}
-	
+
 	// 分页参数 - 设置默认值
 	if r.Pages != nil {
 		gfr.Pages = r.Pages
@@ -74,7 +72,7 @@ func (gc *goodsController) List(ctx *gin.Context) {
 		pages := int32(1)
 		gfr.Pages = &pages
 	}
-	
+
 	if r.PagePerNums != nil {
 		gfr.PagePerNums = r.PagePerNums
 	} else {
@@ -203,7 +201,7 @@ func (gc *goodsController) Sync(ctx *gin.Context) {
 
 	syncRequest := proto.SyncDataRequest{
 		ForceSync: r.ForceSync, // 是否强制全量同步
-		GoodsIds:  r.GoodsIds,	// 同步的商品id列表
+		GoodsIds:  r.GoodsIds,  // 同步的商品id列表
 	}
 
 	syncResponse, err := gc.srv.Goods().SyncData(ctx, &syncRequest)
@@ -213,11 +211,11 @@ func (gc *goodsController) Sync(ctx *gin.Context) {
 	}
 
 	response := map[string]interface{}{
-		"success":      syncResponse.Success,
-		"message":      syncResponse.Message,
+		"success":     syncResponse.Success,
+		"message":     syncResponse.Message,
 		"syncedCount": syncResponse.SyncedCount,
 		"failedCount": syncResponse.FailedCount,
-		"errors":       syncResponse.Errors,
+		"errors":      syncResponse.Errors,
 	}
 
 	core.WriteResponse(ctx, nil, response)
@@ -434,15 +432,14 @@ func (gc *goodsController) Stocks(ctx *gin.Context) {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrBind, "获取商品库存失败: %v", err), nil)
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"stocks":  stockInfo.Num,
 		"goodsId": stockInfo.GoodsId,
 	}
-	
+
 	core.WriteResponse(ctx, nil, response)
 }
-
 
 // ==================== 分类管理 ====================
 
@@ -488,21 +485,21 @@ func (gc *goodsController) CategoryDetail(ctx *gin.Context) {
 	subCategories := make([]interface{}, 0)
 	for _, subCategory := range subCategoriesResponse.SubCategorys {
 		subCategories = append(subCategories, map[string]interface{}{
-			"id":              subCategory.Id,
-			"name":            subCategory.Name,
-			"level":           subCategory.Level,
+			"id":             subCategory.Id,
+			"name":           subCategory.Name,
+			"level":          subCategory.Level,
 			"parentCategory": subCategory.ParentCategory,
 			"isTab":          subCategory.IsTab,
 		})
 	}
 
 	response := map[string]interface{}{
-		"id":              subCategoriesResponse.Info.Id,
-		"name":            subCategoriesResponse.Info.Name,
-		"level":           subCategoriesResponse.Info.Level,
+		"id":             subCategoriesResponse.Info.Id,
+		"name":           subCategoriesResponse.Info.Name,
+		"level":          subCategoriesResponse.Info.Level,
 		"parentCategory": subCategoriesResponse.Info.ParentCategory,
 		"isTab":          subCategoriesResponse.Info.IsTab,
-		"subCategories":   subCategories,
+		"subCategories":  subCategories,
 	}
 
 	core.WriteResponse(ctx, nil, response)
@@ -536,7 +533,7 @@ func (gc *goodsController) CreateCategory(ctx *gin.Context) {
 		"name":   categoryResponse.Name,
 		"parent": categoryResponse.ParentCategory,
 		"level":  categoryResponse.Level,
-		"isTab": categoryResponse.IsTab,
+		"isTab":  categoryResponse.IsTab,
 	}
 
 	core.WriteResponse(ctx, nil, response)
@@ -626,7 +623,7 @@ func (gc *goodsController) BrandList(ctx *gin.Context) {
 	}
 
 	brandRequest := proto.BrandFilterRequest{}
-	
+
 	// 分页参数 - 设置默认值
 	if r.Pages != nil {
 		brandRequest.Pages = r.Pages
@@ -634,7 +631,7 @@ func (gc *goodsController) BrandList(ctx *gin.Context) {
 		defaultPage := int32(1)
 		brandRequest.Pages = &defaultPage // 默认第1页
 	}
-	
+
 	if r.PagePerNums != nil {
 		brandRequest.PagePerNums = r.PagePerNums
 	} else {

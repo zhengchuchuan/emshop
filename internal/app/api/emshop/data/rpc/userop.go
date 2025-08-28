@@ -7,7 +7,6 @@ import (
 	"emshop/pkg/log"
 )
 
-
 type userop struct {
 	uoc uoppbv1.UserOpClient
 }
@@ -15,7 +14,6 @@ type userop struct {
 func NewUserOp(uoc uoppbv1.UserOpClient) *userop {
 	return &userop{uoc}
 }
-
 
 // ==================== 用户收藏管理 ====================
 

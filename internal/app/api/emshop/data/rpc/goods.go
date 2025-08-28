@@ -9,7 +9,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-
 type goods struct {
 	gc gpbv1.GoodsClient
 }
@@ -17,7 +16,6 @@ type goods struct {
 func NewGoods(gc gpbv1.GoodsClient) *goods {
 	return &goods{gc}
 }
-
 
 func (g *goods) GoodsList(ctx context.Context, request *gpbv1.GoodsFilterRequest) (*gpbv1.GoodsListResponse, error) {
 	log.Infof("Calling GoodsList gRPC with filter: %+v", request)

@@ -1,9 +1,9 @@
 package user
 
 import (
-	"github.com/gin-gonic/gin"
 	gin2 "emshop/internal/app/pkg/translator/gin"
 	"emshop/pkg/common/core"
+	"github.com/gin-gonic/gin"
 )
 
 type RegisterForm struct {
@@ -30,9 +30,9 @@ func (us *userServer) Register(ctx *gin.Context) {
 	}
 
 	core.WriteResponse(ctx, nil, gin.H{
-		"id":         userDTO.ID,
+		"id":        userDTO.ID,
 		"nickName":  userDTO.NickName,
-		"token":      userDTO.Token,
+		"token":     userDTO.Token,
 		"expiredAt": userDTO.ExpiresAt,
 	})
 
