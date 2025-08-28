@@ -40,6 +40,14 @@ type Config struct {
 // ErrRedisIsDown is returned when we can't communicate with redis.
 var ErrRedisIsDown = errors.New("storage: Redis is either down or ws not configured")
 
+// Redis健康检查配置常量
+const (
+	// RedisHealthCheckInterval Redis健康检查间隔时间
+	RedisHealthCheckInterval = 30 * time.Second
+	// RedisConnectionTestTimeout Redis连接测试超时时间
+	RedisConnectionTestTimeout = 1 * time.Second
+)
+
 var (
 	singlePool      atomic.Value
 	singleCachePool atomic.Value
@@ -125,12 +133,12 @@ func clusterConnectionIsOpen(ctx context.Context, cluster RedisCluster) bool {
 		return false
 	}
 	testKey := "redis-test-" + id.String()
-	if err := c.Set(ctx, testKey, "test", time.Second).Err(); err != nil {
-		log.Warnf("Error trying to set test key: %s", err.Error())
+	if err := c.Set(ctx, testKey, "test", RedisConnectionTestTimeout).Err(); err != nil {
+		log.Debugf("Redis connection test - set key failed: %s", err.Error())
 		return false
 	}
 	if _, err := c.Get(ctx, testKey).Result(); err != nil {
-		log.Warnf("Error trying to get test key: %s", err.Error())
+		log.Debugf("Redis connection test - get key failed: %s", err.Error())
 		return false
 	}
 	return true
@@ -138,7 +146,8 @@ func clusterConnectionIsOpen(ctx context.Context, cluster RedisCluster) bool {
 
 // ConnectToRedis starts a go routine that periodically tries to connect to redis.
 func ConnectToRedis(ctx context.Context, config *Config) {
-	tick := time.NewTicker(time.Second)
+	// 优化健康检查频率：使用配置的检查间隔，减少不必要的连接测试
+	tick := time.NewTicker(RedisHealthCheckInterval)
 	defer tick.Stop()
 	c := []RedisCluster{
 		{}, {IsCache: true},
@@ -157,6 +166,11 @@ func ConnectToRedis(ctx context.Context, config *Config) {
 		ok = true
 	}
 	redisUp.Store(ok)
+	if ok {
+		log.Info("Redis cluster connection initialized successfully")
+	} else {
+		log.Warn("Redis cluster connection failed during initialization")
+	}
 again:
 	for {
 		select {
