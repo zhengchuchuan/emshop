@@ -3,11 +3,13 @@ package v1
 import (
 	"context"
 	"fmt"
+	"emshop/internal/app/inventory/srv/data/v1/interfaces"
 	"emshop/internal/app/inventory/srv/data/v1/mysql"
 	"emshop/internal/app/pkg/code"
 	"emshop/internal/app/pkg/options"
 	"emshop/pkg/errors"
 	"sort"
+	"gorm.io/gorm"
 
 	"github.com/go-redsync/redsync/v4"
 	redsyncredis "github.com/go-redsync/redsync/v4/redis"
@@ -47,22 +49,41 @@ type InventorySrv interface {
 }
 
 type inventoryService struct {
-	data mysql.DataFactory
-
+	// 预加载的核心组件（日常CRUD操作）
+	inventoryDAO interfaces.InventoryStore
+	db           *gorm.DB
+	
+	// 保留原有组件（复杂操作：事务、锁、分布式操作）
+	data         mysql.DataFactory
 	redisOptions *options.RedisOptions
-
-	pool redsyncredis.Pool
+	pool         redsyncredis.Pool
 }
 
 func (is *inventoryService) Create(ctx context.Context, inv *dto.InventoryDTO) error {
-	return is.data.Inventorys().Create(ctx, is.data.DB(), &inv.InventoryDO)
+	log.Debugf("Creating inventory: goodsID=%d, stocks=%d", inv.Goods, inv.Stocks)
+	
+	// 直接使用预加载的DAO
+	err := is.inventoryDAO.Create(ctx, is.db, &inv.InventoryDO)
+	if err != nil {
+		log.Errorf("Failed to create inventory: goodsID=%d, err=%v", inv.Goods, err)
+		return err
+	}
+	
+	log.Infof("Successfully created inventory: goodsID=%d, stocks=%d", inv.Goods, inv.Stocks)
+	return nil
 }
 
 func (is *inventoryService) Get(ctx context.Context, goodsID uint64) (*dto.InventoryDTO, error) {
-	inv, err := is.data.Inventorys().Get(ctx, is.data.DB(), goodsID)
+	log.Debugf("Getting inventory for goods: %d", goodsID)
+	
+	// 直接使用预加载的DAO
+	inv, err := is.inventoryDAO.Get(ctx, is.db, goodsID)
 	if err != nil {
+		log.Errorf("Failed to get inventory for goods %d: %v", goodsID, err)
 		return nil, err
 	}
+	
+	log.Debugf("Successfully got inventory: goodsID=%d, stocks=%d", goodsID, inv.Stocks)
 	return &dto.InventoryDTO{InventoryDO: *inv}, nil
 }
 
@@ -101,7 +122,8 @@ func (is *inventoryService) Sell(ctx context.Context, ordersn string, details []
 			return errors.WithCode(code.ErrConnectDB, "获取分布式锁失败")
 		}
 
-		inv, err := is.data.Inventorys().Get(ctx, is.data.DB(), uint64(goodsInfo.Goods))
+		// 使用预加载的DAO进行库存查询
+		inv, err := is.inventoryDAO.Get(ctx, is.db, uint64(goodsInfo.Goods))
 		if err != nil {
 			mutex.Unlock()
 			txn.Rollback()
@@ -192,7 +214,8 @@ func (is *inventoryService) Reback(ctx context.Context, ordersn string, details 
 	sort.Sort(detail)
 
 	for _, goodsInfo := range detail {
-		inv, err := is.data.Inventorys().Get(ctx, is.data.DB(), uint64(goodsInfo.Goods))
+		// 使用预加载的DAO进行库存查询
+		inv, err := is.inventoryDAO.Get(ctx, is.db, uint64(goodsInfo.Goods))
 		if err != nil {
 			txn.Rollback() //回滚
 			log.Errorf("订单%s获取库存失败", ordersn)
@@ -251,7 +274,8 @@ func (is *inventoryService) TrySell(ctx context.Context, ordersn string, details
 		}
 
 		// 查询库存
-		inv, err := is.data.Inventorys().Get(ctx, is.data.DB(), uint64(goodsInfo.Goods))
+		// 使用预加载的DAO进行库存查询
+		inv, err := is.inventoryDAO.Get(ctx, is.db, uint64(goodsInfo.Goods))
 		if err != nil {
 			mutex.Unlock()
 			txn.Rollback()
@@ -395,7 +419,8 @@ func (is *inventoryService) ReserveStock(ctx context.Context, ordersn string, de
 		}
 
 		// 查询库存
-		inv, err := is.data.Inventorys().Get(ctx, is.data.DB(), uint64(goodsInfo.Goods))
+		// 使用预加载的DAO进行库存查询
+		inv, err := is.inventoryDAO.Get(ctx, is.db, uint64(goodsInfo.Goods))
 		if err != nil {
 			mutex.Unlock()
 			txn.Rollback()
@@ -478,7 +503,16 @@ func (is *inventoryService) ReleaseReserved(ctx context.Context, ordersn string,
 }
 
 func newInventoryService(s *service) *inventoryService {
-	return &inventoryService{data: s.data, redisOptions: s.redisOptions, pool: s.pool}
+	return &inventoryService{
+		// 预加载核心组件，避免每次方法调用时重复获取
+		inventoryDAO: s.data.Inventorys(),
+		db:           s.data.DB(),
+		
+		// 保留原有组件用于复杂操作
+		data:         s.data,
+		redisOptions: s.redisOptions,
+		pool:         s.pool,
+	}
 }
 
 var _ InventorySrv = &inventoryService{}

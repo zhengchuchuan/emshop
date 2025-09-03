@@ -40,7 +40,7 @@ go.work.sum
 logs/*
 cache/*
 backup/*
-doc/*
+docs/*
 
 # Components directory - include structure but exclude runtime data
 components/**/logs/

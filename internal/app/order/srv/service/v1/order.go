@@ -6,6 +6,7 @@ import (
 	proto2 "emshop/api/goods/v1"
 	proto "emshop/api/inventory/v1"
 	proto3 "emshop/api/order/v1"
+	"emshop/internal/app/order/srv/data/v1/interfaces"
 	"emshop/internal/app/order/srv/data/v1/mysql"
 	"emshop/internal/app/order/srv/domain/do"
 	"emshop/internal/app/order/srv/domain/dto"
@@ -14,6 +15,7 @@ import (
 	v1 "emshop/pkg/common/meta/v1"
 	"emshop/pkg/errors"
 	"emshop/pkg/log"
+	"gorm.io/gorm"
 
 	"github.com/dtm-labs/client/dtmgrpc"
 )
@@ -38,6 +40,12 @@ type OrderSrv interface {
 }
 
 type orderService struct {
+	// 预加载的核心组件（日常CRUD操作）
+	ordersDAO       interfaces.OrderStore
+	shoppingCartsDAO interfaces.ShopCartStore
+	db              *gorm.DB
+	
+	// 保留原有组件（复杂操作：分布式事务、RPC调用等）
 	data    mysql.DataFactory
 	dtmOpts *options.DtmOptions
 }
@@ -56,6 +64,7 @@ func (os *orderService) CreateCom(ctx context.Context, order *dto.OrderDTO) erro
 
 // Create 创建订单
 func (os *orderService) Create(ctx context.Context, order *dto.OrderDTO) error {
+	log.Debugf("Creating order: orderSn=%s, user=%d, goodsCount=%d", order.OrderSn, order.User, len(order.OrderGoods))
 	/*
 		1. 生成orderinfo表
 		2. 生成ordergoods表
@@ -67,13 +76,14 @@ func (os *orderService) Create(ctx context.Context, order *dto.OrderDTO) error {
 		goodsids = append(goodsids, value.Goods)
 	}
 
+	// RPC调用获取商品信息 - 保留复杂业务逻辑
 	goods, err := os.data.Goods().BatchGetGoods(context.Background(), &proto2.BatchGoodsIdInfo{Id: goodsids})
 	if err != nil {
-		log.Errorf("批量获取商品信息失败，goodids: %v, err:%v", goodsids, err)
+		log.Errorf("批量获取商品信息失败，orderSn=%s, goodids: %v, err:%v", order.OrderSn, goodsids, err)
 		return err
 	}
 	if len(goods.Data) != len(goodsids) {
-		log.Errorf("批量获取商品信息失败，goodids: %v, 返回值：%v, err:%v", goodsids, goods.Data, err)
+		log.Errorf("批量获取商品信息失败，orderSn=%s, goodids: %v, 返回值：%v, err:%v", order.OrderSn, goodsids, goods.Data, err)
 		return errors.WithCode(code.ErrGoodsNotFound, "商品不存在或者部分不存在")
 	}
 	var goodsMap = make(map[int32]*proto2.GoodsInfoResponse)
@@ -89,11 +99,12 @@ func (os *orderService) Create(ctx context.Context, order *dto.OrderDTO) error {
 		value.GoodsImage = goodsMap[value.Goods].GoodsFrontImage
 	}
 
+	// 事务操作保留原有逻辑（分布式事务场景）
 	txn := os.data.Begin()
 	defer func() {
 		if err := recover(); err != nil {
 			_ = txn.Rollback()
-			log.Error("新建订单事务进行中出现异常，回滚")
+			log.Errorf("创建订单事务异常，orderSn=%s, err=%v", order.OrderSn, err)
 			return
 		}
 	}()
@@ -101,35 +112,46 @@ func (os *orderService) Create(ctx context.Context, order *dto.OrderDTO) error {
 	err = os.data.Orders().Create(ctx, txn, &order.OrderInfoDO)
 	if err != nil {
 		txn.Rollback()
-		log.Errorf("创建订单失败，err:%v", err)
+		log.Errorf("创建订单失败，orderSn=%s, err:%v", order.OrderSn, err)
 		return err //这个不是abort 也就是说会不停的重试
 	}
 
 	err = os.data.ShoppingCarts().DeleteByGoodsIDs(ctx, txn, uint64(order.User), goodsids)
 	if err != nil {
 		txn.Rollback()
-		log.Errorf("删除购物车失败，goodids:%v, err:%v", goodsids, err)
+		log.Errorf("删除购物车失败，orderSn=%s, goodids:%v, err:%v", order.OrderSn, goodsids, err)
 		return err
 	}
 
 	txn.Commit()
-	//这里有逻辑
+	log.Infof("订单创建成功：orderSn=%s, amount=%.2f", order.OrderSn, orderAmount)
 	return nil
 }
 
 func (os *orderService) Get(ctx context.Context, orderSn string) (*dto.OrderDTO, error) {
-	order, err := os.data.Orders().Get(ctx, os.data.DB(), orderSn)
+	log.Debugf("Getting order by orderSn: %s", orderSn)
+	
+	// 直接使用预加载的DAO
+	order, err := os.ordersDAO.Get(ctx, os.db, orderSn)
 	if err != nil {
+		log.Errorf("Failed to get order by orderSn %s: %v", orderSn, err)
 		return nil, err
 	}
+	
+	log.Debugf("Successfully got order: orderSn=%s", orderSn)
 	return &dto.OrderDTO{*order}, nil
 }
 
 func (os *orderService) List(ctx context.Context, userID uint64, meta v1.ListMeta, orderby []string) (*dto.OrderDTOList, error) {
-	orders, err := os.data.Orders().List(ctx, os.data.DB(), userID, meta, orderby)
+	log.Debugf("Listing orders for user: %d, page: %d, pageSize: %d", userID, meta.Page, meta.PageSize)
+	
+	// 直接使用预加载的DAO
+	orders, err := os.ordersDAO.List(ctx, os.db, userID, meta, orderby)
 	if err != nil {
+		log.Errorf("Failed to list orders for user %d: %v", userID, err)
 		return nil, err
 	}
+	
 	var ret dto.OrderDTOList
 	ret.TotalCount = orders.TotalCount
 	for _, value := range orders.Items {
@@ -137,15 +159,19 @@ func (os *orderService) List(ctx context.Context, userID uint64, meta v1.ListMet
 			*value,
 		})
 	}
+	
+	log.Debugf("Successfully listed %d orders for user %d, total: %d", len(ret.Items), userID, ret.TotalCount)
 	return &ret, nil
 }
 
 // Submit 提交订单， 这里是基于可靠消息最终一致性的思想， saga事务来解决订单生成的问题
 func (os *orderService) Submit(ctx context.Context, order *dto.OrderDTO) error {
-	//先从购物车中获取商品信息
-	list, err := os.data.ShoppingCarts().List(ctx, os.data.DB(), uint64(order.User), true, v1.ListMeta{}, []string{})
+	log.Debugf("Submitting order: orderSn=%s, user=%d", order.OrderSn, order.User)
+	
+	//先从购物车中获取商品信息 - 使用预加载的DAO
+	list, err := os.shoppingCartsDAO.List(ctx, os.db, uint64(order.User), true, v1.ListMeta{}, []string{})
 	if err != nil {
-		log.Errorf("获取购物车信息失败，err:%v", err)
+		log.Errorf("获取购物车信息失败，orderSn=%s, user=%d, err:%v", order.OrderSn, order.User, err)
 		return err
 	}
 
@@ -208,13 +234,27 @@ func (os *orderService) Submit(ctx context.Context, order *dto.OrderDTO) error {
 }
 
 func (os *orderService) Update(ctx context.Context, order *dto.OrderDTO) error {
-	return os.data.Orders().Update(ctx, nil, &order.OrderInfoDO)
+	log.Debugf("Updating order: orderSn=%s, user=%d", order.OrderSn, order.User)
+	
+	// 直接使用预加载的DAO
+	err := os.ordersDAO.Update(ctx, nil, &order.OrderInfoDO)
+	if err != nil {
+		log.Errorf("Failed to update order: orderSn=%s, err=%v", order.OrderSn, err)
+		return err
+	}
+	
+	log.Infof("Successfully updated order: orderSn=%s", order.OrderSn)
+	return nil
 }
 
 // Cart operations implementation
 func (os *orderService) CartItemList(ctx context.Context, userID uint64, meta v1.ListMeta) (*dto.ShopCartDTOList, error) {
-	shopCartDOList, err := os.data.ShoppingCarts().List(ctx, os.data.DB(), userID, false, meta, []string{})
+	log.Debugf("Getting cart item list for user: %d, page: %d, pageSize: %d", userID, meta.Page, meta.PageSize)
+	
+	// 直接使用预加载的DAO
+	shopCartDOList, err := os.shoppingCartsDAO.List(ctx, os.db, userID, false, meta, []string{})
 	if err != nil {
+		log.Errorf("Failed to get cart item list for user %d: %v", userID, err)
 		return nil, err
 	}
 	
@@ -229,42 +269,82 @@ func (os *orderService) CartItemList(ctx context.Context, userID uint64, meta v1
 		}
 	}
 	
+	log.Debugf("Successfully got %d cart items for user %d, total: %d", len(result.Items), userID, result.TotalCount)
 	return result, nil
 }
 
 func (os *orderService) CreateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error {
-	// Check if the cart item already exists
-	existingItem, err := os.data.ShoppingCarts().Get(ctx, os.data.DB(), uint64(cartItem.User), uint64(cartItem.Goods))
+	log.Debugf("Creating cart item: user=%d, goods=%d, nums=%d", cartItem.User, cartItem.Goods, cartItem.Nums)
+	
+	// Check if the cart item already exists - 使用预加载的DAO
+	existingItem, err := os.shoppingCartsDAO.Get(ctx, os.db, uint64(cartItem.User), uint64(cartItem.Goods))
 	if err == nil {
 		// Item exists, update the quantity
 		existingItem.Nums += cartItem.Nums
-		return os.data.ShoppingCarts().UpdateNum(ctx, os.data.DB(), existingItem)
+		log.Debugf("Cart item exists, updating quantity: user=%d, goods=%d, newNums=%d", cartItem.User, cartItem.Goods, existingItem.Nums)
+		err = os.shoppingCartsDAO.UpdateNum(ctx, os.db, existingItem)
+		if err != nil {
+			log.Errorf("Failed to update cart item quantity: user=%d, goods=%d, err=%v", cartItem.User, cartItem.Goods, err)
+			return err
+		}
+		log.Infof("Successfully updated cart item: user=%d, goods=%d", cartItem.User, cartItem.Goods)
+		return nil
 	}
 	
-	// Item doesn't exist, create new
-	return os.data.ShoppingCarts().Create(ctx, os.data.DB(), &cartItem.ShoppingCartDO)
+	// Item doesn't exist, create new - 使用预加载的DAO
+	err = os.shoppingCartsDAO.Create(ctx, os.db, &cartItem.ShoppingCartDO)
+	if err != nil {
+		log.Errorf("Failed to create cart item: user=%d, goods=%d, err=%v", cartItem.User, cartItem.Goods, err)
+		return err
+	}
+	
+	log.Infof("Successfully created cart item: user=%d, goods=%d", cartItem.User, cartItem.Goods)
+	return nil
 }
 
 func (os *orderService) UpdateCartItem(ctx context.Context, cartItem *dto.ShopCartDTO) error {
-	return os.data.ShoppingCarts().UpdateNum(ctx, os.data.DB(), &cartItem.ShoppingCartDO)
+	log.Debugf("Updating cart item: user=%d, goods=%d, nums=%d", cartItem.User, cartItem.Goods, cartItem.Nums)
+	
+	// 直接使用预加载的DAO
+	err := os.shoppingCartsDAO.UpdateNum(ctx, os.db, &cartItem.ShoppingCartDO)
+	if err != nil {
+		log.Errorf("Failed to update cart item: user=%d, goods=%d, err=%v", cartItem.User, cartItem.Goods, err)
+		return err
+	}
+	
+	log.Infof("Successfully updated cart item: user=%d, goods=%d", cartItem.User, cartItem.Goods)
+	return nil
 }
 
 func (os *orderService) DeleteCartItem(ctx context.Context, userID, goodsID uint64) error {
-	cartItem, err := os.data.ShoppingCarts().Get(ctx, os.data.DB(), userID, goodsID)
+	log.Debugf("Deleting cart item: user=%d, goods=%d", userID, goodsID)
+	
+	// 使用预加载的DAO获取购物车项
+	cartItem, err := os.shoppingCartsDAO.Get(ctx, os.db, userID, goodsID)
 	if err != nil {
+		log.Errorf("Failed to get cart item for deletion: user=%d, goods=%d, err=%v", userID, goodsID, err)
 		return err
 	}
-	return os.data.ShoppingCarts().Delete(ctx, os.data.DB(), uint64(cartItem.ID))
+	
+	// 使用预加载的DAO删除
+	err = os.shoppingCartsDAO.Delete(ctx, os.db, uint64(cartItem.ID))
+	if err != nil {
+		log.Errorf("Failed to delete cart item: user=%d, goods=%d, err=%v", userID, goodsID, err)
+		return err
+	}
+	
+	log.Infof("Successfully deleted cart item: user=%d, goods=%d", userID, goodsID)
+	return nil
 }
 
 // UpdatePaidStatus 更新订单为已支付状态 - DTM Saga正向操作
 func (os *orderService) UpdatePaidStatus(ctx context.Context, orderSn string, paymentSn string) error {
 	log.Infof("更新订单支付状态：订单号=%s, 支付单号=%s", orderSn, paymentSn)
 
-	// 查询订单
-	order, err := os.data.Orders().Get(ctx, os.data.DB(), orderSn)
+	// 查询订单 - 使用预加载的DAO
+	order, err := os.ordersDAO.Get(ctx, os.db, orderSn)
 	if err != nil {
-		log.Errorf("查询订单失败: %v", err)
+		log.Errorf("查询订单失败: orderSn=%s, err=%v", orderSn, err)
 		return err
 	}
 
@@ -316,14 +396,15 @@ func (os *orderService) UpdatePaidStatus(ctx context.Context, orderSn string, pa
 func (os *orderService) RevertPaidStatus(ctx context.Context, orderSn string) error {
 	log.Infof("回滚订单支付状态：订单号=%s", orderSn)
 
-	// 查询订单
-	order, err := os.data.Orders().Get(ctx, os.data.DB(), orderSn)
+	// 查询订单 - 使用预加载的DAO
+	order, err := os.ordersDAO.Get(ctx, os.db, orderSn)
 	if err != nil {
 		if errors.IsCode(err, code.ErrNoGoodsSelect) {
 			// 订单不存在，认为回滚成功（幂等性）
 			log.Infof("订单%s不存在，回滚操作成功", orderSn)
 			return nil
 		}
+		log.Errorf("查询订单失败: orderSn=%s, err=%v", orderSn, err)
 		return err
 	}
 
@@ -370,6 +451,12 @@ func (os *orderService) RevertPaidStatus(ctx context.Context, orderSn string) er
 
 func newOrderService(sv *service) *orderService {
 	return &orderService{
+		// 预加载核心组件，避免每次方法调用时重复获取
+		ordersDAO:        sv.data.Orders(),
+		shoppingCartsDAO: sv.data.ShoppingCarts(),
+		db:               sv.data.DB(),
+		
+		// 保留原有组件用于复杂操作
 		data:    sv.data,
 		dtmOpts: sv.dtmopts,
 	}

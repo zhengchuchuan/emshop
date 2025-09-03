@@ -12,20 +12,39 @@ import (
 	"github.com/zeromicro/go-zero/core/mr"
 	metav1 "emshop/pkg/common/meta/v1"
 	"emshop/pkg/log"
+	"gorm.io/gorm"
 )
 
 type goodsService struct {
+	// 预加载的核心DAO（日常CRUD操作）
+	goodsDAO    interfaces.GoodsStore
+	categoryDAO interfaces.CategoryStore
+	brandDAO    interfaces.BrandsStore
+	bannerDAO   interfaces.BannerStore
+	db          *gorm.DB
+	
+	// 保留工厂管理器（复杂操作：ES同步、事务等）
 	factoryManager *dataV1.FactoryManager
 }
 
 func newGoods(srv *service) *goodsService {
+	dataFactory := srv.factoryManager.GetDataFactory()
+	
 	return &goodsService{
+		// 预加载核心DAO，避免每次方法调用时重复获取
+		goodsDAO:    dataFactory.Goods(),
+		categoryDAO: dataFactory.Categorys(),
+		brandDAO:    dataFactory.Brands(),
+		bannerDAO:   dataFactory.Banners(),
+		db:          dataFactory.DB(),
+		
+		// 保留工厂管理器用于复杂操作（ES同步、事务等）
 		factoryManager: srv.factoryManager,
 	}
 }
 
 func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *proto.GoodsFilterRequest, orderby []string) (*dto.GoodsDTOList, error) {
-	dataFactory := gs.factoryManager.GetDataFactory()
+	log.Debugf("Listing goods with search conditions: keywords=%v, brand=%v", req.KeyWords, req.Brand)
 	
 	// 检查是否有搜索条件
 	hasSearchConditions := false
@@ -46,7 +65,8 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 	}
 	if req.TopCategory != nil && *req.TopCategory > 0 {
 		hasSearchConditions = true
-		category, err := dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(*req.TopCategory))
+		// 使用预加载的categoryDAO
+		category, err := gs.categoryDAO.Get(ctx, gs.db, uint64(*req.TopCategory))
 		if err != nil {
 			log.Errorf("categoryData.Get err: %v", err)
 			return nil, err
@@ -57,23 +77,19 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 		}
 	}
 
-	// 如果没有搜索条件，直接查询MySQL
+	// 如果没有搜索条件，直接查询MySQL - 使用预加载的DAO
 	if !hasSearchConditions {
 		log.Debugf("No search conditions, querying MySQL directly")
-		goods, err := dataFactory.Goods().List(ctx, dataFactory.DB(), orderby, opts)
+		goods, err := gs.goodsDAO.List(ctx, gs.db, orderby, opts)
 		if err != nil {
-			log.Errorf("data.List err: %v", err)
+			log.Errorf("Failed to list goods from MySQL: %v", err)
 			return nil, err
 		}
 		
-		var ret dto.GoodsDTOList
-		ret.TotalCount = goods.TotalCount
-		for _, value := range goods.Items {
-			ret.Items = append(ret.Items, &dto.GoodsDTO{
-				GoodsDO: *value,
-			})
-		}
-		return &ret, nil
+		// 业务逻辑层：数据转换
+		ret := gs.convertToGoodsDTOList(goods)
+		log.Debugf("Successfully listed %d goods from MySQL, total: %d", len(ret.Items), ret.TotalCount)
+		return ret, nil
 	}
 
 	// 有搜索条件时，构建ES搜索请求
@@ -122,64 +138,92 @@ func (gs *goodsService) List(ctx context.Context, opts metav1.ListMeta, req *pro
 	log.Debugf("ES Search Request: %+v", searchReq)
 	log.Debugf("CategoryIDs: %v", searchReq.CategoryIDs)
 
-	// 通过搜索引擎查询
+	// 通过搜索引擎查询（使用工厂管理器获取搜索功能）
+	dataFactory := gs.factoryManager.GetDataFactory()
 	goodsList, err := dataFactory.Search().Goods().Search(ctx, searchReq)
 	if err != nil {
-		log.Errorf("searchData.Search err: %v", err)
+		log.Errorf("ES search failed: %v", err)
 		return nil, err
 	}
 
-	log.Debugf("Search es data: %v", goodsList)
+	log.Debugf("ES search results: total=%d, items=%d", goodsList.TotalCount, len(goodsList.Items))
 
-	goodsIDs := []uint64{}
+	// 提取商品ID列表
+	goodsIDs := make([]uint64, 0, len(goodsList.Items))
 	for _, value := range goodsList.Items {
 		goodsIDs = append(goodsIDs, uint64(value.ID))
 	}
 
-	// 通过id批量查询mysql数据
-	goods, err := dataFactory.Goods().ListByIDs(ctx, dataFactory.DB(), goodsIDs, orderby)
+	// 通过ID批量查询MySQL数据 - 使用预加载的DAO
+	goods, err := gs.goodsDAO.ListByIDs(ctx, gs.db, goodsIDs, orderby)
 	if err != nil {
-		log.Errorf("data.ListByIDs err: %v", err)
+		log.Errorf("Failed to list goods by IDs from MySQL: %v", err)
 		return nil, err
 	}
 	
-	var ret dto.GoodsDTOList
-	ret.TotalCount = int64(goodsList.TotalCount)
+	// 业务逻辑层：数据转换
+	ret := &dto.GoodsDTOList{
+		TotalCount: int64(goodsList.TotalCount),
+		Items:      make([]*dto.GoodsDTO, 0, len(goods.Items)),
+	}
 	for _, value := range goods.Items {
 		ret.Items = append(ret.Items, &dto.GoodsDTO{
 			GoodsDO: *value,
 		})
 	}
-	return &ret, nil
+	
+	log.Debugf("Successfully searched and listed %d goods, total: %d", len(ret.Items), ret.TotalCount)
+	return ret, nil
+}
+
+// convertToGoodsDTOList 将DO列表转换为DTO列表 - 分离业务逻辑
+func (gs *goodsService) convertToGoodsDTOList(goods *do.GoodsDOList) *dto.GoodsDTOList {
+	ret := &dto.GoodsDTOList{
+		TotalCount: goods.TotalCount,
+		Items:      make([]*dto.GoodsDTO, 0, len(goods.Items)),
+	}
+	for _, value := range goods.Items {
+		ret.Items = append(ret.Items, &dto.GoodsDTO{
+			GoodsDO: *value,
+		})
+	}
+	return ret
 }
 
 func (gs *goodsService) Get(ctx context.Context, ID uint64) (*dto.GoodsDTO, error) {
-	dataFactory := gs.factoryManager.GetDataFactory()
-	goods, err := dataFactory.Goods().Get(ctx, dataFactory.DB(), ID)
+	log.Debugf("Getting goods by ID: %d", ID)
+	
+	// 直接使用预加载的DAO
+	goods, err := gs.goodsDAO.Get(ctx, gs.db, ID)
 	if err != nil {
-		log.Errorf("data.Get err: %v", err)
+		log.Errorf("Failed to get goods by ID %d: %v", ID, err)
 		return nil, err
 	}
+	
+	log.Debugf("Successfully got goods by ID: %d", ID)
 	return &dto.GoodsDTO{
 		GoodsDO: *goods,
 	}, nil
 }
 
 func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) (*dto.GoodsDTO, error) {
-	dataFactory := gs.factoryManager.GetDataFactory()
+	log.Debugf("Creating goods: name=%s, brandID=%d, categoryID=%d", goods.Name, goods.BrandsID, goods.CategoryID)
 	
-	// 验证品牌和分类是否存在
-	_, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(goods.BrandsID))
+	// 验证品牌和分类是否存在 - 使用预加载的DAO
+	_, err := gs.brandDAO.Get(ctx, gs.db, uint64(goods.BrandsID))
 	if err != nil {
+		log.Errorf("Brand not found: ID=%d, error=%v", goods.BrandsID, err)
 		return nil, err
 	}
 
-	_, err = dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(goods.CategoryID))
+	_, err = gs.categoryDAO.Get(ctx, gs.db, uint64(goods.CategoryID))
 	if err != nil {
+		log.Errorf("Category not found: ID=%d, error=%v", goods.CategoryID, err)
 		return nil, err
 	}
 
-	// 开启事务
+	// 开启事务 - 使用保留的工厂管理器
+	dataFactory := gs.factoryManager.GetDataFactory()
 	txn := dataFactory.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -239,20 +283,23 @@ func (gs *goodsService) Create(ctx context.Context, goods *dto.GoodsDTO) (*dto.G
 }
 
 func (gs *goodsService) Update(ctx context.Context, goods *dto.GoodsDTO) error {
-	dataFactory := gs.factoryManager.GetDataFactory()
+	log.Debugf("Updating goods: ID=%d, name=%s, brandID=%d, categoryID=%d", goods.ID, goods.Name, goods.BrandsID, goods.CategoryID)
 	
-	// 验证品牌和分类是否存在
-	_, err := dataFactory.Brands().Get(ctx, dataFactory.DB(), uint64(goods.BrandsID))
+	// 验证品牌和分类是否存在 - 使用预加载的DAO
+	_, err := gs.brandDAO.Get(ctx, gs.db, uint64(goods.BrandsID))
 	if err != nil {
+		log.Errorf("Brand not found: ID=%d, error=%v", goods.BrandsID, err)
 		return err
 	}
 
-	_, err = dataFactory.Categorys().Get(ctx, dataFactory.DB(), uint64(goods.CategoryID))
+	_, err = gs.categoryDAO.Get(ctx, gs.db, uint64(goods.CategoryID))
 	if err != nil {
+		log.Errorf("Category not found: ID=%d, error=%v", goods.CategoryID, err)
 		return err
 	}
 
-	// 开启事务
+	// 开启事务 - 使用保留的工厂管理器
+	dataFactory := gs.factoryManager.GetDataFactory()
 	txn := dataFactory.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -302,13 +349,15 @@ func (gs *goodsService) Update(ctx context.Context, goods *dto.GoodsDTO) error {
 	}
 
 	txn.Commit()
+	log.Infof("Successfully updated goods: ID=%d", goods.ID)
 	return nil
 }
 
 func (gs *goodsService) Delete(ctx context.Context, ID uint64) error {
-	dataFactory := gs.factoryManager.GetDataFactory()
+	log.Debugf("Deleting goods: ID=%d", ID)
 	
-	// 开启事务
+	// 开启事务 - 使用保留的工厂管理器
+	dataFactory := gs.factoryManager.GetDataFactory()
 	txn := dataFactory.Begin()
 	defer func() {
 		if err := recover(); err != nil {
@@ -341,6 +390,7 @@ func (gs *goodsService) Delete(ctx context.Context, ID uint64) error {
 	}
 
 	txn.Commit()
+	log.Infof("Successfully deleted goods: ID=%d", ID)
 	return nil
 }
 
