@@ -15,6 +15,7 @@ import (
 	"emshop/gin-micro/registry/consul"
 )
 
+// 创建基础应用程序
 func NewApp(basename string) *app.App {
 	cfg := config.New()
 	appl := app.NewApp("api",
@@ -25,6 +26,26 @@ func NewApp(basename string) *app.App {
 	return appl
 }
 
+func run(cfg *config.Config) app.RunFunc {
+	return func(baseName string) error {
+		apiApp, err := NewAPIApp(cfg)
+		if err != nil {
+			return err
+		}
+
+		//启动
+		if err := apiApp.Run(); err != nil {
+			log.Errorf("run api app error: %s", err)
+			return err
+		}
+		return nil
+	}
+}
+
+
+// NewRegistrar 自定义consul注册
+//	@param registry 
+//	@return registry.Registrar 
 func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
 	c := api.DefaultConfig()
 	c.Address = registry.Address
@@ -33,9 +54,11 @@ func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
 	if err != nil {
 		panic(err)
 	}
+	// 创建自定义consul注册器实例
 	r := consul.New(cli, consul.WithHealthCheck(true))
 	return r
 }
+
 
 func NewAPIApp(cfg *config.Config) (*gapp.App, error) {
 	//初始化log
@@ -77,18 +100,3 @@ func NewAPIApp(cfg *config.Config) (*gapp.App, error) {
 	), nil
 }
 
-func run(cfg *config.Config) app.RunFunc {
-	return func(baseName string) error {
-		apiApp, err := NewAPIApp(cfg)
-		if err != nil {
-			return err
-		}
-
-		//启动
-		if err := apiApp.Run(); err != nil {
-			log.Errorf("run api app error: %s", err)
-			return err
-		}
-		return nil
-	}
-}

@@ -29,17 +29,21 @@ func NewApp(basename string) *app.App {
 	return appl
 }
 
-// NewRegistrar 将http服务注册到Consul,并执行健康检查
+// NewRegistrar 创建consul注册器
 //	@param registry 
 //	@return registry.Registrar 
 func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
+	// 创建客户端配置
 	c := api.DefaultConfig()
 	c.Address = registry.Address
 	c.Scheme = registry.Scheme
+
+	// 创建客户端实例
 	cli, err := api.NewClient(c)
 	if err != nil {
 		panic(err)
 	}
+	// 创建自定义consul注册器实例
 	r := consul.New(cli, consul.WithHealthCheck(true))
 	return r
 }

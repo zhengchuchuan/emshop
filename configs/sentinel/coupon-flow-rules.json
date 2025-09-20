@@ -1,0 +1,62 @@
+[
+  {
+    "resource": "coupon-srv:IssueCoupon",
+    "tokenCalculateStrategy": 0,
+    "controlBehavior": 0,
+    "threshold": 200.0,
+    "relationStrategy": 0,
+    "refResource": "",
+    "maxQueueingTimeMs": 500,
+    "warmUpPeriodSec": 10,
+    "warmUpColdFactor": 3,
+    "statIntervalInMs": 1000
+  },
+  {
+    "resource": "coupon-srv:UseCoupon",
+    "tokenCalculateStrategy": 0,
+    "controlBehavior": 0,
+    "threshold": 800.0,
+    "relationStrategy": 0,
+    "refResource": "",
+    "maxQueueingTimeMs": 500,
+    "warmUpPeriodSec": 10,
+    "warmUpColdFactor": 3,
+    "statIntervalInMs": 1000
+  },
+  {
+    "resource": "coupon-srv:GetUserCoupons",
+    "tokenCalculateStrategy": 0,
+    "controlBehavior": 0,
+    "threshold": 1500.0,
+    "relationStrategy": 0,
+    "refResource": "",
+    "maxQueueingTimeMs": 500,
+    "warmUpPeriodSec": 10,
+    "warmUpColdFactor": 3,
+    "statIntervalInMs": 1000
+  },
+  {
+    "resource": "coupon-srv:ValidateCoupon",
+    "tokenCalculateStrategy": 0,
+    "controlBehavior": 0,
+    "threshold": 1000.0,
+    "relationStrategy": 0,
+    "refResource": "",
+    "maxQueueingTimeMs": 200,
+    "warmUpPeriodSec": 5,
+    "warmUpColdFactor": 3,
+    "statIntervalInMs": 1000
+  },
+  {
+    "resource": "coupon-srv:FlashSaleIssueCoupon",
+    "tokenCalculateStrategy": 0,
+    "controlBehavior": 0,
+    "threshold": 100.0,
+    "relationStrategy": 0,
+    "refResource": "",
+    "maxQueueingTimeMs": 1000,
+    "warmUpPeriodSec": 30,
+    "warmUpColdFactor": 5,
+    "statIntervalInMs": 1000
+  }
+]

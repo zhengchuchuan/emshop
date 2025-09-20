@@ -1,7 +1,7 @@
 
 # 服务器配置
 server:
-  name: "goods" # 服务名，注册到consul使用的名称，与Canal配置保持一致
+  name: "emshop-goods-srv" # 服务名，注册到consul使用的名称，与Canal配置保持一致
   host: "0.0.0.0" # host, 默认使用 0.0.0.0,docker容器中不能使用127.0.0.1
   # port: 28053 # grpc端口，使用Canal配置的端口保持一致性
   port: 0 # 随机分配
@@ -29,7 +29,7 @@ registry:
 
 # 链路追踪配置
 telemetry:
-  name: goods # 服务名称，与server.name保持一致
+  name: emshop-goods-srv # 服务名称，与server.name保持一致
   endpoint: http://localhost:14268/api/traces # Jaeger端点
   sampler: 1.0 # 采样率
   batcher: jaeger # 批处理器

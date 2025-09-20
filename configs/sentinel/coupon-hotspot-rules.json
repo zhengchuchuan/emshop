@@ -1,0 +1,39 @@
+[
+  {
+    "resource": "coupon-srv:GetUserCoupons",
+    "metricType": 1,
+    "paramIndex": 0,
+    "threshold": 10,
+    "durationInSec": 1,
+    "burstCount": 0,
+    "specificItems": {
+      "vip_user_123": 50,
+      "vip_user_456": 50,
+      "normal_user": 5
+    }
+  },
+  {
+    "resource": "coupon-srv:IssueCoupon",
+    "metricType": 1,
+    "paramIndex": 1,
+    "threshold": 3,
+    "durationInSec": 1,
+    "burstCount": 0,
+    "specificItems": {
+      "flash_sale_coupon": 1,
+      "normal_coupon": 5
+    }
+  },
+  {
+    "resource": "coupon-srv:UseCoupon",
+    "metricType": 1,
+    "paramIndex": 0,
+    "threshold": 5,
+    "durationInSec": 1,
+    "burstCount": 2,
+    "specificItems": {
+      "high_value_coupon": 2,
+      "normal_coupon": 8
+    }
+  }
+]

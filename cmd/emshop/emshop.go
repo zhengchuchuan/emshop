@@ -1,7 +1,7 @@
 package main
 
 import (
-	admin "emshop/internal/app/api/emshop"
+	emshop "emshop/internal/app/api/emshop"
 	"os"
 	"runtime"
 )
@@ -11,5 +11,5 @@ func main() {
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
-	admin.NewApp("api-server").Run()
+	emshop.NewApp("api-server").Run()
 }

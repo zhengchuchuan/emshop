@@ -34,6 +34,7 @@ go.work.sum
 .vscode/
 .claude/*
 /Claude.md
+AGENTS.md
 
 **.tmp
 

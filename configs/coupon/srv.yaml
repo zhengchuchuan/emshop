@@ -47,18 +47,14 @@ mysql:
 
 # Redis配置
 redis:
-  addr: "localhost:6379"
+  host: "127.0.0.1"
+  port: 6379
   password: ""
-  db: 0
-  pool_size: 50
-  min_idle_conns: 10
-  dial_timeout: "5s"
-  read_timeout: "3s"
-  write_timeout: "3s"
+  database: 0
 
 # RocketMQ配置
 rocketmq:
-  nameservers: ["localhost:9876"]
+  nameservers: ["127.0.0.1:9876"]
   producer_group: "coupon-producer-group"
   consumer_group: "coupon-consumer-group"
   topic: "coupon-events"
@@ -107,4 +103,4 @@ business:
     l1_ttl: "10m"                 # L1缓存TTL
     l2_ttl: "30m"                 # L2缓存TTL  
     warmup_count: 100             # 预热优惠券数量
-    enable_warmup: true           # 是否开启预热
+    enable_warmup: false          # 是否开启预热 - 暂时禁用

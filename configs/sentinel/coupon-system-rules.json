@@ -1,0 +1,22 @@
+[
+  {
+    "metricType": 0,
+    "triggerCount": 0.85,
+    "strategy": 0
+  },
+  {
+    "metricType": 2,
+    "triggerCount": 8.0,
+    "strategy": 0
+  },
+  {
+    "metricType": 4,
+    "triggerCount": 1000,
+    "strategy": 0
+  },
+  {
+    "metricType": 3,
+    "triggerCount": 5000,
+    "strategy": 0
+  }
+]

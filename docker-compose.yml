@@ -1,0 +1,36 @@
+
+include:
+  # Core Services (Always On)
+  - ./components/consul/docker-compose.yml
+  - ./components/nacos/docker-compose.yml
+  - ./components/redis/docker-compose.yml
+  - ./components/dtm/docker-compose.yml
+  - ./components/mysql-canal/docker-compose.yml    # sync mysql to es
+  
+  # Optional Services (Uncomment as needed)
+  - ./components/kong/docker-compose.yml      # API Gateway (Simplified)
+  - ./components/elk/docker-compose.yml       # Elasticsearch, Logstash, Kibana (Simplified)
+  - ./components/prometheus/docker-compose.yml # Prometheus, Grafana, Node-Exporter (Simplified)
+  - ./components/rocketmq/docker-compose.yml  # Message Queue (Simplified)
+  - ./components/jaeger/docker-compose.yml    # Distributed Tracing
+  - ./components/jenkins/docker-compose.yml   # CI/CD Pipeline
+
+
+# 一个项目中的所有服务共用一个网络
+# 网络在主配置文件中定义，各组件通过 external: true 方式引用
+networks:
+  emshop-net:
+    name: emshop-net
+    driver: bridge
+    attachable: true  # 允许其他容器连接
+    ipam:
+      config:
+        - subnet: "172.20.0.0/24"
+          gateway: "172.20.0.1"
+          ip_range: "172.20.0.128/25" # 128以及之后的ip自动分配, 1 - 127 保留给手动分配
+
+# 注意：volumes 定义已迁移到各个组件的 docker-compose.yml 文件中
+# 这样做的好处：
+# 1. 每个组件配置自包含，便于独立维护
+# 2. 降低组件间的配置耦合度
+# 3. 更符合微服务架构的设计原则

@@ -3,7 +3,7 @@ services:
   emshop-consul:
     image: consul:1.15.4
     container_name: emshop-consul
-    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0
+    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -rejoin
     volumes:
       - ./config:/consul/config:ro
       - emshop-consul-data:/consul/data

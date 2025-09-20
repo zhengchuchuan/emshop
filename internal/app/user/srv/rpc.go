@@ -7,9 +7,9 @@ import (
 	"emshop/gin-micro/core/trace"
 	rpcserver "emshop/gin-micro/server/rpc-server"
 	"emshop/internal/app/pkg/options"
+	"emshop/pkg/sentinel"
 
 	"github.com/alibaba/sentinel-golang/ext/datasource"
-	"github.com/alibaba/sentinel-golang/pkg/adapters/grpc"
 	"github.com/alibaba/sentinel-golang/pkg/datasource/nacos"
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
@@ -63,8 +63,16 @@ func NewUserRPCServer(telemetry *options.TelemetryOptions, serverOpts *options.S
 
 	var opts []rpcserver.ServerOption
 	opts = append(opts, rpcserver.WithAddress(rpcAddr))
+
 	if serverOpts.EnableLimit {
-		opts = append(opts, rpcserver.WithUnaryInterceptor(grpc.NewUnaryServerInterceptor()))
+		// 使用新的统一Sentinel拦截器
+		fallbackHandler := sentinel.NewBusinessFallbackHandler("emshop-user-srv", false)
+		interceptorConfig := sentinel.DefaultServerInterceptorConfig("user-srv")
+		interceptorConfig.FallbackFunc = fallbackHandler.Handle
+
+		sentinelInterceptor := sentinel.NewUnaryServerInterceptor(interceptorConfig)
+		opts = append(opts, rpcserver.WithUnaryInterceptor(sentinelInterceptor))
+
 		//初始化nacos
 		err := dataNacos.Initialize()
 		if err != nil {

@@ -181,6 +181,7 @@ func (a *App) buildCommand() {
 	cmd.SetOut(os.Stdout)          // 标准输出流
 	cmd.SetErr(os.Stderr)          // 标准错误流
 	cmd.Flags().SortFlags = true   // 按字母顺序排序标志
+	
 	cliflag.InitFlags(cmd.Flags()) // 初始化命令行标志系统
 
 	// 3. 添加子命令支持

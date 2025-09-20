@@ -1,0 +1,52 @@
+[
+  {
+    "resource": "coupon-srv:IssueCoupon",
+    "strategy": 0,
+    "retryTimeoutMs": 10000,
+    "minRequestAmount": 10,
+    "statIntervalMs": 1000,
+    "statSlidingWindowBucketCount": 10,
+    "maxAllowedRtMs": 1000,
+    "threshold": 0.3
+  },
+  {
+    "resource": "coupon-srv:UseCoupon",
+    "strategy": 0,
+    "retryTimeoutMs": 8000,
+    "minRequestAmount": 15,
+    "statIntervalMs": 1000,
+    "statSlidingWindowBucketCount": 10,
+    "maxAllowedRtMs": 800,
+    "threshold": 0.25
+  },
+  {
+    "resource": "coupon-srv:GetUserCoupons",
+    "strategy": 1,
+    "retryTimeoutMs": 5000,
+    "minRequestAmount": 20,
+    "statIntervalMs": 1000,
+    "statSlidingWindowBucketCount": 10,
+    "maxAllowedRtMs": 500,
+    "threshold": 0.6
+  },
+  {
+    "resource": "coupon-srv:ValidateCoupon",
+    "strategy": 0,
+    "retryTimeoutMs": 3000,
+    "minRequestAmount": 5,
+    "statIntervalMs": 1000,
+    "statSlidingWindowBucketCount": 10,
+    "maxAllowedRtMs": 200,
+    "threshold": 0.1
+  },
+  {
+    "resource": "coupon-srv:FlashSaleIssueCoupon",
+    "strategy": 0,
+    "retryTimeoutMs": 15000,
+    "minRequestAmount": 5,
+    "statIntervalMs": 1000,
+    "statSlidingWindowBucketCount": 10,
+    "maxAllowedRtMs": 2000,
+    "threshold": 0.5
+  }
+]

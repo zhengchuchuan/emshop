@@ -54,13 +54,7 @@ func New(opts ...Option) *App {
 
 // 创建服务注册的结构体
 func (a *App) buildInstance() (*registry.ServiceInstance, error) {
-	// 初始化一些组件
-	// 1. 初始化日志
-	// 2. 初始化配置
-	// 3. 初始化数据库连接
-	// 4. 初始化缓存连接
-	// 5. 初始化服务注册中心连接
-	// 6. 初始化其他组件
+
 
 	endpoints := make([]string, 0)
 	for _, e := range a.opts.endpoints {
@@ -130,9 +124,10 @@ func (a *App) Run() error {
 	eg, ctx := errgroup.WithContext(ctx)
 	wg := sync.WaitGroup{}
 	for _, srv := range servers {
-		//启动server
-		//在启动一个goroutine 去监听是否有err产生
+		// 启动server
+		// 在启动一个goroutine 去监听是否有err产生
 		srv := srv	// 避免闭包捕获问题
+		// 任何一个 goroutine 返回非空的 error 错误时，所有 goroutine 都会被取消执行
 		eg.Go(func() error {
 			<-ctx.Done() //wait for stop signal
 			//不可能无休止的等待stop
