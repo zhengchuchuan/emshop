@@ -3,9 +3,10 @@ package app
 import (
 	"context"
 	"fmt"
-	"net"
 
 	couponpb "emshop/api/coupon/v1"
+	"emshop/gin-micro/core/trace"
+	rpcserver "emshop/gin-micro/server/rpc-server"
 	"emshop/internal/app/coupon/srv/config"
 	"emshop/internal/app/coupon/srv/consumer"
 	controllerv1 "emshop/internal/app/coupon/srv/controller/v1"
@@ -16,7 +17,6 @@ import (
 	"emshop/internal/app/pkg/options"
 	"emshop/pkg/log"
 	"github.com/redis/go-redis/v9"
-	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 	"os"
 )
@@ -29,7 +29,7 @@ type CouponApp struct {
 	redisClient    *redis.Client
 	dataFactory    interfaces.DataFactory
 	factoryManager *datav1.FactoryManager
-	grpcServer     *grpc.Server
+	rpcServer      *rpcserver.Server
 	service        *servicev1.Service
 }
 
@@ -57,10 +57,10 @@ func NewCouponApp(configFile string) (*CouponApp, error) {
 	// 测试Redis连接 - 暂时禁用直到解决兼容性问题
 	// TODO: 调试 Redis 8.0.1 和 go-redis/v9 的兼容性问题
 	/*
-	if err := redisClient.Ping(context.Background()).Err(); err != nil {
-		return nil, fmt.Errorf("连接Redis失败: %v", err)
-	}
-	log.Info("Redis连接测试成功")
+		if err := redisClient.Ping(context.Background()).Err(); err != nil {
+			return nil, fmt.Errorf("连接Redis失败: %v", err)
+		}
+		log.Info("Redis连接测试成功")
 	*/
 	log.Warn("Redis连接测试暂时跳过，需要调试兼容性问题")
 
@@ -93,13 +93,25 @@ func NewCouponApp(configFile string) (*CouponApp, error) {
 	// TODO: 更新 servicev1.NewService 以支持 redis/go-redis/v9
 	service := servicev1.NewService(dataFactory, nil, cfg.DTM, cfg.RocketMQ, cfg.ToCacheConfig())
 	log.Warn("服务层Redis客户端暂时禁用，需要更新到go-redis/v9")
-	
+
+	// 初始化链路追踪
+	trace.InitAgent(trace.Options{
+		Name:     cfg.Telemetry.Name,
+		Endpoint: cfg.Telemetry.Endpoint,
+		Sampler:  cfg.Telemetry.Sampler,
+		Batcher:  cfg.Telemetry.Batcher,
+	})
+
 	// 创建gRPC服务器
-	grpcServer := grpc.NewServer()
-	
+	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	rpcSrv := rpcserver.NewServer(
+		rpcserver.WithAddress(rpcAddr),
+		rpcserver.WithMetrics(cfg.Server.EnableMetrics),
+	)
+
 	// 注册优惠券服务
 	couponServer := controllerv1.NewCouponServer(service)
-	couponpb.RegisterCouponServer(grpcServer, couponServer)
+	couponpb.RegisterCouponServer(rpcSrv.Server, couponServer)
 
 	log.Info("优惠券应用初始化成功")
 
@@ -110,7 +122,7 @@ func NewCouponApp(configFile string) (*CouponApp, error) {
 		redisClient:    redisClient,
 		dataFactory:    dataFactory,
 		factoryManager: factoryManager,
-		grpcServer:     grpcServer,
+		rpcServer:      rpcSrv,
 		service:        service,
 	}, nil
 }
@@ -122,27 +134,20 @@ func (app *CouponApp) Run(ctx context.Context) error {
 	// 启动Canal消费者 - 暂时禁用，需要创建RocketMQ主题
 	// TODO: 创建coupon-binlog-topic主题后启用
 	/*
-	if err := app.canalConsumer.Start(); err != nil {
-		return fmt.Errorf("启动Canal消费者失败: %v", err)
-	}
+		if err := app.canalConsumer.Start(); err != nil {
+			return fmt.Errorf("启动Canal消费者失败: %v", err)
+		}
 	*/
 	log.Warn("Canal消费者暂时禁用，需要创建RocketMQ主题")
 
 	// 启动gRPC服务器
 	go func() {
-		listen, err := net.Listen("tcp", fmt.Sprintf(":%d", app.config.Server.Port))
-		if err != nil {
-			log.Fatalf("gRPC服务器监听失败: %v", err)
-		}
-
-		log.Infof("gRPC服务器启动成功，监听端口: %d", app.config.Server.Port)
-		
-		if err := app.grpcServer.Serve(listen); err != nil {
+		if err := app.rpcServer.Start(context.Background()); err != nil {
 			log.Fatalf("gRPC服务器启动失败: %v", err)
 		}
 	}()
 
-	log.Infof("优惠券服务启动成功 (gRPC: %d, HTTP: %d)", app.config.Server.Port, app.config.Server.HttpPort)
+	log.Infof("优惠券服务启动成功 (gRPC: %s, HTTP: %d)", app.rpcServer.Address(), app.config.Server.HttpPort)
 	return nil
 }
 
@@ -151,8 +156,8 @@ func (app *CouponApp) Stop() error {
 	log.Info("停止优惠券服务...")
 
 	// 停止gRPC服务器
-	if app.grpcServer != nil {
-		app.grpcServer.GracefulStop()
+	if app.rpcServer != nil {
+		_ = app.rpcServer.Stop(context.Background())
 		log.Info("gRPC服务器已停止")
 	}
 

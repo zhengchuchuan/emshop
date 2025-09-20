@@ -8,10 +8,11 @@ import (
 
 // Config 用户操作服务的配置结构体
 type Config struct {
-	Log      *log.Options              `json:"log"      mapstructure:"log"`
-	Server   *options.ServerOptions    `json:"server"   mapstructure:"server"`
-	Registry *options.RegistryOptions  `json:"registry" mapstructure:"registry"`
-	MySQL    *options.MySQLOptions     `json:"mysql"    mapstructure:"mysql"`
+	Log       *log.Options              `json:"log"      mapstructure:"log"`
+	Server    *options.ServerOptions    `json:"server"   mapstructure:"server"`
+	Registry  *options.RegistryOptions  `json:"registry" mapstructure:"registry"`
+	MySQL     *options.MySQLOptions     `json:"mysql"    mapstructure:"mysql"`
+	Telemetry *options.TelemetryOptions `json:"telemetry" mapstructure:"telemetry"`
 }
 
 // Validate 验证配置
@@ -21,6 +22,7 @@ func (c *Config) Validate() []error {
 	errors = append(errors, c.Server.Validate()...)
 	errors = append(errors, c.Registry.Validate()...)
 	errors = append(errors, c.MySQL.Validate()...)
+	errors = append(errors, c.Telemetry.Validate()...)
 	return errors
 }
 
@@ -30,15 +32,17 @@ func (c *Config) Flags() (fss cliflag.NamedFlagSets) {
 	c.Server.AddFlags(fss.FlagSet("server"))
 	c.Registry.AddFlags(fss.FlagSet("registry"))
 	c.MySQL.AddFlags(fss.FlagSet("mysql"))
+	c.Telemetry.AddFlags(fss.FlagSet("telemetry"))
 	return fss
 }
 
 // NewConfig 创建配置实例
 func NewConfig() *Config {
 	return &Config{
-		Log:      log.NewOptions(),
-		Server:   options.NewServerOptions(),
-		Registry: options.NewRegistryOptions(),
-		MySQL:    options.NewMySQLOptions(),
+		Log:       log.NewOptions(),
+		Server:    options.NewServerOptions(),
+		Registry:  options.NewRegistryOptions(),
+		MySQL:     options.NewMySQLOptions(),
+		Telemetry: options.NewTelemetryOptions(),
 	}
 }

@@ -21,24 +21,23 @@ import (
 type Server struct {
 	*grpc.Server
 
-	address string 	// 服务地址
-	unaryInts  []grpc.UnaryServerInterceptor	// Unary拦截器
-	streamInts []grpc.StreamServerInterceptor	// Stream拦截器
-	grpcOpts   []grpc.ServerOption				// gRPC服务器选项
-	lis        net.Listener						// 监听器
+	address    string                         // 服务地址
+	unaryInts  []grpc.UnaryServerInterceptor  // Unary拦截器
+	streamInts []grpc.StreamServerInterceptor // Stream拦截器
+	grpcOpts   []grpc.ServerOption            // gRPC服务器选项
+	lis        net.Listener                   // 监听器
 
-	timeout    time.Duration					// 超时时间, 用于设置请求的超时时间
+	timeout time.Duration // 超时时间, 用于设置请求的超时时间
 
-	health   	*health.Server					// 健康检查服务
-	metadata *apimd.Server						// 元数据服务
-	endpoint 	*url.URL						// 服务地址
+	health   *health.Server // 健康检查服务
+	metadata *apimd.Server  // 元数据服务
+	endpoint *url.URL       // 服务地址
 
-	enableMetrics bool							// 是否开启prometheus 
+	enableMetrics bool // 是否开启prometheus
 }
 
 // 函数选项模式
 type ServerOption func(o *Server)
-
 
 func NewServer(opts ...ServerOption) *Server {
 	srv := &Server{
@@ -71,6 +70,9 @@ func NewServer(opts ...ServerOption) *Server {
 		unaryInts = append(unaryInts, srv.unaryInts...)
 	}
 
+	// 保存最终拦截器链，供后续链式调用
+	srv.unaryInts = unaryInts
+
 	//把传入的拦截器转换成grpc的ServerOption
 	grpcOpts := []grpc.ServerOption{grpc.ChainUnaryInterceptor(srv.unaryInts...)}
 
@@ -98,9 +100,6 @@ func NewServer(opts ...ServerOption) *Server {
 
 	return srv
 }
-
-
-
 
 func WithAddress(address string) ServerOption {
 	return func(s *Server) {
@@ -169,7 +168,6 @@ func (s *Server) Endpoint() *url.URL {
 func (s *Server) Address() string {
 	return s.address
 }
-
 
 // 启动grpc的服务
 func (s *Server) Start(ctx context.Context) error {

@@ -1,15 +1,15 @@
 package srv
 
 import (
-	"fmt"
 	logisticspb "emshop/api/logistics/v1"
+	"emshop/gin-micro/core/trace"
+	"emshop/gin-micro/server/rpc-server"
 	"emshop/internal/app/logistics/srv/config"
 	v1 "emshop/internal/app/logistics/srv/controller/logistics/v1"
 	datav1 "emshop/internal/app/logistics/srv/data/v1"
 	service "emshop/internal/app/logistics/srv/service/v1"
-	"emshop/gin-micro/core/trace"
-	"emshop/gin-micro/server/rpc-server"
 	"emshop/pkg/log"
+	"fmt"
 )
 
 func NewLogisticsRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
@@ -33,9 +33,12 @@ func NewLogisticsRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 
 	// 创建控制器
 	logisticsServer := v1.NewLogisticsController(logisticsSrv)
-	
+
 	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	grpcServer := rpcserver.NewServer(rpcserver.WithAddress(rpcAddr))
+	grpcServer := rpcserver.NewServer(
+		rpcserver.WithAddress(rpcAddr),
+		rpcserver.WithMetrics(cfg.Server.EnableMetrics),
+	)
 
 	logisticspb.RegisterLogisticsServer(grpcServer.Server, logisticsServer)
 

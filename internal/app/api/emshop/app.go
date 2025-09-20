@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	gapp "emshop/gin-micro/app"
+	"emshop/gin-micro/core/trace"
 	"emshop/internal/app/api/emshop/config"
 	"emshop/internal/app/pkg/options"
 	"emshop/pkg/app"
@@ -42,10 +43,10 @@ func run(cfg *config.Config) app.RunFunc {
 	}
 }
 
-
 // NewRegistrar 自定义consul注册
-//	@param registry 
-//	@return registry.Registrar 
+//
+//	@param registry
+//	@return registry.Registrar
 func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
 	c := api.DefaultConfig()
 	c.Address = registry.Address
@@ -59,7 +60,6 @@ func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
 	return r
 }
 
-
 func NewAPIApp(cfg *config.Config) (*gapp.App, error) {
 	//初始化log
 	log.Init(cfg.Log)
@@ -67,6 +67,14 @@ func NewAPIApp(cfg *config.Config) (*gapp.App, error) {
 
 	//服务注册
 	register := NewRegistrar(cfg.Registry)
+
+	// 初始化链路追踪
+	trace.InitAgent(trace.Options{
+		Name:     cfg.Telemetry.Name,
+		Endpoint: cfg.Telemetry.Endpoint,
+		Sampler:  cfg.Telemetry.Sampler,
+		Batcher:  cfg.Telemetry.Batcher,
+	})
 
 	//连接redis
 	redisConfig := &storage.Config{
@@ -99,4 +107,3 @@ func NewAPIApp(cfg *config.Config) (*gapp.App, error) {
 		gapp.WithRegistrar(register),
 	), nil
 }
-

@@ -1,14 +1,14 @@
 package srv
 
 import (
-	"fmt"
 	gpb "emshop/api/goods/v1"
+	"emshop/gin-micro/core/trace"
+	"emshop/gin-micro/server/rpc-server"
 	"emshop/internal/app/goods/srv/config"
 	v12 "emshop/internal/app/goods/srv/controller/v1"
 	dataV1 "emshop/internal/app/goods/srv/data/v1"
 	v1 "emshop/internal/app/goods/srv/service/v1"
-	"emshop/gin-micro/core/trace"
-	"emshop/gin-micro/server/rpc-server"
+	"fmt"
 
 	"emshop/pkg/log"
 )
@@ -33,7 +33,10 @@ func NewGoodsRPCServer(cfg *config.Config) (*rpcserver.Server, *dataV1.FactoryMa
 	srvFactory := v1.NewService(factoryManager)
 	goodsServer := v12.NewGoodsServer(srvFactory)
 	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	grpcServer := rpcserver.NewServer(rpcserver.WithAddress(rpcAddr))
+	grpcServer := rpcserver.NewServer(
+		rpcserver.WithAddress(rpcAddr),
+		rpcserver.WithMetrics(cfg.Server.EnableMetrics),
+	)
 
 	gpb.RegisterGoodsServer(grpcServer.Server, goodsServer)
 

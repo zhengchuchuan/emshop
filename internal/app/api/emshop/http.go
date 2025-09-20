@@ -9,7 +9,7 @@ func NewAPIHTTPServer(cfg *config.Config) (*restserver.Server, error) {
 	aRestServer := restserver.NewServer(
 		restserver.WithPort(cfg.Server.HttpPort),
 		restserver.WithMiddlewares(cfg.Server.Middlewares),
-		restserver.WithMetrics(true),
+		restserver.WithMetrics(cfg.Server.EnableMetrics),
 		restserver.WithTransNames(cfg.I18n.Locale),
 		restserver.WithLocalesDir(cfg.I18n.LocalesDir),
 		restserver.WithRouterInit(func(server *restserver.Server, configInterface interface{}) {

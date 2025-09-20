@@ -62,7 +62,10 @@ func NewUserRPCServer(telemetry *options.TelemetryOptions, serverOpts *options.S
 	rpcAddr := fmt.Sprintf("%s:%d", serverOpts.Host, serverOpts.Port)
 
 	var opts []rpcserver.ServerOption
-	opts = append(opts, rpcserver.WithAddress(rpcAddr))
+	opts = append(opts,
+		rpcserver.WithAddress(rpcAddr),
+		rpcserver.WithMetrics(serverOpts.EnableMetrics),
+	)
 
 	if serverOpts.EnableLimit {
 		// 使用新的统一Sentinel拦截器

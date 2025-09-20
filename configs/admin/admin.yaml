@@ -44,3 +44,9 @@ jwt:
   key: nf6C74WZ0OReB0K1QpKhcee9lmBohGSq # 服务端密钥
   timeout: 2400h # token 过期时间(小时)
   max-refresh: 240h # token 更新时间(小时)
+
+telemetry:
+  name: emshop-admin
+  endpoint: http://127.0.0.1:14268/api/traces
+  sampler: 1.0
+  batcher: jaeger

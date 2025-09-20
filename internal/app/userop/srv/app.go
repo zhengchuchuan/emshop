@@ -1,8 +1,8 @@
 package srv
 
 import (
-	"fmt"
 	gapp "emshop/gin-micro/app"
+	"emshop/gin-micro/core/trace"
 	"emshop/gin-micro/registry"
 	"emshop/gin-micro/registry/consul"
 	rpcserver "emshop/gin-micro/server/rpc-server"
@@ -13,6 +13,7 @@ import (
 	servicev1 "emshop/internal/app/userop/srv/service/v1"
 	"emshop/pkg/app"
 	"emshop/pkg/log"
+	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
@@ -70,9 +71,18 @@ func NewDatabase(mysqlOpts *options.MySQLOptions) (*gorm.DB, error) {
 }
 
 // NewUserOpRPCServer 创建RPC服务器
-func NewUserOpRPCServer(serverOpts *options.ServerOptions, srv servicev1.Service) *rpcserver.Server {
+func NewUserOpRPCServer(telemetry *options.TelemetryOptions, serverOpts *options.ServerOptions, srv servicev1.Service) *rpcserver.Server {
+	trace.InitAgent(trace.Options{
+		Name:     telemetry.Name,
+		Endpoint: telemetry.Endpoint,
+		Sampler:  telemetry.Sampler,
+		Batcher:  telemetry.Batcher,
+	})
 	rpcAddr := fmt.Sprintf("%s:%d", serverOpts.Host, serverOpts.Port)
-	grpcServer := rpcserver.NewServer(rpcserver.WithAddress(rpcAddr))
+	grpcServer := rpcserver.NewServer(
+		rpcserver.WithAddress(rpcAddr),
+		rpcserver.WithMetrics(serverOpts.EnableMetrics),
+	)
 	RegisterGRPCServer(grpcServer.Server, srv)
 	return grpcServer
 }
@@ -111,7 +121,7 @@ func run(cfg *config.Config) app.RunFunc {
 		registrar := NewRegistrar(cfg.Registry)
 
 		// 初始化RPC服务器
-		rpcServer := NewUserOpRPCServer(cfg.Server, service)
+		rpcServer := NewUserOpRPCServer(cfg.Telemetry, cfg.Server, service)
 
 		// 创建应用
 		userOpApp, err := NewUserOpApp(cfg.Server, registrar, rpcServer)

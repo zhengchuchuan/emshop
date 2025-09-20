@@ -2,6 +2,7 @@ package admin
 
 import (
 	gapp "emshop/gin-micro/app"
+	"emshop/gin-micro/core/trace"
 	"emshop/internal/app/api/admin/config"
 	"emshop/internal/app/pkg/options"
 	"emshop/pkg/app"
@@ -42,6 +43,14 @@ func NewUserApp(cfg *config.Config) (*gapp.App, error) {
 
 	//服务注册
 	register := NewRegistrar(cfg.Registry)
+
+	// 初始化链路追踪
+	trace.InitAgent(trace.Options{
+		Name:     cfg.Telemetry.Name,
+		Endpoint: cfg.Telemetry.Endpoint,
+		Sampler:  cfg.Telemetry.Sampler,
+		Batcher:  cfg.Telemetry.Batcher,
+	})
 
 	//生成rpc服务
 	rpcServer, err := NewAdminHTTPServer(cfg)

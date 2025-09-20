@@ -31,14 +31,17 @@ func NewPaymentRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 
 	// 初始化服务工厂
 	paymentSrvFactory := v1service.NewService(dataFactory, cfg.Dtm, cfg.Redis)
-	
+
 	// 创建gRPC服务器
 	paymentServer := payment.NewPaymentServer(paymentSrvFactory)
 	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	grpcServer := rpcserver.NewServer(rpcserver.WithAddress(rpcAddr))
-	
+	grpcServer := rpcserver.NewServer(
+		rpcserver.WithAddress(rpcAddr),
+		rpcserver.WithMetrics(cfg.Server.EnableMetrics),
+	)
+
 	// 注册服务
 	gpb.RegisterPaymentServer(grpcServer.Server, paymentServer)
-	
+
 	return grpcServer, nil
 }
