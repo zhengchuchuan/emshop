@@ -10,7 +10,7 @@ import (
 	"emshop/internal/app/pkg/code"
 	"emshop/pkg/errors"
 	"emshop/pkg/log"
-	
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -71,7 +71,7 @@ func (cs *couponServer) UpdateCouponTemplate(ctx context.Context, req *couponpb.
 	dto := &dto.UpdateCouponTemplateDTO{
 		ID: req.Id,
 	}
-	
+
 	if req.Name != nil {
 		dto.Name = req.Name
 	}
@@ -96,7 +96,7 @@ func (cs *couponServer) ListCouponTemplates(ctx context.Context, req *couponpb.L
 		Page:     req.Page,
 		PageSize: req.PageSize,
 	}
-	
+
 	if req.Status != nil {
 		dto.Status = req.Status
 	}
@@ -142,7 +142,7 @@ func (cs *couponServer) GetUserCoupons(ctx context.Context, req *couponpb.GetUse
 		Page:     req.Page,
 		PageSize: req.PageSize,
 	}
-	
+
 	if req.Status != nil {
 		dto.Status = req.Status
 	}
@@ -326,16 +326,16 @@ func (cs *couponServer) handleError(err error) error {
 
 	// 根据业务错误码转换为gRPC状态码
 	if errors.IsCode(err, code.ErrResourceNotFound) {
-		return status.Errorf(codes.NotFound, err.Error())
+		return status.Error(codes.NotFound, err.Error())
 	}
 	if errors.IsCode(err, code.ErrInvalidRequest) {
-		return status.Errorf(codes.InvalidArgument, err.Error())
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	if errors.IsCode(err, code.ErrResourceNotAvailable) {
-		return status.Errorf(codes.Unavailable, err.Error())
+		return status.Error(codes.Unavailable, err.Error())
 	}
 	if errors.IsCode(err, code.ErrResourceLimitExceeded) {
-		return status.Errorf(codes.ResourceExhausted, err.Error())
+		return status.Error(codes.ResourceExhausted, err.Error())
 	}
 	if errors.IsCode(err, code.ErrDatabase) {
 		return status.Errorf(codes.Internal, "数据库错误")

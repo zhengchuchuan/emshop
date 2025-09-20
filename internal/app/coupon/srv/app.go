@@ -3,9 +3,16 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
+	"time"
 
 	couponpb "emshop/api/coupon/v1"
 	"emshop/gin-micro/core/trace"
+	"emshop/gin-micro/registry"
+	"emshop/gin-micro/registry/consul"
 	rpcserver "emshop/gin-micro/server/rpc-server"
 	"emshop/internal/app/coupon/srv/config"
 	"emshop/internal/app/coupon/srv/consumer"
@@ -15,30 +22,75 @@ import (
 	"emshop/internal/app/coupon/srv/pkg/cache"
 	servicev1 "emshop/internal/app/coupon/srv/service/v1"
 	"emshop/internal/app/pkg/options"
+	appframework "emshop/pkg/app"
 	"emshop/pkg/log"
-	"github.com/redis/go-redis/v9"
-	"gopkg.in/yaml.v3"
-	"os"
+
+	redis "github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
+	"github.com/hashicorp/consul/api"
 )
+
+// NewApp returns a CLI application wired for the coupon service.
+func NewApp(basename string) *appframework.App {
+	cfg := config.New()
+	return appframework.NewApp(
+		"coupon",
+		basename,
+		appframework.WithOptions(cfg),
+		appframework.WithRunFunc(run(cfg)),
+	)
+}
+
+func run(cfg *config.Config) appframework.RunFunc {
+	return func(basename string) error {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		couponApp, err := NewCouponApp(cfg)
+		if err != nil {
+			return err
+		}
+
+		if err := couponApp.Run(ctx); err != nil {
+			_ = couponApp.Stop()
+			return err
+		}
+
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(quit)
+		<-quit
+
+		log.Info("正在优雅关闭优惠券服务...")
+
+		if err := couponApp.Stop(); err != nil {
+			log.Errorf("停止优惠券服务失败: %v", err)
+			return err
+		}
+
+		log.Info("优惠券服务已停止")
+		return nil
+	}
+}
 
 // CouponApp 优惠券应用
 type CouponApp struct {
-	config         *config.Config
-	cacheManager   cache.CacheManager
-	canalConsumer  *consumer.CouponCanalConsumer
-	redisClient    *redis.Client
-	dataFactory    interfaces.DataFactory
-	factoryManager *datav1.FactoryManager
-	rpcServer      *rpcserver.Server
-	service        *servicev1.Service
+	config          *config.Config
+	cacheManager    cache.CacheManager
+	canalConsumer   *consumer.CouponCanalConsumer
+	redisClient     *redis.Client
+	dataFactory     interfaces.DataFactory
+	factoryManager  *datav1.FactoryManager
+	rpcServer       *rpcserver.Server
+	service         *servicev1.Service
+	registrar       registry.Registrar
+	serviceInstance *registry.ServiceInstance
 }
 
 // NewCouponApp 创建优惠券应用
-func NewCouponApp(configFile string) (*CouponApp, error) {
-	// 加载配置
-	cfg, err := loadConfig(configFile)
-	if err != nil {
-		return nil, fmt.Errorf("加载配置失败: %v", err)
+func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("配置不能为空")
 	}
 
 	// 初始化日志
@@ -54,15 +106,13 @@ func NewCouponApp(configFile string) (*CouponApp, error) {
 		DB:       cfg.Redis.Database,
 	})
 
-	// 测试Redis连接 - 暂时禁用直到解决兼容性问题
-	// TODO: 调试 Redis 8.0.1 和 go-redis/v9 的兼容性问题
-	/*
-		if err := redisClient.Ping(context.Background()).Err(); err != nil {
-			return nil, fmt.Errorf("连接Redis失败: %v", err)
-		}
-		log.Info("Redis连接测试成功")
-	*/
-	log.Warn("Redis连接测试暂时跳过，需要调试兼容性问题")
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if err := redisClient.Ping(pingCtx).Err(); err != nil {
+		cancel()
+		return nil, fmt.Errorf("连接Redis失败: %v", err)
+	}
+	cancel()
+	log.Infof("Redis连接测试成功, addr: %s", addr)
 
 	// 创建数据层工厂管理器
 	factoryManager, err := datav1.NewFactoryManager(cfg.MySQL)
@@ -72,12 +122,17 @@ func NewCouponApp(configFile string) (*CouponApp, error) {
 
 	dataFactory := factoryManager.GetDataFactory()
 
-	// 创建缓存管理器 - 暂时跳过，因为需要更新到go-redis/v9
-	// TODO: 更新 cache.NewCouponCacheManager 以支持 redis/go-redis/v9
-	var cacheManager cache.CacheManager
-	log.Warn("缓存管理器暂时禁用，需要更新到go-redis/v9")
+	// 创建服务层，注入Redis与RocketMQ依赖
+	service := servicev1.NewService(dataFactory, redisClient, cfg.DTM, cfg.RocketMQ, cfg.ToCacheConfig())
+	cacheManager := service.CacheManager
+	if cacheManager == nil {
+		return nil, fmt.Errorf("初始化缓存管理器失败")
+	}
 
-	// 创建Canal消费者配置
+	if cfg.Canal == nil {
+		return nil, fmt.Errorf("未配置Canal同步信息")
+	}
+
 	canalConfig := &consumer.CanalConsumerConfig{
 		NameServers:   cfg.RocketMQ.NameServers,
 		ConsumerGroup: cfg.Canal.ConsumerGroup,
@@ -86,21 +141,17 @@ func NewCouponApp(configFile string) (*CouponApp, error) {
 		BatchSize:     cfg.Canal.BatchSize,
 	}
 
-	// 创建Canal消费者
 	canalConsumer := consumer.NewCouponCanalConsumer(canalConfig, cacheManager)
 
-	// 创建服务层 - 暂时不传递redisClient，因为需要更新到go-redis/v9
-	// TODO: 更新 servicev1.NewService 以支持 redis/go-redis/v9
-	service := servicev1.NewService(dataFactory, nil, cfg.DTM, cfg.RocketMQ, cfg.ToCacheConfig())
-	log.Warn("服务层Redis客户端暂时禁用，需要更新到go-redis/v9")
-
 	// 初始化链路追踪
-	trace.InitAgent(trace.Options{
-		Name:     cfg.Telemetry.Name,
-		Endpoint: cfg.Telemetry.Endpoint,
-		Sampler:  cfg.Telemetry.Sampler,
-		Batcher:  cfg.Telemetry.Batcher,
-	})
+	if cfg.Telemetry != nil {
+		trace.InitAgent(trace.Options{
+			Name:     cfg.Telemetry.Name,
+			Endpoint: cfg.Telemetry.Endpoint,
+			Sampler:  cfg.Telemetry.Sampler,
+			Batcher:  cfg.Telemetry.Batcher,
+		})
+	}
 
 	// 创建gRPC服务器
 	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -113,17 +164,34 @@ func NewCouponApp(configFile string) (*CouponApp, error) {
 	couponServer := controllerv1.NewCouponServer(service)
 	couponpb.RegisterCouponServer(rpcSrv.Server, couponServer)
 
+	var registrar registry.Registrar
+	var serviceInstance *registry.ServiceInstance
+	if cfg.Registry != nil {
+		registrar, err = newConsulRegistrar(cfg.Registry)
+		if err != nil {
+			return nil, fmt.Errorf("创建Consul注册器失败: %v", err)
+		}
+		serviceInstance, err = buildServiceInstance(cfg.Server, rpcSrv)
+		if err != nil {
+			return nil, fmt.Errorf("构建服务实例失败: %v", err)
+		}
+	} else {
+		log.Warn("未配置服务注册信息，将跳过Consul服务注册")
+	}
+
 	log.Info("优惠券应用初始化成功")
 
 	return &CouponApp{
-		config:         cfg,
-		cacheManager:   cacheManager,
-		canalConsumer:  canalConsumer,
-		redisClient:    redisClient,
-		dataFactory:    dataFactory,
-		factoryManager: factoryManager,
-		rpcServer:      rpcSrv,
-		service:        service,
+		config:          cfg,
+		cacheManager:    cacheManager,
+		canalConsumer:   canalConsumer,
+		redisClient:     redisClient,
+		dataFactory:     dataFactory,
+		factoryManager:  factoryManager,
+		rpcServer:       rpcSrv,
+		service:         service,
+		registrar:       registrar,
+		serviceInstance: serviceInstance,
 	}, nil
 }
 
@@ -131,14 +199,14 @@ func NewCouponApp(configFile string) (*CouponApp, error) {
 func (app *CouponApp) Run(ctx context.Context) error {
 	log.Info("启动优惠券服务...")
 
-	// 启动Canal消费者 - 暂时禁用，需要创建RocketMQ主题
-	// TODO: 创建coupon-binlog-topic主题后启用
-	/*
+	if app.canalConsumer != nil {
 		if err := app.canalConsumer.Start(); err != nil {
 			return fmt.Errorf("启动Canal消费者失败: %v", err)
 		}
-	*/
-	log.Warn("Canal消费者暂时禁用，需要创建RocketMQ主题")
+		log.Info("Canal消费者启动成功，已开启缓存同步")
+	} else {
+		log.Warn("Canal消费者未初始化，跳过缓存同步")
+	}
 
 	// 启动gRPC服务器
 	go func() {
@@ -147,6 +215,22 @@ func (app *CouponApp) Run(ctx context.Context) error {
 		}
 	}()
 
+	if app.registrar != nil && app.serviceInstance != nil {
+		regCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		err := app.registrar.Register(regCtx, app.serviceInstance)
+		cancel()
+		if err != nil {
+			log.Errorf("注册优惠券服务到Consul失败: %v", err)
+			if app.rpcServer != nil {
+				_ = app.rpcServer.Stop(context.Background())
+			}
+			return fmt.Errorf("注册优惠券服务失败: %w", err)
+		}
+		log.Infof("优惠券服务已注册到Consul (serviceID=%s)", app.serviceInstance.ID)
+	} else {
+		log.Warn("Consul注册器未初始化，跳过服务注册")
+	}
+
 	log.Infof("优惠券服务启动成功 (gRPC: %s, HTTP: %d)", app.rpcServer.Address(), app.config.Server.HttpPort)
 	return nil
 }
@@ -154,6 +238,17 @@ func (app *CouponApp) Run(ctx context.Context) error {
 // Stop 停止应用
 func (app *CouponApp) Stop() error {
 	log.Info("停止优惠券服务...")
+
+	if app.registrar != nil && app.serviceInstance != nil {
+		deregCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := app.registrar.Deregister(deregCtx, app.serviceInstance)
+		cancel()
+		if err != nil {
+			log.Errorf("注销优惠券服务失败: %v", err)
+		} else {
+			log.Info("已从Consul注销优惠券服务")
+		}
+	}
 
 	// 停止gRPC服务器
 	if app.rpcServer != nil {
@@ -169,8 +264,10 @@ func (app *CouponApp) Stop() error {
 	}
 
 	// 停止Canal消费者
-	if err := app.canalConsumer.Stop(); err != nil {
-		log.Errorf("停止Canal消费者失败: %v", err)
+	if app.canalConsumer != nil {
+		if err := app.canalConsumer.Stop(); err != nil {
+			log.Errorf("停止Canal消费者失败: %v", err)
+		}
 	}
 
 	// 关闭缓存管理器
@@ -190,28 +287,70 @@ func (app *CouponApp) Stop() error {
 		}
 	}
 
+	log.Flush()
 	log.Info("优惠券服务停止完成")
 	return nil
 }
 
-// loadConfig 加载配置文件
-func loadConfig(configFile string) (*config.Config, error) {
-	data, err := os.ReadFile(configFile)
-	if err != nil {
-		return nil, fmt.Errorf("读取配置文件失败: %v", err)
+// initLogger 初始化日志
+func initLogger(logOpts *log.Options) error {
+	if logOpts == nil {
+		logOpts = log.NewOptions()
 	}
 
-	var cfg config.Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("解析配置文件失败: %v", err)
-	}
-
-	return &cfg, nil
+	log.Init(logOpts)
+	log.Infof("日志系统初始化成功，level=%s", logOpts.Level)
+	return nil
 }
 
-// initLogger 初始化日志
-func initLogger(logOpts *options.LogOptions) error {
-	// 这里暂时简化，实际应该根据配置初始化日志
-	log.Info("日志系统初始化成功")
-	return nil
+func newConsulRegistrar(registryOpts *options.RegistryOptions) (registry.Registrar, error) {
+	if registryOpts == nil {
+		return nil, fmt.Errorf("registry配置为空")
+	}
+
+	cfg := api.DefaultConfig()
+	if registryOpts.Address != "" {
+		cfg.Address = registryOpts.Address
+	}
+	if registryOpts.Scheme != "" {
+		cfg.Scheme = registryOpts.Scheme
+	}
+
+	cli, err := api.NewClient(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("创建Consul客户端失败: %w", err)
+	}
+
+	return consul.New(cli, consul.WithHealthCheck(true)), nil
+}
+
+func buildServiceInstance(serverOpts *options.ServerOptions, rpcSrv *rpcserver.Server) (*registry.ServiceInstance, error) {
+	if serverOpts == nil {
+		return nil, fmt.Errorf("server配置为空")
+	}
+	if rpcSrv == nil {
+		return nil, fmt.Errorf("gRPC服务器未初始化")
+	}
+
+	endpoint := rpcSrv.Endpoint()
+	if endpoint == nil {
+		return nil, fmt.Errorf("无法获取gRPC服务Endpoint")
+	}
+
+	instanceID := uuid.NewString()
+	if serverOpts.Name != "" {
+		instanceID = fmt.Sprintf("%s-%s", serverOpts.Name, instanceID)
+	}
+
+	metadata := map[string]string{
+		"host":      serverOpts.Host,
+		"http_port": strconv.Itoa(serverOpts.HttpPort),
+	}
+
+	return &registry.ServiceInstance{
+		ID:        instanceID,
+		Name:      serverOpts.Name,
+		Endpoints: []string{endpoint.String()},
+		Metadata:  metadata,
+	}, nil
 }

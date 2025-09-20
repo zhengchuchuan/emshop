@@ -1,7 +1,7 @@
 # 优惠券服务配置文件
 # 服务器配置
 server:
-  name: "coupon"
+  name: emshop-coupon-srv
   host: "0.0.0.0"
   port: 0 # 随机分配
   http-port: 8056
