@@ -25,7 +25,8 @@ scrape_configs:
     metrics_path: '/metrics'
 
   # Add your application metrics here
-  # - job_name: 'emshop-services'
-  #   static_configs:
-  #     - targets: ['your-service:8080']
-  #   scrape_interval: 30s
+  - job_name: 'emshop-api'
+    static_configs:
+      - targets: ['host.docker.internal:8051']
+    scrape_interval: 5s
+    metrics_path: '/metrics'

@@ -1,15 +1,14 @@
 package user
 
 import (
-	"time"
+    "time"
 
-	"emshop/internal/app/api/emshop/domain/dto/request"
-	"emshop/internal/app/pkg/jwt"
-	gin2 "emshop/internal/app/pkg/translator/gin"
-	"emshop/pkg/common/core"
-	jtime "emshop/pkg/common/time"
+    "emshop/internal/app/api/emshop/domain/dto/request"
+    gin2 "emshop/internal/app/pkg/translator/gin"
+    "emshop/pkg/common/core"
+    jtime "emshop/pkg/common/time"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
 func (us *userServer) UpdateUser(ctx *gin.Context) {
@@ -21,9 +20,8 @@ func (us *userServer) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID
-	userID, _ := ctx.Get(jwt.KeyUserID)
-	userIDInt := uint64(userID.(int))
+    // 获取当前用户ID
+    userIDInt := uint64(us.getUserIDFromContext(ctx))
 
 	// 将请求数据转换为proto结构
 	updateReq, err := req.ToProto(userIDInt)

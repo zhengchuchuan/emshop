@@ -1,9 +1,12 @@
 package errors
 
 import (
-	"fmt"
-	"net/http"
-	"sync"
+    "fmt"
+    "net/http"
+    "sync"
+
+    gstatus "google.golang.org/grpc/status"
+    gcodes "google.golang.org/grpc/codes"
 )
 
 var (
@@ -104,17 +107,70 @@ func MustRegister(coder Coder) {
 // nil error will return nil direct.
 // None withStack error will be parsed as ErrUnknown.
 func ParseCoder(err error) Coder {
-	if err == nil {
-		return nil
-	}
+    if err == nil {
+        return nil
+    }
 
-	if v, ok := err.(*withCode); ok {
-		if coder, ok := codes[v.code]; ok {
-			return coder
-		}
-	}
+    // If this is a gRPC status error, map to HTTP directly
+    if st, ok := gstatus.FromError(err); ok {
+        return grpcStatusToCoder(st)
+    }
 
-	return unknownCoder
+    if v, ok := err.(*withCode); ok {
+        if coder, ok := codes[v.code]; ok {
+            return coder
+        }
+
+        // If withCode contains a gRPC status code that we didn't register, map it
+        if st, ok := gstatus.FromError(v.err); ok {
+            return grpcStatusToCoder(st)
+        }
+    }
+
+    return unknownCoder
+}
+
+// grpcStatusToCoder converts a gRPC status to a defaultCoder with appropriate HTTP status.
+func grpcStatusToCoder(st *gstatus.Status) Coder {
+    httpStatus := http.StatusInternalServerError
+    switch st.Code() {
+    case gcodes.OK:
+        httpStatus = http.StatusOK
+    case gcodes.Canceled:
+        httpStatus = http.StatusBadRequest
+    case gcodes.Unknown:
+        httpStatus = http.StatusInternalServerError
+    case gcodes.InvalidArgument:
+        httpStatus = http.StatusBadRequest
+    case gcodes.DeadlineExceeded:
+        httpStatus = http.StatusGatewayTimeout
+    case gcodes.NotFound:
+        httpStatus = http.StatusNotFound
+    case gcodes.AlreadyExists:
+        httpStatus = http.StatusConflict
+    case gcodes.PermissionDenied:
+        httpStatus = http.StatusForbidden
+    case gcodes.Unauthenticated:
+        httpStatus = http.StatusUnauthorized
+    case gcodes.ResourceExhausted:
+        httpStatus = http.StatusTooManyRequests
+    case gcodes.FailedPrecondition:
+        httpStatus = http.StatusBadRequest
+    case gcodes.Aborted:
+        httpStatus = http.StatusConflict
+    case gcodes.OutOfRange:
+        httpStatus = http.StatusBadRequest
+    case gcodes.Unimplemented:
+        httpStatus = http.StatusNotImplemented
+    case gcodes.Internal:
+        httpStatus = http.StatusInternalServerError
+    case gcodes.Unavailable:
+        httpStatus = http.StatusServiceUnavailable
+    case gcodes.DataLoss:
+        httpStatus = http.StatusInternalServerError
+    }
+
+    return defaultCoder{C: int(st.Code()), HTTP: httpStatus, Ext: st.Message(), Ref: ""}
 }
 
 // IsCode reports whether any error in err's chain contains the given error code.

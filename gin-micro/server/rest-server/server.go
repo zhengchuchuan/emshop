@@ -203,32 +203,35 @@ func (s *Server) Start(ctx context.Context) error {
 		return err
 	}
 	
-	// 初始化路由（在翻译器初始化之后）
-	if s.routerInitFunc != nil {
-		log.Info("initializing routes after translator setup")
-		s.routerInitFunc(s, s.routerInitConfig)
-	}
+    // 注册prometheus监控（需在路由初始化之前安装中间件，确保对已注册路由生效）
+    if s.enableMetrics {
+        // get global Monitor object
+        m := ginmetrics.GetMonitor()
+        // +optional set metric path, default /debug/metrics
+        m.SetMetricPath("/metrics")
+        // +optional set slow time, default 5s
+        // +optional set request duration, default {0.1, 0.3, 1.2, 5, 10}
+        // used to p95, p99
+        m.SetDuration([]float64{0.1, 0.3, 1.2, 5, 10})
+        m.Use(s)
 
-	//注册mobile验证码
-	validation.RegisterMobile(s.localizer)
+        // Add concise per-route request counter for QPS
+        s.Use(mws.HTTPMetricsMiddleware(s.serviceName))
+    }
 
-	//根据配置初始化pprof路由
-	if s.enableProfiling {
-		pprof.Register(s.Engine)
-	}
+    // 初始化路由（在翻译器初始化之后，并在Metrics/中间件安装之后）
+    if s.routerInitFunc != nil {
+        log.Info("initializing routes after translator setup")
+        s.routerInitFunc(s, s.routerInitConfig)
+    }
 
-	// 注册prometheus监控
-	if s.enableMetrics {
-		// get global Monitor object
-		m := ginmetrics.GetMonitor()
-		// +optional set metric path, default /debug/metrics
-		m.SetMetricPath("/metrics")
-		// +optional set slow time, default 5s
-		// +optional set request duration, default {0.1, 0.3, 1.2, 5, 10}
-		// used to p95, p99
-		m.SetDuration([]float64{0.1, 0.3, 1.2, 5, 10})
-		m.Use(s)
-	}
+    //注册mobile验证码
+    validation.RegisterMobile(s.localizer)
+
+    //根据配置初始化pprof路由
+    if s.enableProfiling {
+        pprof.Register(s.Engine)
+    }
 
 	log.Infof("rest server is running on port: %d", s.port)
 	address := fmt.Sprintf(":%d", s.port)

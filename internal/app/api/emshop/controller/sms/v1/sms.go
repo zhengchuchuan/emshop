@@ -29,7 +29,7 @@ func NewSmsController(sf service.ServiceFactory, trans restserver.I18nTranslator
 func (sc *SmsController) SendSms(c *gin.Context) {
 	var smsReq upbv1.SendSmsRequest
 
-	if err := c.ShouldBind(&smsReq); err != nil {
+	if err := c.ShouldBindJSON(&smsReq); err != nil {
 		gin2.HandleValidatorError(c, err, sc.trans)
 		return
 	}

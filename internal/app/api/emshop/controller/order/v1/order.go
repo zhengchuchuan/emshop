@@ -41,14 +41,14 @@ func (oc *orderController) OrderList(ctx *gin.Context) {
 	}
 
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(jwt.KeyUserID)
-	if !exists {
+	userID := oc.getUserIDFromContext(ctx)
+	if userID == 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	orderRequest := proto.OrderFilterRequest{
-		UserId: int32(userId.(int)),
+		UserId: int32(userID),
 	}
 
 	// 分页参数 - 设置默认值
@@ -106,14 +106,14 @@ func (oc *orderController) CreateOrder(ctx *gin.Context) {
 	}
 
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(jwt.KeyUserID)
-	if !exists {
+	userID := oc.getUserIDFromContext(ctx)
+	if userID == 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	orderRequest := proto.OrderRequest{
-		UserId:  int32(userId.(int)),
+		UserId:  int32(userID),
 		Address: &r.Address,
 		Name:    &r.Name,
 		Mobile:  &r.Mobile,
@@ -147,15 +147,15 @@ func (oc *orderController) OrderDetail(ctx *gin.Context) {
 	}
 
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(jwt.KeyUserID)
-	if !exists {
+	userID := oc.getUserIDFromContext(ctx)
+	if userID == 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	orderRequest := proto.OrderRequest{
 		Id:     int32(i),
-		UserId: int32(userId.(int)),
+		UserId: int32(userID),
 	}
 
 	orderDetailResponse, err := oc.srv.Order().OrderDetail(ctx, &orderRequest)
@@ -199,14 +199,14 @@ func (oc *orderController) CartList(ctx *gin.Context) {
 	log.Info("cart list function called ...")
 
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(jwt.KeyUserID)
-	if !exists {
+	userID := oc.getUserIDFromContext(ctx)
+	if userID == 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	userRequest := proto.UserInfo{
-		Id: int32(userId.(int)),
+		Id: int32(userID),
 	}
 
 	cartResponse, err := oc.srv.Order().CartItemList(ctx, &userRequest)
@@ -244,15 +244,15 @@ func (oc *orderController) AddToCart(ctx *gin.Context) {
 	}
 
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(jwt.KeyUserID)
-	if !exists {
+	userID := oc.getUserIDFromContext(ctx)
+	if userID == 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	checked := true
 	cartRequest := proto.CartItemRequest{
-		UserId:  int32(userId.(int)),
+		UserId:  int32(userID),
 		GoodsId: r.GoodsId,
 		Nums:    &r.Nums,
 		Checked: &checked,
@@ -297,15 +297,15 @@ func (oc *orderController) UpdateCartItem(ctx *gin.Context) {
 	}
 
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(jwt.KeyUserID)
-	if !exists {
+	userID := oc.getUserIDFromContext(ctx)
+	if userID == 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	cartRequest := proto.CartItemRequest{
 		Id:     int32(i),
-		UserId: int32(userId.(int)),
+		UserId: int32(userID),
 		Nums:   &r.Nums,
 	}
 	if r.Checked != nil {
@@ -339,15 +339,15 @@ func (oc *orderController) DeleteCartItem(ctx *gin.Context) {
 	}
 
 	// 从JWT中获取用户ID
-	userId, exists := ctx.Get(jwt.KeyUserID)
-	if !exists {
+	userID := oc.getUserIDFromContext(ctx)
+	if userID == 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	// 先获取购物车列表，找到对应的商品ID
 	userRequest := proto.UserInfo{
-		Id: int32(userId.(int)),
+		Id: int32(userID),
 	}
 
 	cartResponse, err := oc.srv.Order().CartItemList(ctx, &userRequest)
@@ -373,7 +373,7 @@ func (oc *orderController) DeleteCartItem(ctx *gin.Context) {
 	}
 
 	cartRequest := proto.CartItemRequest{
-		UserId:  int32(userId.(int)),
+		UserId:  int32(userID),
 		GoodsId: goodsId,
 	}
 
@@ -386,4 +386,18 @@ func (oc *orderController) DeleteCartItem(ctx *gin.Context) {
 	core.WriteResponse(ctx, nil, map[string]interface{}{
 		"msg": "删除成功",
 	})
+}
+
+// getUserIDFromContext 从上下文获取用户ID
+func (oc *orderController) getUserIDFromContext(ctx *gin.Context) int64 {
+    // 从中间件设置的上下文键获取用户ID
+    if v, ok := ctx.Get(jwt.KeyUserID); ok {
+        if id, ok := v.(int); ok {
+            return int64(id)
+        }
+        if id64, ok := v.(int64); ok {
+            return id64
+        }
+    }
+    return 0
 }

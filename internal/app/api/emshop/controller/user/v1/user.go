@@ -1,14 +1,15 @@
 package user
 
 import (
-	"net/http"
-	"strconv"
+    "net/http"
+    "strconv"
 
-	restserver "emshop/gin-micro/server/rest-server"
-	"emshop/internal/app/api/emshop/service"
-	"emshop/pkg/common/core"
+    restserver "emshop/gin-micro/server/rest-server"
+    "emshop/internal/app/api/emshop/service"
+    "emshop/internal/app/pkg/jwt"
+    "emshop/pkg/common/core"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
 type userServer struct {
@@ -123,4 +124,18 @@ func (us *userServer) GetUserList(ctx *gin.Context) {
 		"total": userListDTO.TotalCount,
 		"users": users,
 	})
+}
+
+// getUserIDFromContext 从上下文获取用户ID
+func (us *userServer) getUserIDFromContext(ctx *gin.Context) int64 {
+    // 从中间件设置的上下文键获取用户ID
+    if v, ok := ctx.Get(jwt.KeyUserID); ok {
+        if id, ok := v.(int); ok {
+            return int64(id)
+        }
+        if id64, ok := v.(int64); ok {
+            return id64
+        }
+    }
+    return 0
 }

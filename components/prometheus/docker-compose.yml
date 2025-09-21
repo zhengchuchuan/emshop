@@ -7,6 +7,8 @@ services:
       - "${PROMETHEUS_PORT:-9090}:9090"
     networks:
       - emshop-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - emshop-prometheus-data:/prometheus
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -26,7 +28,7 @@ services:
     container_name: emshop-node-exporter
     restart: unless-stopped
     ports:
-      - "${NODE_EXPORTER_PORT:-9101}:9100"
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
     networks:
       - emshop-net
     volumes:
@@ -47,6 +49,8 @@ services:
       - "${GRAFANA_PORT:-3000}:3000"
     networks:
       - emshop-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}

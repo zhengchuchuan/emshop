@@ -196,11 +196,11 @@ func (ctd *couponTemplateData) CheckTemplateAvailability(ctx context.Context, db
 	}
 	
 	var count int64
-	if err := db.WithContext(ctx).Model(&do.CouponTemplateDO{}).
-		Where("id = ? AND status = ? AND valid_start_time <= ? AND valid_end_time >= ? AND used_count < total_count", 
-		templateID, do.CouponStatusActive, currentTime, currentTime).Count(&count).Error; err != nil {
-		log.Errorf("检查优惠券模板可用性失败: %v", err)
-		return false, err
-	}
+    if err := db.WithContext(ctx).Model(&do.CouponTemplateDO{}).
+        Where("id = ? AND status = ? AND valid_start_time <= ? AND valid_end_time >= ? AND (total_count = 0 OR used_count < total_count)",
+        templateID, do.CouponStatusActive, currentTime, currentTime).Count(&count).Error; err != nil {
+        log.Errorf("检查优惠券模板可用性失败: %v", err)
+        return false, err
+    }
 	return count > 0, nil
 }
