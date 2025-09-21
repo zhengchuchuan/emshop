@@ -3,6 +3,7 @@ package mysql
 import (
 	"emshop/internal/app/coupon/srv/data/v1/interfaces"
 	"emshop/internal/app/pkg/options"
+	gormtrace "emshop/pkg/observability/gormtrace"
 	"emshop/pkg/log"
 	"fmt"
 	"sync"
@@ -64,6 +65,8 @@ func (f *dataFactory) initMySQL(mysqlOpts *options.MySQLOptions) error {
 		log.Errorf("MySQL连接失败: %v", err)
 		return err
 	}
+
+	gormtrace.Enable(db, mysqlOpts.Database)
 	
 	sqlDB, err := db.DB()
 	if err != nil {

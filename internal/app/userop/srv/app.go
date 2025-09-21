@@ -11,6 +11,7 @@ import (
 	datav1 "emshop/internal/app/userop/srv/data/v1"
 	"emshop/internal/app/userop/srv/domain/do"
 	servicev1 "emshop/internal/app/userop/srv/service/v1"
+	gormtrace "emshop/pkg/observability/gormtrace"
 	"emshop/pkg/app"
 	"emshop/pkg/log"
 	"fmt"
@@ -56,6 +57,8 @@ func NewDatabase(mysqlOpts *options.MySQLOptions) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	gormtrace.Enable(db, mysqlOpts.Database)
 
 	// 自动迁移数据表
 	if err = db.AutoMigrate(

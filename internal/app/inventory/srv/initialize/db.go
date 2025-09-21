@@ -3,6 +3,7 @@ package initialize
 import (
 	"emshop/internal/app/inventory/srv/domain/do"
 	"emshop/internal/app/inventory/srv/global"
+	gormtrace "emshop/pkg/observability/gormtrace"
 	"fmt"
 	"log"
 	"os"
@@ -40,6 +41,8 @@ func InitDB() {
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect database: %v", err))
 	}
+
+	gormtrace.Enable(global.DB, opts.Database)
 
 	sqlDB, err := global.DB.DB()
 	if err != nil {

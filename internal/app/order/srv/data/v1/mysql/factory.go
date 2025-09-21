@@ -10,6 +10,7 @@ import (
 	"emshop/internal/app/order/srv/data/v1/interfaces"
 	"emshop/internal/app/pkg/code"
 	"emshop/internal/app/pkg/options"
+	gormtrace "emshop/pkg/observability/gormtrace"
 	errors2 "emshop/pkg/errors"
 	"os"
 	"sync"
@@ -120,6 +121,8 @@ func NewMySQLFactory(mysqlOpts *options.MySQLOptions, goodsClient proto.GoodsCli
 		if err != nil {
 			return
 		}
+
+		gormtrace.Enable(db, mysqlOpts.Database)
 
 		sqlDB, _ := db.DB()
 		// 创建临时变量来构建factory

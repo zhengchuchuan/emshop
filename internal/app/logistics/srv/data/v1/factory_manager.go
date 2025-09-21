@@ -4,6 +4,7 @@ import (
 	"emshop/internal/app/logistics/srv/data/v1/interfaces"
 	"emshop/internal/app/logistics/srv/data/v1/mysql"
 	"emshop/internal/app/pkg/options"
+	gormtrace "emshop/pkg/observability/gormtrace"
 	"emshop/pkg/log"
 
 	mysqlDriver "gorm.io/driver/mysql"
@@ -81,6 +82,8 @@ func createDBConnection(opts *options.MySQLOptions) (*gorm.DB, error) {
 		log.Errorf("failed to connect to MySQL: %v", err)
 		return nil, err
 	}
+
+	gormtrace.Enable(db, opts.Database)
 
 	// 设置连接池参数
 	sqlDB, err := db.DB()
