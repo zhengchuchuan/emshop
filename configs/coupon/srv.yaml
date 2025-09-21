@@ -87,6 +87,7 @@ canal:
 business:
   # 秒杀配置
   flashsale:
+    enable_async: true          # 是否启用异步秒杀链路
     max_qps_per_user: 5           # 单用户最大QPS
     stock_cache_ttl: "300s"       # 库存缓存TTL
     user_limit_ttl: "1800s"       # 用户限制TTL

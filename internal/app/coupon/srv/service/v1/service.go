@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"emshop/internal/app/coupon/srv/config"
 	"emshop/internal/app/coupon/srv/consumer"
 	"emshop/internal/app/coupon/srv/data/v1/interfaces"
 	"emshop/internal/app/coupon/srv/pkg/cache"
@@ -21,10 +22,18 @@ type Service struct {
 	EventProducer       consumer.FlashSaleEventProducer // RocketMQ事件生产者
 	TransactionProducer *consumer.TransactionFlashSaleEventProducer // 事务消息生产者
 	RetryManager        *consumer.RetryManager // 重试管理器
+	asyncFlashSale      bool
 }
 
 // NewService 创建优惠券服务工厂
-func NewService(data interfaces.DataFactory, redisClient *redis.Client, dtmOpts *options.DtmOptions, rocketmqOpts *options.RocketMQOptions, cacheConfig *cache.CacheConfig) *Service {
+func NewService(
+	data interfaces.DataFactory,
+	redisClient *redis.Client,
+	dtmOpts *options.DtmOptions,
+	rocketmqOpts *options.RocketMQOptions,
+	cacheConfig *cache.CacheConfig,
+	bizOpts *config.BusinessOptions,
+) *Service {
 	// 创建缓存适配器，将数据层接口适配为缓存仓库接口
 	cacheRepository := newCacheRepositoryAdapter(data)
 	
@@ -108,11 +117,20 @@ func NewService(data interfaces.DataFactory, redisClient *redis.Client, dtmOpts 
 		TransactionProducer: transactionProducer,
 		RetryManager:        retryManager,
 	}
-	
+
+	if bizOpts != nil && bizOpts.FlashSale != nil && bizOpts.FlashSale.EnableAsync && finalEventProducer != nil {
+		service.asyncFlashSale = true
+	}
+
 	// 创建DTM管理器，传入服务实例用于TCC回调
 	service.DTMManager = NewCouponDTMManager(dtmOpts, service)
-	
+
 	return service
+}
+
+// AsyncFlashSaleEnabled 返回是否启用异步秒杀链路
+func (s *Service) AsyncFlashSaleEnabled() bool {
+	return s != nil && s.asyncFlashSale && s.FlashSaleCore != nil
 }
 
 // Shutdown 优雅关闭服务

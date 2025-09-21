@@ -70,12 +70,32 @@ func (dm *CouponDTMManager) SubmitOrderWithCoupons(ctx context.Context, req *Ord
 func (dm *CouponDTMManager) ProcessFlashSaleWithInventory(ctx context.Context, req *FlashSaleInventoryRequest) error {
 	log.Infof("开始秒杀-库存分布式事务, 用户: %d, 秒杀ID: %d", req.UserID, req.FlashSaleID)
 
-	// 简化版：直接调用秒杀参与
+	if dm.service.AsyncFlashSaleEnabled() && dm.service.FlashSaleCore != nil {
+		coreReq := &dto.FlashSaleRequestDTO{
+			ActivityID: req.FlashSaleID,
+			UserID:     req.UserID,
+		}
+		coreResult, err := dm.service.FlashSaleCore.FlashSaleCoupon(ctx, coreReq)
+		if err != nil {
+			log.Errorf("异步秒杀预扣失败: %v", err)
+			return fmt.Errorf("秒杀参与失败: %w", err)
+		}
+		if coreResult == nil || !coreResult.Success {
+			failReason := "秒杀失败"
+			if coreResult != nil {
+				failReason = coreResult.Message
+			}
+			return fmt.Errorf(failReason)
+		}
+		log.Infof("秒杀-库存分布式事务异步预扣成功, 用户: %d", req.UserID)
+		return nil
+	}
+
 	flashSaleDTO := &dto.ParticipateFlashSaleDTO{
 		UserID:      req.UserID,
 		FlashSaleID: req.FlashSaleID,
 	}
-	
+
 	result, err := dm.service.FlashSaleSrv.ParticipateFlashSale(ctx, flashSaleDTO)
 	if err != nil {
 		log.Errorf("秒杀参与失败: %v", err)
@@ -98,7 +118,26 @@ func (dm *CouponDTMManager) ProcessFlashSaleWithInventory(ctx context.Context, r
 func (dm *CouponDTMManager) TryFlashSale(ctx context.Context, req *dto.ParticipateFlashSaleDTO) (*emptypb.Empty, error) {
 	log.Infof("TCC Try: 预占秒杀优惠券, 用户: %d, 秒杀ID: %d", req.UserID, req.FlashSaleID)
 
-	// 预占逻辑
+	if dm.service.AsyncFlashSaleEnabled() && dm.service.FlashSaleCore != nil {
+		coreReq := &dto.FlashSaleRequestDTO{
+			ActivityID: req.FlashSaleID,
+			UserID:     req.UserID,
+		}
+		coreResult, err := dm.service.FlashSaleCore.FlashSaleCoupon(ctx, coreReq)
+		if err != nil {
+			log.Errorf("TCC Try 异步预占失败: %v", err)
+			return nil, status.Errorf(codes.Aborted, "%s", err.Error())
+		}
+		if coreResult == nil || !coreResult.Success {
+			failReason := "秒杀预占失败"
+			if coreResult != nil {
+				failReason = coreResult.Message
+			}
+			return nil, status.Errorf(codes.Aborted, "%s", failReason)
+		}
+		return &emptypb.Empty{}, nil
+	}
+
 	result, err := dm.service.FlashSaleSrv.ParticipateFlashSale(ctx, req)
 	if err != nil {
 		log.Errorf("TCC Try 预占秒杀失败: %v", err)

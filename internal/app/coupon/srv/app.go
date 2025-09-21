@@ -78,6 +78,8 @@ type CouponApp struct {
 	config          *config.Config
 	cacheManager    cache.CacheManager
 	canalConsumer   *consumer.CouponCanalConsumer
+	flashSaleConfig *consumer.FlashSaleConsumerConfig
+	flashSaleConsumer *consumer.FlashSaleConsumer
 	redisClient     *redis.Client
 	dataFactory     interfaces.DataFactory
 	factoryManager  *datav1.FactoryManager
@@ -123,7 +125,7 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 	dataFactory := factoryManager.GetDataFactory()
 
 	// 创建服务层，注入Redis与RocketMQ依赖
-	service := servicev1.NewService(dataFactory, redisClient, cfg.DTM, cfg.RocketMQ, cfg.ToCacheConfig())
+	service := servicev1.NewService(dataFactory, redisClient, cfg.DTM, cfg.RocketMQ, cfg.ToCacheConfig(), cfg.Business)
 	cacheManager := service.CacheManager
 	if cacheManager == nil {
 		return nil, fmt.Errorf("初始化缓存管理器失败")
@@ -142,6 +144,25 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 	}
 
 	canalConsumer := consumer.NewCouponCanalConsumer(canalConfig, cacheManager)
+
+	var flashSaleConsumer *consumer.FlashSaleConsumer
+	var flashSaleCfg *consumer.FlashSaleConsumerConfig
+	if service.AsyncFlashSaleEnabled() && cfg.Business != nil && cfg.Business.FlashSale != nil {
+		flashSaleCfg = &consumer.FlashSaleConsumerConfig{
+			NameServers:   cfg.RocketMQ.NameServers,
+			ConsumerGroup: cfg.RocketMQ.ConsumerGroup,
+			Topic:         cfg.RocketMQ.Topic,
+			BatchSize:     int(cfg.Business.FlashSale.BatchSize),
+			MaxRetries:    int(cfg.RocketMQ.MaxReconsume),
+		}
+		if flashSaleCfg.BatchSize <= 0 {
+			flashSaleCfg.BatchSize = 16
+		}
+		if flashSaleCfg.MaxRetries <= 0 {
+			flashSaleCfg.MaxRetries = 3
+		}
+		flashSaleConsumer = consumer.NewFlashSaleConsumer(dataFactory, redisClient, service.RetryManager)
+	}
 
 	// 初始化链路追踪
 	if cfg.Telemetry != nil {
@@ -185,6 +206,8 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 		config:          cfg,
 		cacheManager:    cacheManager,
 		canalConsumer:   canalConsumer,
+		flashSaleConfig: flashSaleCfg,
+		flashSaleConsumer: flashSaleConsumer,
 		redisClient:     redisClient,
 		dataFactory:     dataFactory,
 		factoryManager:  factoryManager,
@@ -198,6 +221,13 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 // Run 运行应用
 func (app *CouponApp) Run(ctx context.Context) error {
 	log.Info("启动优惠券服务...")
+
+	if app.flashSaleConsumer != nil && app.flashSaleConfig != nil {
+		if err := app.flashSaleConsumer.Start(app.flashSaleConfig); err != nil {
+			return fmt.Errorf("启动秒杀事件消费者失败: %v", err)
+		}
+		log.Info("秒杀事件消费者启动成功，已开启异步落库")
+	}
 
 	if app.canalConsumer != nil {
 		if err := app.canalConsumer.Start(); err != nil {
@@ -260,6 +290,12 @@ func (app *CouponApp) Stop() error {
 	if app.service != nil {
 		if err := app.service.Shutdown(); err != nil {
 			log.Errorf("关闭服务层失败: %v", err)
+		}
+	}
+
+	if app.flashSaleConsumer != nil {
+		if err := app.flashSaleConsumer.Stop(); err != nil {
+			log.Errorf("停止秒杀事件消费者失败: %v", err)
 		}
 	}
 

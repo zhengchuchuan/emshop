@@ -65,6 +65,7 @@ func New() *Config {
 				StockCacheTTL: 300 * time.Second,
 				UserLimitTTL:  1800 * time.Second,
 				BatchSize:     100,
+				EnableAsync:   false,
 			},
 			Coupon: &CouponOptions{
 				MaxStackCount: 5,
@@ -199,6 +200,7 @@ type FlashSaleOptions struct {
 	StockCacheTTL time.Duration `yaml:"stock_cache_ttl"`
 	UserLimitTTL  time.Duration `yaml:"user_limit_ttl"`
 	BatchSize     int           `yaml:"batch_size"`
+	EnableAsync   bool          `yaml:"enable_async"`
 }
 
 // CouponOptions 优惠券配置

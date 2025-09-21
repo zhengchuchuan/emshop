@@ -10,7 +10,7 @@ import (
 	"emshop/internal/app/coupon/srv/data/v1/redis"
 	"emshop/internal/app/coupon/srv/domain/do"
 	"emshop/pkg/log"
-	
+
 	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/apache/rocketmq-client-go/v2/producer"
@@ -36,6 +36,9 @@ type FlashSaleConsumer struct {
 	data         interfaces.DataFactory
 	redisClient  *redisClient.Client
 	stockManager *redis.StockManager
+	mqConsumer   rocketmq.PushConsumer
+	retryManager *RetryManager
+	retryConfig  *RetryConfig
 }
 
 // FlashSaleConsumerConfig 秒杀消费者配置
@@ -48,12 +51,114 @@ type FlashSaleConsumerConfig struct {
 }
 
 // NewFlashSaleConsumer 创建秒杀消费者
-func NewFlashSaleConsumer(data interfaces.DataFactory, redisClient *redisClient.Client) *FlashSaleConsumer {
+func NewFlashSaleConsumer(data interfaces.DataFactory, redisClient *redisClient.Client, retryMgr *RetryManager) *FlashSaleConsumer {
 	return &FlashSaleConsumer{
 		data:         data,
 		redisClient:  redisClient,
 		stockManager: redis.NewStockManager(redisClient),
+		retryManager: retryMgr,
 	}
+}
+
+// Start 启动秒杀事件消费者
+func (fsc *FlashSaleConsumer) Start(config *FlashSaleConsumerConfig) error {
+	if fsc == nil {
+		return fmt.Errorf("flash sale consumer is nil")
+	}
+	if config == nil {
+		return fmt.Errorf("flash sale consumer config is nil")
+	}
+	if fsc.mqConsumer != nil {
+		return nil
+	}
+
+	options := []consumer.Option{
+		consumer.WithNameServer(config.NameServers),
+		consumer.WithGroupName(config.ConsumerGroup),
+		consumer.WithConsumeFromWhere(consumer.ConsumeFromLastOffset),
+	}
+	if config.BatchSize > 0 {
+		options = append(options, consumer.WithConsumeMessageBatchMaxSize(config.BatchSize))
+	}
+	pushConsumer, err := rocketmq.NewPushConsumer(options...)
+	if err != nil {
+		return fmt.Errorf("创建RocketMQ消费者失败: %w", err)
+	}
+
+	if err := pushConsumer.Subscribe(config.Topic, consumer.MessageSelector{}, fsc.dispatchConsumeMessage); err != nil {
+		pushConsumer.Shutdown()
+		return fmt.Errorf("订阅秒杀事件失败: %w", err)
+	}
+
+	if err := pushConsumer.Start(); err != nil {
+		pushConsumer.Shutdown()
+		return fmt.Errorf("启动秒杀事件消费者失败: %w", err)
+	}
+
+	fsc.mqConsumer = pushConsumer
+	fsc.retryConfig = fsc.buildRetryConfig(config)
+	return nil
+}
+
+// Stop 停止秒杀事件消费者
+func (fsc *FlashSaleConsumer) Stop() error {
+	if fsc == nil || fsc.mqConsumer == nil {
+		return nil
+	}
+	defer func() { fsc.mqConsumer = nil }()
+	return fsc.mqConsumer.Shutdown()
+}
+
+func (fsc *FlashSaleConsumer) buildRetryConfig(config *FlashSaleConsumerConfig) *RetryConfig {
+	retryCfg := &RetryConfig{
+		InitialDelay: 1 * time.Second,
+		MaxDelay:     30 * time.Second,
+		Multiplier:   2,
+		EnableJitter: true,
+	}
+	if config != nil && config.MaxRetries > 0 {
+		retryCfg.MaxRetries = config.MaxRetries
+	} else {
+		retryCfg.MaxRetries = 5
+	}
+	return retryCfg
+}
+
+func (fsc *FlashSaleConsumer) dispatchConsumeMessage(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
+	if len(msgs) == 0 {
+		return consumer.ConsumeSuccess, nil
+	}
+
+	var successMsgs []*primitive.MessageExt
+	var failureMsgs []*primitive.MessageExt
+
+	for _, msg := range msgs {
+		eventType := msg.GetProperty("event_type")
+		switch eventType {
+		case "flash_sale_success":
+			successMsgs = append(successMsgs, msg)
+		case "flash_sale_failure":
+			failureMsgs = append(failureMsgs, msg)
+		default:
+			log.Warnf("收到未知类型秒杀事件，跳过: msgID=%s, eventType=%s", msg.MsgId, eventType)
+		}
+	}
+
+	if len(successMsgs) > 0 {
+		result, err := fsc.ConsumeFlashSaleSuccessMessage(ctx, successMsgs...)
+		if err != nil || result != consumer.ConsumeSuccess {
+			return result, err
+		}
+	}
+
+	if len(failureMsgs) > 0 {
+		result, err := fsc.ConsumeFlashSaleFailureMessage(ctx, failureMsgs...)
+		if err != nil || result != consumer.ConsumeSuccess {
+			return result, err
+		}
+	}
+
+	return consumer.ConsumeSuccess, nil
 }
 
 // ConsumeFlashSaleSuccessMessage 消费秒杀成功消息
@@ -73,8 +178,24 @@ func (fsc *FlashSaleConsumer) ConsumeFlashSaleSuccessMessage(ctx context.Context
 
 		// 处理秒杀成功事件
 		if err := fsc.handleFlashSaleSuccess(ctx, &event, msg.MsgId); err != nil {
-			log.Errorf("处理秒杀成功事件失败: %v, 将重试", err)
-			return consumer.ConsumeRetryLater, err
+			handled := false
+			if fsc.retryManager != nil {
+				retryCfg := fsc.retryConfig
+				if retryCfg == nil {
+					retryCfg = fsc.buildRetryConfig(nil)
+				}
+				if retryErr := fsc.retryManager.ScheduleRetry(ctx, msg, err, retryCfg); retryErr != nil {
+					log.Errorf("调度秒杀成功事件重试失败: %v", retryErr)
+				} else {
+					handled = true
+					log.Infof("秒杀成功事件已加入重试队列: msgID=%s", msg.MsgId)
+				}
+			}
+
+			if !handled {
+				log.Errorf("处理秒杀成功事件失败: %v, 将由RocketMQ重试", err)
+				return consumer.ConsumeRetryLater, err
+			}
 		}
 	}
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"emshop/internal/app/coupon/srv/config"
 	"emshop/internal/app/coupon/srv/consumer"
 	"emshop/internal/app/coupon/srv/data/v1/interfaces"
 	"emshop/internal/app/coupon/srv/domain/do"
@@ -214,7 +215,9 @@ func TestService_Creation(t *testing.T) {
 	}
 	
 	// 测试服务创建
-	service := NewService(mockData, redisClient, dtmOpts, rocketmqOpts, cacheConfig)
+	bizConfig := &config.BusinessOptions{FlashSale: &config.FlashSaleOptions{EnableAsync: false}}
+
+	service := NewService(mockData, redisClient, dtmOpts, rocketmqOpts, cacheConfig, bizConfig)
 	
 	// 断言
 	assert.NotNil(t, service)

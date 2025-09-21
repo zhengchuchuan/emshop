@@ -93,6 +93,29 @@ func (cs *couponServer) GetActiveFlashSales(ctx context.Context, req *emptypb.Em
 func (cs *couponServer) ParticipateFlashSale(ctx context.Context, req *couponpb.ParticipateFlashSaleRequest) (*couponpb.ParticipateFlashSaleResponse, error) {
 	log.Infof("ParticipateFlashSale: userID=%d, flashSaleID=%d", req.UserId, req.FlashSaleId)
 
+	if cs.srv.AsyncFlashSaleEnabled() && cs.srv.FlashSaleCore != nil {
+		flashReq := &dto.FlashSaleRequestDTO{
+			ActivityID: req.FlashSaleId,
+			UserID:     req.UserId,
+		}
+		coreResult, err := cs.srv.FlashSaleCore.FlashSaleCoupon(ctx, flashReq)
+		if err != nil {
+			return nil, cs.handleError(err)
+		}
+
+		resp := &couponpb.ParticipateFlashSaleResponse{}
+		if coreResult != nil && coreResult.Success {
+			resp.Status = 1
+		} else {
+			resp.Status = 2
+			if coreResult != nil {
+				failMsg := coreResult.Message
+				resp.FailReason = &failMsg
+			}
+		}
+		return resp, nil
+	}
+
 	dto := &dto.ParticipateFlashSaleDTO{
 		UserID:      req.UserId,
 		FlashSaleID: req.FlashSaleId,

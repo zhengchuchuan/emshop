@@ -153,6 +153,10 @@ func (fss *flashSaleSrvCore) StopFlashSaleActivity(ctx context.Context, req *dto
 func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.FlashSaleRequestDTO) (*dto.FlashSaleResultDTO, error) {
 	log.Infof("执行秒杀请求: activityID=%d, userID=%d", req.ActivityID, req.UserID)
 
+	if fss.eventProducer == nil {
+		return nil, fmt.Errorf("秒杀事件生产者未配置，无法执行异步落库")
+	}
+
 	// 获取活动信息（优先从Redis获取）
 	activityInfo, err := fss.stockManager.GetActivityStatus(ctx, req.ActivityID)
 	if err != nil {
