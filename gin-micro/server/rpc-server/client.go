@@ -105,7 +105,7 @@ func Dial(ctx context.Context, opts ...ClientOption) (*grpc.ClientConn, error) {
 func dial(ctx context.Context, insecure bool, opts ...ClientOption) (*grpc.ClientConn, error) {
 	options := clientOptions{
 		timeout:       2000 * time.Millisecond,
-		balancerName:  "round_robin",
+		balancerName:  "round_robin", // 默认轮询
 		enableTracing: true,
 	}
 
@@ -120,7 +120,7 @@ func dial(ctx context.Context, insecure bool, opts ...ClientOption) (*grpc.Clien
 	if options.enableTracing {
 		ints = append(ints, otelgrpc.UnaryClientInterceptor())
 	}
-	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// 是否允许指标采集
 	if options.enableMetrics {
 		ints = append(ints, clientinterceptors.PrometheusInterceptor())
 	}
@@ -135,7 +135,9 @@ func dial(ctx context.Context, insecure bool, opts ...ClientOption) (*grpc.Clien
 	}
 
 	grpcOpts := []grpc.DialOption{
+		// 设置客户端负载均衡策略
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "` + options.balancerName + `"}`),
+
 		grpc.WithChainUnaryInterceptor(ints...),
 		grpc.WithChainStreamInterceptor(streamInts...),
 	}

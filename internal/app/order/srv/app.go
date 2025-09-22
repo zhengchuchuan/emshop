@@ -1,13 +1,16 @@
 package srv
 
 import (
-	gapp "emshop/gin-micro/app"
-	"emshop/gin-micro/registry"
-	"emshop/gin-micro/registry/consul"
-	"emshop/internal/app/order/srv/config"
-	"emshop/internal/app/pkg/options"
-	"emshop/pkg/app"
-	"emshop/pkg/log"
+    gapp "emshop/gin-micro/app"
+    "emshop/gin-micro/registry"
+    "emshop/gin-micro/registry/consul"
+    rpcserver "emshop/gin-micro/server/rpc-server"
+    "emshop/gin-micro/server/rpc-server/selector"
+    "emshop/gin-micro/server/rpc-server/selector/p2c"
+    "emshop/internal/app/order/srv/config"
+    "emshop/internal/app/pkg/options"
+    "emshop/pkg/app"
+    "emshop/pkg/log"
 
 	"github.com/hashicorp/consul/api"
 )
@@ -36,12 +39,16 @@ func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
 }
 
 func NeworderApp(cfg *config.Config) (*gapp.App, error) {
-	//初始化log
-	log.Init(cfg.Log)
-	defer log.Flush()
+    //初始化log
+    log.Init(cfg.Log)
+    defer log.Flush()
 
-	//服务注册
-	register := NewRegistrar(cfg.Registry)
+    // 初始化全局 gRPC 负载均衡策略为 p2c，并注册自定义 balancer
+    selector.SetGlobalSelector(p2c.NewBuilder())
+    rpcserver.InitBuilder()
+
+    //服务注册
+    register := NewRegistrar(cfg.Registry)
 
 	//生成rpc服务
 	rpcServer, err := NewOrderRPCServer(cfg)

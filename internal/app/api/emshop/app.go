@@ -1,14 +1,17 @@
 package admin
 
 import (
-	"context"
-	gapp "emshop/gin-micro/app"
-	"emshop/gin-micro/core/trace"
-	"emshop/internal/app/api/emshop/config"
-	"emshop/internal/app/pkg/options"
-	"emshop/pkg/app"
-	"emshop/pkg/log"
-	"emshop/pkg/storage"
+    "context"
+    gapp "emshop/gin-micro/app"
+    "emshop/gin-micro/core/trace"
+    rpcserver "emshop/gin-micro/server/rpc-server"
+    "emshop/gin-micro/server/rpc-server/selector"
+    "emshop/gin-micro/server/rpc-server/selector/p2c"
+    "emshop/internal/app/api/emshop/config"
+    "emshop/internal/app/pkg/options"
+    "emshop/pkg/app"
+    "emshop/pkg/log"
+    "emshop/pkg/storage"
 
 	"github.com/hashicorp/consul/api"
 
@@ -61,12 +64,16 @@ func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
 }
 
 func NewAPIApp(cfg *config.Config) (*gapp.App, error) {
-	//初始化log
-	log.Init(cfg.Log)
-	defer log.Flush()
+    //初始化log
+    log.Init(cfg.Log)
+    defer log.Flush()
 
-	//服务注册
-	register := NewRegistrar(cfg.Registry)
+    // 初始化全局 gRPC 负载均衡策略为 p2c，并注册自定义 balancer
+    selector.SetGlobalSelector(p2c.NewBuilder())
+    rpcserver.InitBuilder()
+
+    //服务注册
+    register := NewRegistrar(cfg.Registry)
 
 	// 初始化链路追踪
 	trace.InitAgent(trace.Options{

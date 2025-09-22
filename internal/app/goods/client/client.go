@@ -9,13 +9,13 @@ import (
 	rpc "emshop/gin-micro/server/rpc-server"
 	_ "emshop/gin-micro/server/rpc-server/resolver/direct"
 	"emshop/gin-micro/server/rpc-server/selector"
-	"emshop/gin-micro/server/rpc-server/selector/random"
+	"emshop/gin-micro/server/rpc-server/selector/p2c"
 	"time"
 )
 
 func main() {
 	//设置全局的负载均衡策略
-	selector.SetGlobalSelector(random.NewBuilder())
+	selector.SetGlobalSelector(p2c.NewBuilder())
 	rpc.InitBuilder()
 
 	conf := api.DefaultConfig()
