@@ -9,6 +9,9 @@ import (
 	"emshop/gin-micro/server/rpc-server/selector"
 )
 
+/*
+	构建自定义负载均衡器所需的基本组件
+*/
 const (
 	// balancerName 是负载均衡器的名称
 	balancerName = "selector"
@@ -25,7 +28,7 @@ func InitBuilder() {
 	b := base.NewBalancerBuilder(
 		balancerName,
 		&balancerBuilder{
-			builder: selector.GlobalSelector(),
+			builder: selector.GlobalSelector(), // 通过全局选择器构建器创建选择器
 		},
 		base.Config{HealthCheck: true},
 	)

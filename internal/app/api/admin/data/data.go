@@ -1,20 +1,22 @@
 package data
 
 import (
-	"context"
-	upbv1 "emshop/api/user/v1"
-	gpbv1 "emshop/api/goods/v1"
-	ipbv1 "emshop/api/inventory/v1"
-	opbv1 "emshop/api/order/v1"
+    "context"
+    upbv1 "emshop/api/user/v1"
+    gpbv1 "emshop/api/goods/v1"
+    ipbv1 "emshop/api/inventory/v1"
+    opbv1 "emshop/api/order/v1"
+    cpbv1 "emshop/api/coupon/v1"
 )
 
 // DataFactory 数据访问工厂接口
 type DataFactory interface {
-	Users() UserData
-	Goods() GoodsData
-	Inventory() InventoryData
-	Order() OrderData
-	UserOp() UserOpData
+    Users() UserData
+    Goods() GoodsData
+    Inventory() InventoryData
+    Order() OrderData
+    UserOp() UserOpData
+    Coupon() CouponData
 }
 
 // UserData 用户数据访问接口
@@ -91,5 +93,12 @@ type OrderData interface {
 
 // UserOpData 用户操作数据访问接口
 type UserOpData interface {
-	// 管理员查看用户操作相关方法
+    // 管理员查看用户操作相关方法
+}
+
+// CouponData 优惠券数据访问接口
+type CouponData interface {
+    // 优惠券模板
+    ListCouponTemplates(ctx context.Context, req *cpbv1.ListCouponTemplatesRequest) (*cpbv1.ListCouponTemplatesResponse, error)
+    CreateCouponTemplate(ctx context.Context, req *cpbv1.CreateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
 }

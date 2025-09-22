@@ -1,16 +1,17 @@
 package admin
 
 import (
-	restserver "emshop/gin-micro/server/rest-server"
-	"emshop/internal/app/api/admin/config"
-	"emshop/internal/app/api/admin/controller/analytics/v1"
-	"emshop/internal/app/api/admin/controller/export/v1"
-	"emshop/internal/app/api/admin/controller/goods/v1"
-	import_controller "emshop/internal/app/api/admin/controller/import/v1"
-	"emshop/internal/app/api/admin/controller/order/v1"
-	"emshop/internal/app/api/admin/controller/upload/v1"
-	"emshop/internal/app/api/admin/controller/user/v1"
-	"emshop/internal/app/api/admin/data/rpc"
+    restserver "emshop/gin-micro/server/rest-server"
+    "emshop/internal/app/api/admin/config"
+    "emshop/internal/app/api/admin/controller/analytics/v1"
+    "emshop/internal/app/api/admin/controller/export/v1"
+    "emshop/internal/app/api/admin/controller/goods/v1"
+    "emshop/internal/app/api/admin/controller/coupon/v1"
+    import_controller "emshop/internal/app/api/admin/controller/import/v1"
+    "emshop/internal/app/api/admin/controller/order/v1"
+    "emshop/internal/app/api/admin/controller/upload/v1"
+    "emshop/internal/app/api/admin/controller/user/v1"
+    "emshop/internal/app/api/admin/data/rpc"
 	"emshop/internal/app/api/admin/service"
 	"emshop/internal/app/pkg/middleware"
 )
@@ -151,6 +152,14 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 			ordersGroup.PATCH("/:id/status", orderController.UpdateOrderStatus) // PATCH /v1/admin/orders/:id/status 更新订单状态
 			ordersGroup.GET("/by-sn/:order_sn", orderController.GetOrderByOrderSn) // GET /v1/admin/orders/by-sn/:order_sn 按订单号查询
 			ordersGroup.GET("/by-user/:user_id", orderController.GetOrdersByUserId) // GET /v1/admin/orders/by-user/:user_id 按用户ID查询
+		}
+
+		// 优惠券管理（模板）
+		couponController := coupon.NewCouponController(g.Translator(), serviceFactory)
+		couponsGroup := adminGroup.Group("/coupons")
+		{
+			// 确保存在一个可用模板：没有则创建默认模板
+			couponsGroup.POST("/templates/ensure-default", couponController.EnsureDefaultTemplate)
 		}
 	}
 }

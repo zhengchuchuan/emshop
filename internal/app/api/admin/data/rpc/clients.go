@@ -1,48 +1,52 @@
 package rpc
 
 import (
-	"context"
-	"time"
-	
-	gpbv1 "emshop/api/goods/v1"
-	ipbv1 "emshop/api/inventory/v1"
-	opbv1 "emshop/api/order/v1"
-	upbv1 "emshop/api/user/v1"
-	uoppbv1 "emshop/api/userop/v1"
-	"emshop/gin-micro/registry"
-	rpcserver "emshop/gin-micro/server/rpc-server"
-	clientinterceptors "emshop/gin-micro/server/rpc-server/client-interceptors"
-	"emshop/pkg/log"
-	"google.golang.org/grpc"
+    "context"
+    "time"
+    
+    gpbv1 "emshop/api/goods/v1"
+    ipbv1 "emshop/api/inventory/v1"
+    opbv1 "emshop/api/order/v1"
+    upbv1 "emshop/api/user/v1"
+    uoppbv1 "emshop/api/userop/v1"
+    cpbv1 "emshop/api/coupon/v1"
+    "emshop/gin-micro/registry"
+    rpcserver "emshop/gin-micro/server/rpc-server"
+    clientinterceptors "emshop/gin-micro/server/rpc-server/client-interceptors"
+    "emshop/pkg/log"
+    "google.golang.org/grpc"
 )
 
 // grpcClients 集中管理所有的 gRPC 客户端
 type grpcClients struct {
-	userClient      upbv1.UserClient
-	goodsClient     gpbv1.GoodsClient
-	inventoryClient ipbv1.InventoryClient
-	orderClient     opbv1.OrderClient
-	userOpClient    uoppbv1.UserOpClient
+    userClient      upbv1.UserClient
+    goodsClient     gpbv1.GoodsClient
+    inventoryClient ipbv1.InventoryClient
+    orderClient     opbv1.OrderClient
+    userOpClient    uoppbv1.UserOpClient
+    couponClient    cpbv1.CouponClient
 }
 
 // newGrpcClients 创建并初始化所有 gRPC 客户端
 func newGrpcClients(discovery registry.Discovery) *grpcClients {
-	return &grpcClients{
-		userClient:      NewUserServiceClient(discovery),
-		goodsClient:     NewGoodsServiceClient(discovery),
-		inventoryClient: NewInventoryServiceClient(discovery),
-		orderClient:     NewOrderServiceClient(discovery),
-		userOpClient:    NewUserOpServiceClient(discovery),
-	}
+    return &grpcClients{
+        userClient:      NewUserServiceClient(discovery),
+        goodsClient:     NewGoodsServiceClient(discovery),
+        inventoryClient: NewInventoryServiceClient(discovery),
+        orderClient:     NewOrderServiceClient(discovery),
+        userOpClient:    NewUserOpServiceClient(discovery),
+        couponClient:    NewCouponServiceClient(discovery),
+    }
 }
 
 // 服务名称常量 - 集中定义所有服务名称
 const (
-	clientUserServiceName      = "discovery:///emshop-user-srv"
-	clientGoodsServiceName     = "discovery:///emshop-goods-srv"
-	clientInventoryServiceName = "discovery:///emshop-inventory-srv"
-	clientOrderServiceName     = "discovery:///emshop-order-srv"
-	clientUseropServiceName    = "discovery:///emshop-userop-srv"
+    clientUserServiceName      = "discovery:///emshop-user-srv"
+    clientGoodsServiceName     = "discovery:///emshop-goods-srv"
+    clientInventoryServiceName = "discovery:///emshop-inventory-srv"
+    clientOrderServiceName     = "discovery:///emshop-order-srv"
+    clientUseropServiceName    = "discovery:///emshop-userop-srv"
+    clientCouponServiceName    = "discovery:///emshop-coupon-srv"
 )
 
 // NewUserServiceClient 创建用户服务的 gRPC 客户端
@@ -148,4 +152,25 @@ func NewUserOpServiceClient(r registry.Discovery) uoppbv1.UserOpClient {
 	log.Info("gRPC connection established successfully")
 	c := uoppbv1.NewUserOpClient(conn)
 	return c
+}
+
+// NewCouponServiceClient 创建优惠券服务的 gRPC 客户端
+func NewCouponServiceClient(r registry.Discovery) cpbv1.CouponClient {
+    log.Infof("Initializing gRPC connection to service: %s", clientCouponServiceName)
+    conn, err := rpcserver.DialInsecure(
+        context.Background(),
+        rpcserver.WithBalancerName("selector"),
+        rpcserver.WithEndpoint(clientCouponServiceName),
+        rpcserver.WithDiscovery(r),
+        rpcserver.WithClientTimeout(10*time.Second),
+        rpcserver.WithClientOptions(grpc.WithNoProxy()),
+        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+    )
+    if err != nil {
+        log.Errorf("Failed to create gRPC connection: %v", err)
+        panic(err)
+    }
+    log.Info("gRPC connection established successfully")
+    c := cpbv1.NewCouponClient(conn)
+    return c
 }

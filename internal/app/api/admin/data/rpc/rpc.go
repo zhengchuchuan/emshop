@@ -14,11 +14,12 @@ import (
 )
 
 type grpcData struct {
-	ud data.UserData
-	gd data.GoodsData
-	id data.InventoryData
-	od data.OrderData
-	uopd data.UserOpData
+    ud data.UserData
+    gd data.GoodsData
+    id data.InventoryData
+    od data.OrderData
+    uopd data.UserOpData
+    cd data.CouponData
 }
 
 func (g grpcData) Goods() data.GoodsData {
@@ -38,7 +39,11 @@ func (g grpcData) Order() data.OrderData {
 }
 
 func (g grpcData) UserOp() data.UserOpData {
-	return g.uopd
+    return g.uopd
+}
+
+func (g grpcData) Coupon() data.CouponData {
+    return g.cd
 }
 
 func NewDiscovery(opts *options.RegistryOptions) registry.Discovery {
@@ -65,27 +70,29 @@ func GetDataFactoryOr(options *options.RegistryOptions) (data.DataFactory, error
 	}
 
 	//这里负责依赖的所有的rpc连接
-	once.Do(func() {
-		discovery := NewDiscovery(options)
+    once.Do(func() {
+        discovery := NewDiscovery(options)
 
 		// 创建客户端管理器，统一管理所有gRPC客户端
 		clients := newGrpcClients(discovery)
 
-		// 创建数据层实例，使用客户端管理器
-		userData := NewUsers(clients.userClient)
-		goodsData := NewGoods(clients.goodsClient)
-		inventoryData := NewInventory(clients.inventoryClient)
-		orderData := NewOrder(clients.orderClient)
-		userOpData := NewUserOp(clients.userOpClient)
+        // 创建数据层实例，使用客户端管理器
+        userData := NewUsers(clients.userClient)
+        goodsData := NewGoods(clients.goodsClient)
+        inventoryData := NewInventory(clients.inventoryClient)
+        orderData := NewOrder(clients.orderClient)
+        userOpData := NewUserOp(clients.userOpClient)
+        couponData := NewCoupon(clients.couponClient)
 
-		dbFactory = &grpcData{
-			ud: userData,
-			gd: goodsData,
-			id: inventoryData,
-			od: orderData,
-			uopd: userOpData,
-		}
-	})
+        dbFactory = &grpcData{
+            ud: userData,
+            gd: goodsData,
+            id: inventoryData,
+            od: orderData,
+            uopd: userOpData,
+            cd: couponData,
+        }
+    })
 
 	if dbFactory == nil {
 		return nil, errors2.WithCode(code.ErrConnectGRPC, "failed to get grpc store factory")
