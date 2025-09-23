@@ -6,7 +6,7 @@ import (
 	restserver "emshop/gin-micro/server/rest-server"
 	"emshop/internal/app/api/emshop/domain/dto/request"
 	"emshop/internal/app/api/emshop/service"
-	"emshop/internal/app/pkg/jwt"
+	"emshop/internal/app/pkg/middleware"
 	gin2 "emshop/internal/app/pkg/translator/gin"
 	"emshop/pkg/common/core"
 	"emshop/pkg/errors"
@@ -40,15 +40,15 @@ func (oc *orderController) OrderList(ctx *gin.Context) {
 		return
 	}
 
-	// 从JWT中获取用户ID
-	userID := oc.getUserIDFromContext(ctx)
-	if userID == 0 {
+	// 从上下文获取用户ID（统一使用中间件助手）
+	uid, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok || uid <= 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	orderRequest := proto.OrderFilterRequest{
-		UserId: int32(userID),
+		UserId: int32(uid),
 	}
 
 	// 分页参数 - 设置默认值
@@ -105,15 +105,15 @@ func (oc *orderController) CreateOrder(ctx *gin.Context) {
 		return
 	}
 
-	// 从JWT中获取用户ID
-	userID := oc.getUserIDFromContext(ctx)
-	if userID == 0 {
+	// 从上下文获取用户ID（统一使用中间件助手）
+	uid, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok || uid <= 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	orderRequest := proto.OrderRequest{
-		UserId:  int32(userID),
+		UserId:  int32(uid),
 		Address: &r.Address,
 		Name:    &r.Name,
 		Mobile:  &r.Mobile,
@@ -146,17 +146,17 @@ func (oc *orderController) OrderDetail(ctx *gin.Context) {
 		return
 	}
 
-	// 从JWT中获取用户ID
-	userID := oc.getUserIDFromContext(ctx)
-	if userID == 0 {
-		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
-		return
-	}
-
-	orderRequest := proto.OrderRequest{
-		Id:     int32(i),
-		UserId: int32(userID),
-	}
+    	// 从上下文获取用户ID（统一使用中间件助手）
+    	uid, ok := middleware.GetUserIDFromContext(ctx)
+    	if !ok || uid <= 0 {
+    		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
+    		return
+    	}
+    
+    	orderRequest := proto.OrderRequest{
+    		Id:     int32(i),
+    		UserId: int32(uid),
+    	}
 
 	orderDetailResponse, err := oc.srv.Order().OrderDetail(ctx, &orderRequest)
 	if err != nil {
@@ -198,15 +198,15 @@ func (oc *orderController) OrderDetail(ctx *gin.Context) {
 func (oc *orderController) CartList(ctx *gin.Context) {
 	log.Info("cart list function called ...")
 
-	// 从JWT中获取用户ID
-	userID := oc.getUserIDFromContext(ctx)
-	if userID == 0 {
+	// 从上下文获取用户ID（统一使用中间件助手）
+	uid, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok || uid <= 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	userRequest := proto.UserInfo{
-		Id: int32(userID),
+		Id: int32(uid),
 	}
 
 	cartResponse, err := oc.srv.Order().CartItemList(ctx, &userRequest)
@@ -243,16 +243,16 @@ func (oc *orderController) AddToCart(ctx *gin.Context) {
 		return
 	}
 
-	// 从JWT中获取用户ID
-	userID := oc.getUserIDFromContext(ctx)
-	if userID == 0 {
+	// 从上下文获取用户ID（统一使用中间件助手）
+	uid, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok || uid <= 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	checked := true
 	cartRequest := proto.CartItemRequest{
-		UserId:  int32(userID),
+		UserId:  int32(uid),
 		GoodsId: r.GoodsId,
 		Nums:    &r.Nums,
 		Checked: &checked,
@@ -296,16 +296,16 @@ func (oc *orderController) UpdateCartItem(ctx *gin.Context) {
 		return
 	}
 
-	// 从JWT中获取用户ID
-	userID := oc.getUserIDFromContext(ctx)
-	if userID == 0 {
+	// 从上下文获取用户ID（统一使用中间件助手）
+	uid, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok || uid <= 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	cartRequest := proto.CartItemRequest{
 		Id:     int32(i),
-		UserId: int32(userID),
+		UserId: int32(uid),
 		Nums:   &r.Nums,
 	}
 	if r.Checked != nil {
@@ -338,17 +338,15 @@ func (oc *orderController) DeleteCartItem(ctx *gin.Context) {
 		return
 	}
 
-	// 从JWT中获取用户ID
-	userID := oc.getUserIDFromContext(ctx)
-	if userID == 0 {
+	// 从上下文获取用户ID（统一使用中间件助手）
+	uid, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok || uid <= 0 {
 		core.WriteResponse(ctx, errors.WithCode(code.ErrTokenInvalid, "用户ID不存在"), nil)
 		return
 	}
 
 	// 先获取购物车列表，找到对应的商品ID
-	userRequest := proto.UserInfo{
-		Id: int32(userID),
-	}
+	userRequest := proto.UserInfo{Id: int32(uid)}
 
 	cartResponse, err := oc.srv.Order().CartItemList(ctx, &userRequest)
 	if err != nil {
@@ -372,10 +370,7 @@ func (oc *orderController) DeleteCartItem(ctx *gin.Context) {
 		return
 	}
 
-	cartRequest := proto.CartItemRequest{
-		UserId:  int32(userID),
-		GoodsId: goodsId,
-	}
+	cartRequest := proto.CartItemRequest{UserId: int32(uid), GoodsId: goodsId}
 
 	err = oc.srv.Order().DeleteCartItem(ctx, &cartRequest)
 	if err != nil {
@@ -388,16 +383,4 @@ func (oc *orderController) DeleteCartItem(ctx *gin.Context) {
 	})
 }
 
-// getUserIDFromContext 从上下文获取用户ID
-func (oc *orderController) getUserIDFromContext(ctx *gin.Context) int64 {
-    // 从中间件设置的上下文键获取用户ID
-    if v, ok := ctx.Get(jwt.KeyUserID); ok {
-        if id, ok := v.(int); ok {
-            return int64(id)
-        }
-        if id64, ok := v.(int64); ok {
-            return id64
-        }
-    }
-    return 0
-}
+// 已统一通过 middleware.GetUserIDFromContext 获取用户ID

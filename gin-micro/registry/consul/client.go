@@ -23,21 +23,23 @@ type Client struct {
 	resolver ServiceResolver	// 解析服务入口端点
 	healthcheckInterval int	// 健康检查时间间隔(秒)
 	heartbeat bool			// 是否启用心跳
-	deregisterCriticalServiceAfter int // 严重错误服务自动注销时间间隔(秒)
-	serviceChecks api.AgentServiceChecks 	// 用户自定义检查项: 内置了TCP检查和TTL检查, 可以额外添加http或者grpc
+    deregisterCriticalServiceAfter int // 严重错误服务自动注销时间间隔(秒)
+    serviceChecks api.AgentServiceChecks 	// 用户自定义检查项: 内置了TCP检查和TTL检查, 可以额外添加http或者grpc
+    checkTimeout int // 健康检查超时时间(秒)
 }
 
 // 创建Consul客户端
 func NewClient(cli *api.Client) *Client {
-	c := &Client{
-		cli:                            cli,
-		resolver:                       defaultResolver,
-		healthcheckInterval:            10,
-		heartbeat:                      true,
-		deregisterCriticalServiceAfter: 600,
-	}
-	c.ctx, c.cancel = context.WithCancel(context.Background())
-	return c
+    c := &Client{
+        cli:                            cli,
+        resolver:                       defaultResolver,
+        healthcheckInterval:            10,
+        heartbeat:                      true,
+        deregisterCriticalServiceAfter: 600,
+        checkTimeout:                   5,
+    }
+    c.ctx, c.cancel = context.WithCancel(context.Background())
+    return c
 }
 
 // 默认的服务解析器，将Consul服务条目转换为服务实例
@@ -122,21 +124,27 @@ func (c *Client) Service(ctx context.Context, service string, index uint64, pass
 //	@param enableHealthCheck 是否启用TCP健康检查
 //	@return error
 func (c *Client) Register(_ context.Context, svc *registry.ServiceInstance, enableHealthCheck bool) error {
-	// 初始化地址映射和检查地址列表
-	addresses := make(map[string]api.ServiceAddress, len(svc.Endpoints))
-	checkAddresses := make([]string, 0, len(svc.Endpoints))
+    // 初始化地址映射和检查地址列表
+    addresses := make(map[string]api.ServiceAddress, len(svc.Endpoints))
+    tcpCheckAddresses := make([]string, 0, len(svc.Endpoints))
+    grpcCheckAddresses := make([]string, 0, len(svc.Endpoints))
 	// 解析所有服务端点
-	for _, endpoint := range svc.Endpoints {
-		raw, err := url.Parse(endpoint)
-		if err != nil {
-			return err
-		}
-		addr := raw.Hostname()
-		port, _ := strconv.ParseUint(raw.Port(), 10, 16)
+    for _, endpoint := range svc.Endpoints {
+        raw, err := url.Parse(endpoint)
+        if err != nil {
+            return err
+        }
+        addr := raw.Hostname()
+        port, _ := strconv.ParseUint(raw.Port(), 10, 16)
 
-		checkAddresses = append(checkAddresses, net.JoinHostPort(addr, strconv.FormatUint(port, 10)))
-		addresses[raw.Scheme] = api.ServiceAddress{Address: endpoint, Port: int(port)}
-	}
+        // 根据不同协议收集健康检查地址
+        if raw.Scheme == "grpc" {
+            grpcCheckAddresses = append(grpcCheckAddresses, net.JoinHostPort(addr, strconv.FormatUint(port, 10)))
+        } else {
+            tcpCheckAddresses = append(tcpCheckAddresses, net.JoinHostPort(addr, strconv.FormatUint(port, 10)))
+        }
+        addresses[raw.Scheme] = api.ServiceAddress{Address: endpoint, Port: int(port)}
+    }
 	// 创建服务注册配置,协议无关
 	asr := &api.AgentServiceRegistration{
 		ID:              svc.ID,
@@ -146,23 +154,41 @@ func (c *Client) Register(_ context.Context, svc *registry.ServiceInstance, enab
 		TaggedAddresses: addresses,
 	}
 	// 设置主地址和端口
-	if len(checkAddresses) > 0 {
-		host, portRaw, _ := net.SplitHostPort(checkAddresses[0])
-		port, _ := strconv.ParseInt(portRaw, 10, 32)
-		asr.Address = host
-		asr.Port = int(port)
-	}
-	// 如果启用健康检查，添加TCP检查
-	if enableHealthCheck {
-		for _, address := range checkAddresses {
-			asr.Checks = append(asr.Checks, &api.AgentServiceCheck{
-				TCP:                            address,
-				Interval:                       fmt.Sprintf("%ds", c.healthcheckInterval),
-				DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", c.deregisterCriticalServiceAfter),
-				Timeout:                        "5s",
-			})
-		}
-	}
+    if len(tcpCheckAddresses) > 0 || len(grpcCheckAddresses) > 0 {
+        // 选任一地址作为主注册地址
+        pick := ""
+        if len(grpcCheckAddresses) > 0 {
+            pick = grpcCheckAddresses[0]
+        } else if len(tcpCheckAddresses) > 0 {
+            pick = tcpCheckAddresses[0]
+        }
+        host, portRaw, _ := net.SplitHostPort(pick)
+        port, _ := strconv.ParseInt(portRaw, 10, 32)
+        asr.Address = host
+        asr.Port = int(port)
+    }
+    // 如果启用健康检查，添加TCP检查
+    if enableHealthCheck {
+        // 为非 gRPC 端点添加 TCP 健康检查
+        for _, address := range tcpCheckAddresses {
+            asr.Checks = append(asr.Checks, &api.AgentServiceCheck{
+                TCP:                            address,
+                Interval:                       fmt.Sprintf("%ds", c.healthcheckInterval),
+                DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", c.deregisterCriticalServiceAfter),
+                Timeout:                        fmt.Sprintf("%ds", c.checkTimeout),
+            })
+        }
+        // 为 gRPC 端点添加 gRPC 健康检查（依赖服务端注册了 grpc health 服务）
+        for _, address := range grpcCheckAddresses {
+            asr.Checks = append(asr.Checks, &api.AgentServiceCheck{
+                GRPC:                           address,
+                GRPCUseTLS:                     false,
+                Interval:                       fmt.Sprintf("%ds", c.healthcheckInterval),
+                DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", c.deregisterCriticalServiceAfter),
+                Timeout:                        fmt.Sprintf("%ds", c.checkTimeout),
+            })
+        }
+    }
 	// 如果启用心跳，添加TTL检查
 	if c.heartbeat {
 		asr.Checks = append(asr.Checks, &api.AgentServiceCheck{

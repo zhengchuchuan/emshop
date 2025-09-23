@@ -19,7 +19,7 @@ import (
 
 // wire Injector
 func initApp(nacosOptions *options.NacosOptions, logOptions *log.Options, serverOptions *options.ServerOptions, registryOptions *options.RegistryOptions, telemetryOptions *options.TelemetryOptions, mySQLOptions *options.MySQLOptions) (*app.App, error) {
-	registrar := NewRegistrar(registryOptions)
+	registrar := NewRegistrar(registryOptions, logOptions.Development)
 	factoryManager, err := v1.NewFactoryManager(mySQLOptions)
 	if err != nil {
 		return nil, err

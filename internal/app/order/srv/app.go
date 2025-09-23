@@ -26,16 +26,21 @@ func NewApp(basename string) *app.App {
 	return appl
 }
 
-func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
-	c := api.DefaultConfig()
-	c.Address = registry.Address
-	c.Scheme = registry.Scheme
-	cli, err := api.NewClient(c)
-	if err != nil {
-		panic(err)
-	}
-	r := consul.New(cli, consul.WithHealthCheck(true))
-	return r
+func NewRegistrar(registry *options.RegistryOptions, dev bool) registry.Registrar {
+    c := api.DefaultConfig()
+    c.Address = registry.Address
+    c.Scheme = registry.Scheme
+    cli, err := api.NewClient(c)
+    if err != nil {
+        panic(err)
+    }
+    // 默认启用健康检查；开发环境缩短严重错误注销时间以加速剔除失效实例
+    opts := []consul.Option{consul.WithHealthCheck(true)}
+    if dev {
+        opts = append(opts, consul.WithDeregisterCriticalServiceAfter(60))
+    }
+    r := consul.New(cli, opts...)
+    return r
 }
 
 func NeworderApp(cfg *config.Config) (*gapp.App, error) {
@@ -48,7 +53,7 @@ func NeworderApp(cfg *config.Config) (*gapp.App, error) {
     rpcserver.InitBuilder()
 
     //服务注册
-    register := NewRegistrar(cfg.Registry)
+    register := NewRegistrar(cfg.Registry, cfg.Log.Development)
 
 	//生成rpc服务
 	rpcServer, err := NewOrderRPCServer(cfg)

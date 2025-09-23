@@ -1,16 +1,18 @@
 package srv
 
 import (
-	gpb "emshop/api/order/v1"
-	"emshop/gin-micro/core/trace"
-	"emshop/gin-micro/server/rpc-server"
-	"emshop/internal/app/order/srv/config"
-	"emshop/internal/app/order/srv/controller/order/v1"
-	v1 "emshop/internal/app/order/srv/data/v1"
-	v13 "emshop/internal/app/order/srv/service/v1"
-	"fmt"
+    "fmt"
+    "time"
 
-	"emshop/pkg/log"
+    gpb "emshop/api/order/v1"
+    "emshop/gin-micro/core/trace"
+    "emshop/gin-micro/server/rpc-server"
+    "emshop/internal/app/order/srv/config"
+    "emshop/internal/app/order/srv/controller/order/v1"
+    v1 "emshop/internal/app/order/srv/data/v1"
+    v13 "emshop/internal/app/order/srv/service/v1"
+
+    "emshop/pkg/log"
 )
 
 func NewOrderRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
@@ -30,10 +32,12 @@ func NewOrderRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 	orderSrvFactory := v13.NewService(factoryManager.GetDataFactory(), cfg.Dtm)
 	orderServer := order.NewOrderServer(orderSrvFactory)
 	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	grpcServer := rpcserver.NewServer(
-		rpcserver.WithAddress(rpcAddr),
-		rpcserver.WithMetrics(cfg.Server.EnableMetrics),
-	)
+    grpcServer := rpcserver.NewServer(
+        rpcserver.WithAddress(rpcAddr),
+        rpcserver.WithMetrics(cfg.Server.EnableMetrics),
+        // Increase default unary timeout from 1s to 5s to avoid premature deadline on multi-step operations
+        rpcserver.WithTimeout(5*time.Second),
+    )
 	gpb.RegisterOrderServer(grpcServer.Server, orderServer)
 	return grpcServer, nil
 }

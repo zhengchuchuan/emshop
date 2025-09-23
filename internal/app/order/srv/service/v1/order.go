@@ -77,7 +77,7 @@ func (os *orderService) Create(ctx context.Context, order *dto.OrderDTO) error {
 	}
 
 	// RPC调用获取商品信息 - 保留复杂业务逻辑
-	goods, err := os.data.Goods().BatchGetGoods(context.Background(), &proto2.BatchGoodsIdInfo{Id: goodsids})
+	goods, err := os.data.Goods().BatchGetGoods(ctx, &proto2.BatchGoodsIdInfo{Id: goodsids})
 	if err != nil {
 		log.Errorf("批量获取商品信息失败，orderSn=%s, goodids: %v, err:%v", order.OrderSn, goodsids, err)
 		return err

@@ -1,9 +1,11 @@
 package user
 
 import (
+    "net/http"
     "time"
 
     "emshop/internal/app/api/emshop/domain/dto/request"
+    "emshop/internal/app/pkg/middleware"
     gin2 "emshop/internal/app/pkg/translator/gin"
     "emshop/pkg/common/core"
     jtime "emshop/pkg/common/time"
@@ -20,8 +22,13 @@ func (us *userServer) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-    // 获取当前用户ID
-    userIDInt := uint64(us.getUserIDFromContext(ctx))
+    // 获取当前用户ID（统一使用中间件助手）
+    uid, ok := middleware.GetUserIDFromContext(ctx)
+    if !ok || uid <= 0 {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"code": http.StatusUnauthorized, "message": "用户未登录"})
+        return
+    }
+    userIDInt := uint64(uid)
 
 	// 将请求数据转换为proto结构
 	updateReq, err := req.ToProto(userIDInt)

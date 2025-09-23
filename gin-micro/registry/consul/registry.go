@@ -57,11 +57,20 @@ func WithHealthCheckInterval(interval int) Option {
 
 // 设置严重错误服务自动注销时间(秒)
 func WithDeregisterCriticalServiceAfter(interval int) Option {
-	return func(o *Registry) {
-		if o.cli != nil {
-			o.cli.deregisterCriticalServiceAfter = interval
-		}
-	}
+    return func(o *Registry) {
+        if o.cli != nil {
+            o.cli.deregisterCriticalServiceAfter = interval
+        }
+    }
+}
+
+// WithCheckTimeout sets the health check timeout (seconds) for gRPC/TCP checks
+func WithCheckTimeout(seconds int) Option {
+    return func(o *Registry) {
+        if o.cli != nil {
+            o.cli.checkTimeout = seconds
+        }
+    }
 }
 
 // 设置自定义服务检查

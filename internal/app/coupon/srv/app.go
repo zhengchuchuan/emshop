@@ -185,13 +185,13 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 	couponServer := controllerv1.NewCouponServer(service)
 	couponpb.RegisterCouponServer(rpcSrv.Server, couponServer)
 
-	var registrar registry.Registrar
+    var registrar registry.Registrar
 	var serviceInstance *registry.ServiceInstance
-	if cfg.Registry != nil {
-		registrar, err = newConsulRegistrar(cfg.Registry)
-		if err != nil {
-			return nil, fmt.Errorf("创建Consul注册器失败: %v", err)
-		}
+    if cfg.Registry != nil {
+        registrar, err = newConsulRegistrar(cfg.Registry, cfg.Log.Development)
+        if err != nil {
+            return nil, fmt.Errorf("创建Consul注册器失败: %v", err)
+        }
 		serviceInstance, err = buildServiceInstance(cfg.Server, rpcSrv)
 		if err != nil {
 			return nil, fmt.Errorf("构建服务实例失败: %v", err)
@@ -339,10 +339,10 @@ func initLogger(logOpts *log.Options) error {
 	return nil
 }
 
-func newConsulRegistrar(registryOpts *options.RegistryOptions) (registry.Registrar, error) {
-	if registryOpts == nil {
-		return nil, fmt.Errorf("registry配置为空")
-	}
+func newConsulRegistrar(registryOpts *options.RegistryOptions, dev bool) (registry.Registrar, error) {
+    if registryOpts == nil {
+        return nil, fmt.Errorf("registry配置为空")
+    }
 
 	cfg := api.DefaultConfig()
 	if registryOpts.Address != "" {
@@ -357,7 +357,19 @@ func newConsulRegistrar(registryOpts *options.RegistryOptions) (registry.Registr
 		return nil, fmt.Errorf("创建Consul客户端失败: %w", err)
 	}
 
-	return consul.New(cli, consul.WithHealthCheck(true)), nil
+    opts := []consul.Option{consul.WithHealthCheck(true)}
+    if registryOpts.HealthCheckInterval > 0 {
+        opts = append(opts, consul.WithHealthCheckInterval(registryOpts.HealthCheckInterval))
+    }
+    if registryOpts.CheckTimeout > 0 {
+        opts = append(opts, consul.WithCheckTimeout(registryOpts.CheckTimeout))
+    }
+    if dev {
+        opts = append(opts, consul.WithDeregisterCriticalServiceAfter(60))
+    } else if registryOpts.DeregisterCriticalAfter > 0 {
+        opts = append(opts, consul.WithDeregisterCriticalServiceAfter(registryOpts.DeregisterCriticalAfter))
+    }
+    return consul.New(cli, opts...), nil
 }
 
 func buildServiceInstance(serverOpts *options.ServerOptions, rpcSrv *rpcserver.Server) (*registry.ServiceInstance, error) {

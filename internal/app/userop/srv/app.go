@@ -32,16 +32,28 @@ func NewApp(basename string) *app.App {
 }
 
 // NewRegistrar 创建服务注册器
-func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
-	c := api.DefaultConfig()
-	c.Address = registry.Address
-	c.Scheme = registry.Scheme
-	cli, err := api.NewClient(c)
-	if err != nil {
-		panic(err)
-	}
-	r := consul.New(cli, consul.WithHealthCheck(true))
-	return r
+func NewRegistrar(registry *options.RegistryOptions, dev bool) registry.Registrar {
+    c := api.DefaultConfig()
+    c.Address = registry.Address
+    c.Scheme = registry.Scheme
+    cli, err := api.NewClient(c)
+    if err != nil {
+        panic(err)
+    }
+    opts := []consul.Option{consul.WithHealthCheck(true)}
+    if registry.HealthCheckInterval > 0 {
+        opts = append(opts, consul.WithHealthCheckInterval(registry.HealthCheckInterval))
+    }
+    if registry.CheckTimeout > 0 {
+        opts = append(opts, consul.WithCheckTimeout(registry.CheckTimeout))
+    }
+    if dev {
+        opts = append(opts, consul.WithDeregisterCriticalServiceAfter(60))
+    } else if registry.DeregisterCriticalAfter > 0 {
+        opts = append(opts, consul.WithDeregisterCriticalServiceAfter(registry.DeregisterCriticalAfter))
+    }
+    r := consul.New(cli, opts...)
+    return r
 }
 
 // NewDatabase 创建数据库连接
@@ -121,7 +133,7 @@ func run(cfg *config.Config) app.RunFunc {
 		service := servicev1.NewService(dataFactory)
 
 		// 初始化注册器
-		registrar := NewRegistrar(cfg.Registry)
+    registrar := NewRegistrar(cfg.Registry, cfg.Log.Development)
 
 		// 初始化RPC服务器
 		rpcServer := NewUserOpRPCServer(cfg.Telemetry, cfg.Server, service)

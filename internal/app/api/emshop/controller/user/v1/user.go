@@ -6,7 +6,6 @@ import (
 
     restserver "emshop/gin-micro/server/rest-server"
     "emshop/internal/app/api/emshop/service"
-    "emshop/internal/app/pkg/jwt"
     "emshop/pkg/common/core"
 
     "github.com/gin-gonic/gin"
@@ -125,17 +124,4 @@ func (us *userServer) GetUserList(ctx *gin.Context) {
 		"users": users,
 	})
 }
-
-// getUserIDFromContext 从上下文获取用户ID
-func (us *userServer) getUserIDFromContext(ctx *gin.Context) int64 {
-    // 从中间件设置的上下文键获取用户ID
-    if v, ok := ctx.Get(jwt.KeyUserID); ok {
-        if id, ok := v.(int); ok {
-            return int64(id)
-        }
-        if id64, ok := v.(int64); ok {
-            return id64
-        }
-    }
-    return 0
-}
+// 已统一通过 middleware.GetUserIDFromContext 获取用户ID

@@ -6,7 +6,7 @@ import (
     restserver "emshop/gin-micro/server/rest-server"
     "emshop/internal/app/api/emshop/domain/dto/request"
     "emshop/internal/app/api/emshop/service"
-    "emshop/internal/app/pkg/jwt"
+    "emshop/internal/app/pkg/middleware"
     "emshop/pkg/common/core"
 
     "github.com/gin-gonic/gin"
@@ -52,19 +52,19 @@ func (cc *couponController) ReceiveCoupon(ctx *gin.Context) {
 		return
 	}
 
-	// 获取用户ID
-	userID := cc.getUserIDFromContext(ctx)
-	if userID == 0 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "用户未登录"})
-		return
-	}
+    // 获取用户ID（统一使用中间件助手）
+    uid, ok := middleware.GetUserIDFromContext(ctx)
+    if !ok || uid <= 0 {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "用户未登录"})
+        return
+    }
 
 	// 调用服务层
-	resp, err := cc.sf.Coupon().ReceiveCoupon(ctx, userID, &req)
-	if err != nil {
-		core.WriteResponse(ctx, err, nil)
-		return
-	}
+    resp, err := cc.sf.Coupon().ReceiveCoupon(ctx, int64(uid), &req)
+    if err != nil {
+        core.WriteResponse(ctx, err, nil)
+        return
+    }
 
 	core.WriteResponse(ctx, nil, resp)
 }
@@ -79,19 +79,19 @@ func (cc *couponController) GetUserCoupons(ctx *gin.Context) {
 		return
 	}
 
-	// 获取用户ID
-	userID := cc.getUserIDFromContext(ctx)
-	if userID == 0 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "用户未登录"})
-		return
-	}
+    // 获取用户ID（统一使用中间件助手）
+    uid, ok := middleware.GetUserIDFromContext(ctx)
+    if !ok || uid <= 0 {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "用户未登录"})
+        return
+    }
 
 	// 调用服务层
-	resp, err := cc.sf.Coupon().GetUserCoupons(ctx, userID, &req)
-	if err != nil {
-		core.WriteResponse(ctx, err, nil)
-		return
-	}
+    resp, err := cc.sf.Coupon().GetUserCoupons(ctx, int64(uid), &req)
+    if err != nil {
+        core.WriteResponse(ctx, err, nil)
+        return
+    }
 
 	core.WriteResponse(ctx, nil, resp)
 }
@@ -106,19 +106,19 @@ func (cc *couponController) GetAvailableCoupons(ctx *gin.Context) {
 		return
 	}
 
-	// 获取用户ID
-	userID := cc.getUserIDFromContext(ctx)
-	if userID == 0 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "用户未登录"})
-		return
-	}
+    // 获取用户ID（统一使用中间件助手）
+    uid, ok := middleware.GetUserIDFromContext(ctx)
+    if !ok || uid <= 0 {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "用户未登录"})
+        return
+    }
 
 	// 调用服务层
-	resp, err := cc.sf.Coupon().GetAvailableCoupons(ctx, userID, &req)
-	if err != nil {
-		core.WriteResponse(ctx, err, nil)
-		return
-	}
+    resp, err := cc.sf.Coupon().GetAvailableCoupons(ctx, int64(uid), &req)
+    if err != nil {
+        core.WriteResponse(ctx, err, nil)
+        return
+    }
 
 	core.WriteResponse(ctx, nil, resp)
 }
@@ -133,33 +133,21 @@ func (cc *couponController) CalculateDiscount(ctx *gin.Context) {
 		return
 	}
 
-	// 获取用户ID
-	userID := cc.getUserIDFromContext(ctx)
-	if userID == 0 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "用户未登录"})
-		return
-	}
+    // 获取用户ID（统一使用中间件助手）
+    uid, ok := middleware.GetUserIDFromContext(ctx)
+    if !ok || uid <= 0 {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "用户未登录"})
+        return
+    }
 
 	// 调用服务层
-	resp, err := cc.sf.Coupon().CalculateDiscount(ctx, userID, &req)
-	if err != nil {
-		core.WriteResponse(ctx, err, nil)
-		return
-	}
+    resp, err := cc.sf.Coupon().CalculateDiscount(ctx, int64(uid), &req)
+    if err != nil {
+        core.WriteResponse(ctx, err, nil)
+        return
+    }
 
 	core.WriteResponse(ctx, nil, resp)
 }
 
-// getUserIDFromContext 从上下文获取用户ID
-func (cc *couponController) getUserIDFromContext(ctx *gin.Context) int64 {
-    // 从中间件设置的上下文键获取用户ID
-    if v, ok := ctx.Get(jwt.KeyUserID); ok {
-        if id, ok := v.(int); ok {
-            return int64(id)
-        }
-        if id64, ok := v.(int64); ok {
-            return id64
-        }
-    }
-    return 0
-}
+// 已统一通过 middleware.GetUserIDFromContext 获取用户ID

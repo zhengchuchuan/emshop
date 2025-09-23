@@ -14,6 +14,7 @@ import (
 	cosulAPI "github.com/hashicorp/consul/api"
 
 	"emshop/gin-micro/registry"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -40,15 +41,13 @@ func GetGoodsClient(opts *options.RegistryOptions) gpbv1.GoodsClient {
 }
 
 func NewGoodsServiceClient(r registry.Discovery) gpbv1.GoodsClient {
-	// 创建带有重试和超时的上下文
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
 	conn, err := rpcserver.DialInsecure(
-		ctx,
+		context.Background(),
 		rpcserver.WithBalancerName("p2c"),
 		rpcserver.WithEndpoint(goodsserviceName),
 		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientTimeout(10*time.Second),
+		rpcserver.WithClientOptions(grpc.WithNoProxy()),
 		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 	)
 	if err != nil {
@@ -70,6 +69,7 @@ func NewInventoryServiceClient(r registry.Discovery) proto.InventoryClient {
 		rpcserver.WithBalancerName("p2c"),
 		rpcserver.WithEndpoint(ginvserviceName),
 		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientOptions(grpc.WithNoProxy()),
 		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 	)
 	if err != nil {

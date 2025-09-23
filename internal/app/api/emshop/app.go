@@ -50,17 +50,29 @@ func run(cfg *config.Config) app.RunFunc {
 //
 //	@param registry
 //	@return registry.Registrar
-func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
-	c := api.DefaultConfig()
-	c.Address = registry.Address
-	c.Scheme = registry.Scheme
-	cli, err := api.NewClient(c)
-	if err != nil {
-		panic(err)
-	}
-	// 创建自定义consul注册器实例
-	r := consul.New(cli, consul.WithHealthCheck(true))
-	return r
+func NewRegistrar(registry *options.RegistryOptions, dev bool) registry.Registrar {
+    c := api.DefaultConfig()
+    c.Address = registry.Address
+    c.Scheme = registry.Scheme
+    cli, err := api.NewClient(c)
+    if err != nil {
+        panic(err)
+    }
+    // 创建自定义consul注册器实例
+    opts := []consul.Option{consul.WithHealthCheck(true)}
+    if registry.HealthCheckInterval > 0 {
+        opts = append(opts, consul.WithHealthCheckInterval(registry.HealthCheckInterval))
+    }
+    if registry.CheckTimeout > 0 {
+        opts = append(opts, consul.WithCheckTimeout(registry.CheckTimeout))
+    }
+    if dev {
+        opts = append(opts, consul.WithDeregisterCriticalServiceAfter(60))
+    } else if registry.DeregisterCriticalAfter > 0 {
+        opts = append(opts, consul.WithDeregisterCriticalServiceAfter(registry.DeregisterCriticalAfter))
+    }
+    r := consul.New(cli, opts...)
+    return r
 }
 
 func NewAPIApp(cfg *config.Config) (*gapp.App, error) {
@@ -73,7 +85,7 @@ func NewAPIApp(cfg *config.Config) (*gapp.App, error) {
     rpcserver.InitBuilder()
 
     //服务注册
-    register := NewRegistrar(cfg.Registry)
+    register := NewRegistrar(cfg.Registry, cfg.Log.Development)
 
 	// 初始化链路追踪
 	trace.InitAgent(trace.Options{

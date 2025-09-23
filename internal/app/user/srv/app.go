@@ -32,7 +32,7 @@ func NewApp(basename string) *app.App {
 // NewRegistrar 创建consul注册器
 //	@param registry 
 //	@return registry.Registrar 
-func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
+func NewRegistrar(registry *options.RegistryOptions, dev bool) registry.Registrar {
 	// 创建客户端配置
 	c := api.DefaultConfig()
 	c.Address = registry.Address
@@ -44,7 +44,19 @@ func NewRegistrar(registry *options.RegistryOptions) registry.Registrar {
 		panic(err)
 	}
 	// 创建自定义consul注册器实例
-	r := consul.New(cli, consul.WithHealthCheck(true))
+	opts := []consul.Option{consul.WithHealthCheck(true)}
+	if registry.HealthCheckInterval > 0 {
+		opts = append(opts, consul.WithHealthCheckInterval(registry.HealthCheckInterval))
+	}
+	if registry.CheckTimeout > 0 {
+		opts = append(opts, consul.WithCheckTimeout(registry.CheckTimeout))
+	}
+	if dev {
+		opts = append(opts, consul.WithDeregisterCriticalServiceAfter(60))
+	} else if registry.DeregisterCriticalAfter > 0 {
+		opts = append(opts, consul.WithDeregisterCriticalServiceAfter(registry.DeregisterCriticalAfter))
+	}
+	r := consul.New(cli, opts...)
 	return r
 }
 
