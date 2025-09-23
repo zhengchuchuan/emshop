@@ -29,14 +29,14 @@ func NewOrderRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 		log.Fatal(err.Error())
 	}
 
-	orderSrvFactory := v13.NewService(factoryManager.GetDataFactory(), cfg.Dtm)
+    orderSrvFactory := v13.NewService(factoryManager.GetDataFactory(), cfg.Dtm, cfg.Registry)
 	orderServer := order.NewOrderServer(orderSrvFactory)
 	rpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
     grpcServer := rpcserver.NewServer(
         rpcserver.WithAddress(rpcAddr),
         rpcserver.WithMetrics(cfg.Server.EnableMetrics),
-        // Increase default unary timeout from 1s to 5s to avoid premature deadline on multi-step operations
-        rpcserver.WithTimeout(5*time.Second),
+        // Saga下单会级联调用库存/商品，适当放宽超时
+        rpcserver.WithTimeout(15*time.Second),
     )
 	gpb.RegisterOrderServer(grpcServer.Server, orderServer)
 	return grpcServer, nil

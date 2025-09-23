@@ -24,23 +24,23 @@ type ServerOptions struct {
 	// HTTP服务端口
 	HttpPort int `json:"http-port,omitempty" mapstructure:"http-port"`
 	// 服务名称
-	Name string `json:"name,omitempty" mapstructure:"name"`
-	// 中间件列表
-	Middlewares []string `json:"middlewares,omitempty" mapstructure:"middlewares"`
+    Name string `json:"name,omitempty" mapstructure:"name"`
+    // 中间件列表
+    Middlewares []string `json:"middlewares,omitempty" mapstructure:"middlewares"`
 }
 
 // NewServerOptions 创建带默认值的ServerOptions实例
 // 这是Options模式的标准实现：提供合理的默认值
 func NewServerOptions() *ServerOptions {
-	return &ServerOptions{
+    return &ServerOptions{
 		EnableHealthCheck: true,
 		EnableProfiling:   true,
 		EnableMetrics:     true,
 		Host:              "127.0.0.1",
 		Port:              8078,
 		HttpPort:          8079,
-		Name:              "emshop-user-srv",
-	}
+        Name:              "emshop-user-srv",
+    }
 }
 
 // Validate 验证配置选项的有效性
@@ -64,8 +64,8 @@ func (so *ServerOptions) AddFlags(fs *pflag.FlagSet) {
 		"enable-health-check, if true, will add health check route, default is true")
 
 	// StringVar: 绑定字符串类型字段到命令行标志
-	fs.StringVar(&so.Host, "server.host", so.Host, "server host default is 127.0.0.1")
-	fs.StringVar(&so.Name, "server.name", so.Name, "server name default is emshop-user-srv")
+    fs.StringVar(&so.Host, "server.host", so.Host, "server host default is 127.0.0.1")
+    fs.StringVar(&so.Name, "server.name", so.Name, "server name default is emshop-user-srv")
 
 	// IntVar: 绑定整数类型字段到命令行标志
 	fs.IntVar(&so.Port, "server.port", so.Port, "server port default is 8078")

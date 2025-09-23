@@ -29,14 +29,15 @@ func (o *order) OrderList(ctx context.Context, request *opbv1.OrderFilterRequest
 }
 
 func (o *order) CreateOrder(ctx context.Context, request *opbv1.OrderRequest) (*opbv1.OrderInfoResponse, error) {
-	log.Infof("Calling CreateOrder gRPC for user: %d", request.UserId)
-	_, err := o.oc.CreateOrder(ctx, request)
-	if err != nil {
-		log.Errorf("CreateOrder gRPC call failed: %v", err)
-		return nil, err
-	}
-	log.Infof("CreateOrder gRPC call successful")
-	return &opbv1.OrderInfoResponse{}, nil
+    // For API order creation, we should submit based on checked cart items
+    log.Infof("Calling SubmitOrder gRPC for user: %d", request.UserId)
+    _, err := o.oc.SubmitOrder(ctx, request)
+    if err != nil {
+        log.Errorf("SubmitOrder gRPC call failed: %v", err)
+        return nil, err
+    }
+    log.Infof("SubmitOrder gRPC call successful")
+    return &opbv1.OrderInfoResponse{}, nil
 }
 
 func (o *order) OrderDetail(ctx context.Context, request *opbv1.OrderRequest) (*opbv1.OrderInfoDetailResponse, error) {

@@ -1,9 +1,9 @@
 package host
 
 import (
-	"fmt"
-	"net"
-	"strconv"
+    "fmt"
+    "net"
+    "strconv"
 )
 
 // ExtractHostPort from address
@@ -35,10 +35,10 @@ func Port(lis net.Listener) (int, bool) {
 
 // Extract returns a private addr and port.
 func Extract(hostPort string, lis net.Listener) (string, error) {
-	addr, port, err := net.SplitHostPort(hostPort)
-	if err != nil && lis == nil {
-		return "", err
-	}
+    addr, port, err := net.SplitHostPort(hostPort)
+    if err != nil && lis == nil {
+        return "", err
+    }
 	if lis != nil {
 		if p, ok := Port(lis); ok {
 			port = strconv.Itoa(p)
@@ -46,10 +46,10 @@ func Extract(hostPort string, lis net.Listener) (string, error) {
 			return "", fmt.Errorf("failed to extract port: %v", lis.Addr())
 		}
 	}
-	if len(addr) > 0 && (addr != "0.0.0.0" && addr != "[::]" && addr != "::") {
-		return net.JoinHostPort(addr, port), nil
-	}
-	ifaces, err := net.Interfaces()
+    if len(addr) > 0 && (addr != "0.0.0.0" && addr != "[::]" && addr != "::") {
+        return net.JoinHostPort(addr, port), nil
+    }
+    ifaces, err := net.Interfaces()
 	if err != nil {
 		return "", err
 	}

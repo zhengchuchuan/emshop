@@ -18,14 +18,15 @@ type Config struct {
 }
 
 func New() *Config {
-	//配置默认初始化
-	return &Config{
-		MySQLOptions: options.NewMySQLOptions(),
-		Log:          log.NewOptions(),
-		Server:       options.NewServerOptions(),
-		Telemetry:    options.NewTelemetryOptions(),
-		Registry:     options.NewRegistryOptions(),
-	}
+    //配置默认初始化
+    return &Config{
+        MySQLOptions: options.NewMySQLOptions(),
+        Log:          log.NewOptions(),
+        Server:       options.NewServerOptions(),
+        Telemetry:    options.NewTelemetryOptions(),
+        Registry:     options.NewRegistryOptions(),
+        Dtm:          options.NewDtmOptions(),
+    }
 }
 
 // Flags returns flags for a specific APIServer by section name.

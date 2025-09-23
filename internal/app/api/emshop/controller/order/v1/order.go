@@ -12,6 +12,9 @@ import (
 	"emshop/pkg/errors"
 	"emshop/pkg/log"
 	"strconv"
+	"time"
+	"fmt"
+	"math/rand"
 
 	"github.com/gin-gonic/gin"
 )
@@ -112,12 +115,16 @@ func (oc *orderController) CreateOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Generate an orderSn for DTM saga id and order linking
+	orderSn := generateOrderSn(int32(uid))
+
 	orderRequest := proto.OrderRequest{
 		UserId:  int32(uid),
 		Address: &r.Address,
 		Name:    &r.Name,
 		Mobile:  &r.Mobile,
 		Post:    &r.Post,
+		OrderSn: &orderSn,
 	}
 
 	_, err := oc.srv.Order().CreateOrder(ctx, &orderRequest)
@@ -129,6 +136,16 @@ func (oc *orderController) CreateOrder(ctx *gin.Context) {
 	core.WriteResponse(ctx, nil, map[string]interface{}{
 		"msg": "订单创建成功",
 	})
+}
+
+// generateOrderSn 生成订单号: 时间戳 + 用户ID + 2位随机数
+func generateOrderSn(userId int32) string {
+	now := time.Now()
+	rand.Seed(time.Now().UnixNano())
+	return fmt.Sprintf("%04d%02d%02d%02d%02d%02d%d%02d",
+		now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(),
+		userId, rand.Intn(90)+10,
+	)
 }
 
 func (oc *orderController) OrderDetail(ctx *gin.Context) {

@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"emshop/pkg/log"
+	"time"
 )
 
 func NewInventoryRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
@@ -33,6 +34,7 @@ func NewInventoryRPCServer(cfg *config.Config) (*rpcserver.Server, error) {
 	grpcServer := rpcserver.NewServer(
 		rpcserver.WithAddress(rpcAddr),
 		rpcserver.WithMetrics(cfg.Server.EnableMetrics),
+		rpcserver.WithTimeout(15*time.Second),
 	)
 	gpb.RegisterInventoryServer(grpcServer.Server, invServer)
 	//r := gin.Default()

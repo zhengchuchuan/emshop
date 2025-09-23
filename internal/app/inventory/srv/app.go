@@ -52,11 +52,11 @@ func NewRegistrar(registry *options.RegistryOptions, dev bool) registry.Registra
 }
 
 func NewInventoryApp(cfg *config.Config) (*gapp.App, error) {
-	//初始化log
-	log.Init(cfg.Log)
-	defer log.Flush()
+    //初始化log
+    log.Init(cfg.Log)
+    defer log.Flush()
 
-	//服务注册
+    //服务注册
     register := NewRegistrar(cfg.Registry, cfg.Log.Development)
 
 	//连接redis

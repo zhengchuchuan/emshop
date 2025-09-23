@@ -1,23 +1,25 @@
 package service
 
 import (
-	"context"
-	"time"
-	proto2 "emshop/api/goods/v1"
-	proto "emshop/api/inventory/v1"
-	proto3 "emshop/api/order/v1"
-	"emshop/internal/app/order/srv/data/v1/interfaces"
-	"emshop/internal/app/order/srv/data/v1/mysql"
-	"emshop/internal/app/order/srv/domain/do"
-	"emshop/internal/app/order/srv/domain/dto"
-	"emshop/internal/app/pkg/code"
-	"emshop/internal/app/pkg/options"
-	v1 "emshop/pkg/common/meta/v1"
-	"emshop/pkg/errors"
-	"emshop/pkg/log"
-	"gorm.io/gorm"
+    "context"
+    "time"
+    proto2 "emshop/api/goods/v1"
+    proto "emshop/api/inventory/v1"
+    proto3 "emshop/api/order/v1"
+    "emshop/internal/app/order/srv/data/v1/interfaces"
+    "emshop/internal/app/order/srv/data/v1/mysql"
+    "emshop/internal/app/order/srv/domain/do"
+    "emshop/internal/app/order/srv/domain/dto"
+    "emshop/internal/app/pkg/code"
+    "emshop/internal/app/pkg/options"
+    v1 "emshop/pkg/common/meta/v1"
+    "emshop/pkg/errors"
+    "emshop/pkg/log"
+    "gorm.io/gorm"
 
-	"github.com/dtm-labs/client/dtmgrpc"
+    "github.com/dtm-labs/client/dtmgrpc"
+    "net/url"
+    "fmt"
 )
 
 type OrderSrv interface {
@@ -46,8 +48,9 @@ type orderService struct {
 	db              *gorm.DB
 	
 	// 保留原有组件（复杂操作：分布式事务、RPC调用等）
-	data    mysql.DataFactory
-	dtmOpts *options.DtmOptions
+    data    mysql.DataFactory
+    dtmOpts *options.DtmOptions
+    regOpts *options.RegistryOptions
 }
 
 // CreateCom 是Create的补偿方法， 主要是回滚订单的创建
@@ -217,21 +220,80 @@ func (os *orderService) Submit(ctx context.Context, order *dto.OrderDTO) error {
 		OrderItems: orderItems,
 	}
 
-	// 注意：这里的qsBusi和gBusi是服务的地址， 需要根据实际情况修改,此处直接写死了consul的地址
-	qsBusi := "discovery:///emshop-inventory-srv"
-	gBusi := "discovery:///emshop-order-srv"
+    // 解析直连地址，避免 DTM 端缺少 discovery resolver
+    qsBusi, err := os.resolveDirectAddr(ctx, "emshop-inventory-srv")
+    if err != nil {
+        log.Errorf("解析库存服务地址失败: %v", err)
+        return err
+    }
+    gBusi, err := os.resolveDirectAddr(ctx, "emshop-order-srv")
+    if err != nil {
+        log.Errorf("解析订单服务地址失败: %v", err)
+        return err
+    }
 	// saga事务分为正向和补偿两个阶段
 	// 正向阶段： Sell -> CreateOrder
 	// 补偿阶段： Reback -> CreateOrderCom
 	// 通过 DTM 的 Saga 模式，串联库存扣减和订单创建两个服务，保证跨服务的数据一致性。
-	saga := dtmgrpc.NewSagaGrpc(os.dtmOpts.GrpcServer, order.OrderSn).
-		Add(qsBusi+"/Inventory/Sell", qsBusi+"/Inventory/Reback", req).
-		Add(gBusi+"/Order/CreateOrder", gBusi+"/Order/CreateOrderCom", oReq)
-	saga.WaitResult = true
-	err = saga.Submit()
-	//通过OrderSn查询一下， 当前的状态如何状态一直值Submitted那么就你一直不要给前端返回， 如果是failed那么你提示给前端说下单失败，重新下单
-	return err
+    // 注意：gRPC 全限定方法名以 Service 名称为前缀，而非包名
+    // 参考 api/inventory/v1/inventory_grpc.pb.go: Invoke(ctx, "/Inventory/Sell", ...)
+    //       api/order/v1/order_grpc.pb.go:    FullMethodName = "/Order/CreateOrder"
+    saga := dtmgrpc.NewSagaGrpc(os.dtmOpts.GrpcServer, order.OrderSn).
+        Add(qsBusi+"/Inventory/Sell", qsBusi+"/Inventory/Reback", req).
+        Add(gBusi+"/Order/CreateOrder", gBusi+"/Order/CreateOrderCom", oReq)
+    saga.WaitResult = true
+    err = saga.Submit()
+    //通过OrderSn查询一下， 当前的状态如何状态一直值Submitted那么就你一直不要给前端返回， 如果是failed那么你提示给前端说下单失败，重新下单
+    return err
 }
+
+// resolveDirectAddr 通过注册中心解析直连地址（host:port），供 DTM 调用
+func (os *orderService) resolveDirectAddr(_ context.Context, serviceName string) (string, error) {
+    if os.regOpts == nil {
+        return "", fmt.Errorf("缺少注册中心配置")
+    }
+    d := mysql.NewDiscovery(os.regOpts)
+    // 使用内部超时 + 重试，避免首次调用时服务尚未就绪或健康检查未通过
+    deadline := time.Now().Add(10 * time.Second)
+    for attempt := 0; time.Now().Before(deadline); attempt++ {
+        ctx, cancel := context.WithTimeout(context.Background(), 800*time.Millisecond)
+        ins, err := d.GetService(ctx, serviceName)
+        cancel()
+        if err == nil && len(ins) > 0 {
+            for _, ep := range ins[0].Endpoints {
+                u, parseErr := url.Parse(ep)
+                if parseErr != nil {
+                    continue
+                }
+                if u.Scheme == "grpc" && u.Host != "" {
+                    hostport := u.Host
+                    // 优先使用配置中的 DTM 分支主机覆盖，其次使用环境变量/广告地址
+                    if forceHost := os.getBusiHostOverride(); forceHost != "" {
+                        if p := u.Port(); p != "" {
+                            hostport = fmt.Sprintf("%s:%s", forceHost, p)
+                        } else {
+                            hostport = forceHost
+                        }
+                    }
+                    log.Debugf("服务解析成功: %s -> %s", serviceName, hostport)
+                    return hostport, nil // host:port
+                }
+            }
+        }
+        time.Sleep(150 * time.Millisecond)
+    }
+    return "", fmt.Errorf("解析服务地址失败: %s", serviceName)
+}
+
+// 获取用于 Saga 分支调用的主机覆盖优先级：dtm.busi-host > FORCE_TARGET_HOST > ADVERTISE_ADDR
+func (os *orderService) getBusiHostOverride() string {
+    if os.dtmOpts != nil && os.dtmOpts.BusiHost != "" {
+        return os.dtmOpts.BusiHost
+    }
+    return ""
+}
+var _ = fmt.Sprintf // silence unused import if any
+
 
 func (os *orderService) Update(ctx context.Context, order *dto.OrderDTO) error {
 	log.Debugf("Updating order: orderSn=%s, user=%d", order.OrderSn, order.User)
@@ -450,16 +512,17 @@ func (os *orderService) RevertPaidStatus(ctx context.Context, orderSn string) er
 }
 
 func newOrderService(sv *service) *orderService {
-	return &orderService{
-		// 预加载核心组件，避免每次方法调用时重复获取
-		ordersDAO:        sv.data.Orders(),
-		shoppingCartsDAO: sv.data.ShoppingCarts(),
-		db:               sv.data.DB(),
-		
-		// 保留原有组件用于复杂操作
-		data:    sv.data,
-		dtmOpts: sv.dtmopts,
-	}
+    return &orderService{
+        // 预加载核心组件，避免每次方法调用时重复获取
+        ordersDAO:        sv.data.Orders(),
+        shoppingCartsDAO: sv.data.ShoppingCarts(),
+        db:               sv.data.DB(),
+        
+        // 保留原有组件用于复杂操作
+        data:    sv.data,
+        dtmOpts: sv.dtmopts,
+        regOpts: sv.regopts,
+    }
 }
 
 var _ OrderSrv = &orderService{}

@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"emshop/pkg/log"
+	"time"
 )
 
 func NewGoodsRPCServer(cfg *config.Config) (*rpcserver.Server, *dataV1.FactoryManager, error) {
@@ -36,6 +37,7 @@ func NewGoodsRPCServer(cfg *config.Config) (*rpcserver.Server, *dataV1.FactoryMa
 	grpcServer := rpcserver.NewServer(
 		rpcserver.WithAddress(rpcAddr),
 		rpcserver.WithMetrics(cfg.Server.EnableMetrics),
+		rpcserver.WithTimeout(15*time.Second),
 	)
 
 	gpb.RegisterGoodsServer(grpcServer.Server, goodsServer)
