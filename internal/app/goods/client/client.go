@@ -2,14 +2,14 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github.com/hashicorp/consul/api"
 	v1 "emshop/api/goods/v1"
 	"emshop/gin-micro/registry/consul"
 	rpc "emshop/gin-micro/server/rpc-server"
 	_ "emshop/gin-micro/server/rpc-server/resolver/direct"
 	"emshop/gin-micro/server/rpc-server/selector"
 	"emshop/gin-micro/server/rpc-server/selector/p2c"
+	"fmt"
+	"github.com/hashicorp/consul/api"
 	"time"
 )
 
@@ -28,7 +28,7 @@ func main() {
 	r := consul.New(cli, consul.WithHealthCheck(true))
 
 	conn, err := rpc.DialInsecure(context.Background(),
-		rpc.WithBalancerName("selector"),
+		rpc.WithBalancerName("p2c"),
 		rpc.WithDiscovery(r),
 		rpc.WithClientTimeout(time.Second*5000),
 		rpc.WithEndpoint("discovery:///emshop-goods-srv"),

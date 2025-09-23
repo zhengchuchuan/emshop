@@ -40,17 +40,17 @@ func GetGoodsClient(opts *options.RegistryOptions) gpbv1.GoodsClient {
 }
 
 func NewGoodsServiceClient(r registry.Discovery) gpbv1.GoodsClient {
-    // 创建带有重试和超时的上下文
-    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-    defer cancel()
-    
-    conn, err := rpcserver.DialInsecure(
-        ctx,
-        rpcserver.WithBalancerName("selector"),
-        rpcserver.WithEndpoint(goodsserviceName),
-        rpcserver.WithDiscovery(r),
-        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
-    )
+	// 创建带有重试和超时的上下文
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	conn, err := rpcserver.DialInsecure(
+		ctx,
+		rpcserver.WithBalancerName("p2c"),
+		rpcserver.WithEndpoint(goodsserviceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -65,13 +65,13 @@ func GetInventoryClient(opts *options.RegistryOptions) proto.InventoryClient {
 }
 
 func NewInventoryServiceClient(r registry.Discovery) proto.InventoryClient {
-    conn, err := rpcserver.DialInsecure(
-        context.Background(),
-        rpcserver.WithBalancerName("selector"),
-        rpcserver.WithEndpoint(ginvserviceName),
-        rpcserver.WithDiscovery(r),
-        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
-    )
+	conn, err := rpcserver.DialInsecure(
+		context.Background(),
+		rpcserver.WithBalancerName("p2c"),
+		rpcserver.WithEndpoint(ginvserviceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	)
 	if err != nil {
 		panic(err)
 	}

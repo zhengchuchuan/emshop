@@ -1,34 +1,81 @@
 package rpcserver
 
 import (
+	"sync"
+
 	"emshop/gin-micro/registry"
+	"emshop/gin-micro/server/rpc-server/selector"
+	"emshop/gin-micro/server/rpc-server/selector/p2c"
+	"emshop/gin-micro/server/rpc-server/selector/random"
+	"emshop/gin-micro/server/rpc-server/selector/wrr"
 
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/metadata"
-	"emshop/gin-micro/server/rpc-server/selector"
 )
 
-/*
-	构建自定义负载均衡器所需的基本组件
-*/
 const (
-	// balancerName 是负载均衡器的名称
-	balancerName = "selector"
+	// selectorName 是“全局选择器”映射到的 gRPC 策略名
+	// 通过 selector.SetGlobalSelector() 设置其具体算法
+	selectorName = "selector"
+
+	// 直接选择内置算法的策略名（客户端可按名选择）
+	p2cName    = "p2c"
+	wrrName    = "wrr"
+	randomName = "random"
 )
 
 var (
 	// 编译时接口检查
 	_ base.PickerBuilder = &balancerBuilder{}
 	_ balancer.Picker    = &balancerPicker{}
+
+	regOnce     sync.Once
+	regMu       sync.Mutex
+	regNamesSet = map[string]struct{}{}
 )
 
-// InitBuilder 初始化并注册负载均衡器构建器
+// InitBuilder 初始化并注册内置负载均衡器（幂等）
+// - 注册 selector（使用全局选择器；若未设置则默认 p2c）
+// - 注册 p2c/wrr/random 三种算法的独立策略名，便于客户端按名选择
 func InitBuilder() {
+	regOnce.Do(func() {
+		// selector: 使用全局选择器（若未设置则回落到 p2c）
+		global := selector.GlobalSelector()
+		if global == nil {
+			global = p2c.NewBuilder()
+		}
+		registerBalancer(selectorName, global)
+
+		// 直接按算法名注册内置负载均衡器，方便客户端明确选择
+		registerBalancer(p2cName, p2c.NewBuilder())
+		registerBalancer(wrrName, wrr.NewBuilder())
+		registerBalancer(randomName, random.NewBuilder())
+	})
+}
+
+// RegisterBalancer 允许外部以自定义名称注册一个选择器（幂等）
+// 若重复注册相同名称将被忽略，以避免 gRPC 重复注册造成崩溃
+func RegisterBalancer(name string, builder selector.Builder) {
+	registerBalancer(name, builder)
+}
+
+func registerBalancer(name string, builder selector.Builder) {
+	if builder == nil || name == "" {
+		return
+	}
+	regMu.Lock()
+	if _, ok := regNamesSet[name]; ok {
+		regMu.Unlock()
+		return
+	}
+	regNamesSet[name] = struct{}{}
+	regMu.Unlock()
+
 	b := base.NewBalancerBuilder(
-		balancerName,
+		name,
 		&balancerBuilder{
-			builder: selector.GlobalSelector(), // 通过全局选择器构建器创建选择器
+			builder: builder,
 		},
 		base.Config{HealthCheck: true},
 	)
@@ -105,6 +152,6 @@ func (t Trailer) Get(k string) string {
 
 // grpcNode gRPC 节点包装器，包含 selector 节点和 gRPC 子连接
 type grpcNode struct {
-	selector.Node            // 基础节点接口
+	selector.Node                  // 基础节点接口
 	subConn       balancer.SubConn // gRPC 子连接
 }

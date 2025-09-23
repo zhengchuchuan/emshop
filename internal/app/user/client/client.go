@@ -29,7 +29,7 @@ func main() {
 	r := consul.New(cli, consul.WithHealthCheck(true))
 
 	conn, err := rpc.DialInsecure(context.Background(),
-		rpc.WithBalancerName("selector"),
+		rpc.WithBalancerName("p2c"),
 		rpc.WithDiscovery(r),
 		rpc.WithClientTimeout(time.Second*5000),
 		rpc.WithEndpoint("discovery:///emshop-user-srv"),
@@ -48,7 +48,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(re)	
+		fmt.Println(re)
 		fmt.Println("success")
 		time.Sleep(time.Millisecond * 2)
 	}

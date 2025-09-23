@@ -61,15 +61,15 @@ const (
 
 // NewUserServiceClient 创建用户服务的 gRPC 客户端
 func NewUserServiceClient(r registry.Discovery) upbv1.UserClient {
-    log.Infof("Initializing gRPC connection to service: %s", clientUserServiceName)
-    conn, err := rpcserver.DialInsecure(
-        context.Background(),
-        rpcserver.WithBalancerName("selector"),
-        rpcserver.WithEndpoint(clientUserServiceName),
-        rpcserver.WithDiscovery(r),
-        rpcserver.WithClientTimeout(10*time.Second),
-        rpcserver.WithClientOptions(grpc.WithNoProxy()),
-        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	log.Infof("Initializing gRPC connection to service: %s", clientUserServiceName)
+	conn, err := rpcserver.DialInsecure(
+		context.Background(),
+		rpcserver.WithBalancerName("p2c"),
+		rpcserver.WithEndpoint(clientUserServiceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientTimeout(10*time.Second),
+		rpcserver.WithClientOptions(grpc.WithNoProxy()),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 	)
 	if err != nil {
 		log.Errorf("Failed to create gRPC connection: %v", err)
@@ -82,15 +82,15 @@ func NewUserServiceClient(r registry.Discovery) upbv1.UserClient {
 
 // NewGoodsServiceClient 创建商品服务的 gRPC 客户端
 func NewGoodsServiceClient(r registry.Discovery) gpbv1.GoodsClient {
-    log.Infof("Initializing gRPC connection to service: %s", clientGoodsServiceName)
-    conn, err := rpcserver.DialInsecure(
-        context.Background(),
-        rpcserver.WithBalancerName("selector"),
-        rpcserver.WithEndpoint(clientGoodsServiceName),
-        rpcserver.WithDiscovery(r),
-        rpcserver.WithClientTimeout(10*time.Second),
-        rpcserver.WithClientOptions(grpc.WithNoProxy()),
-        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	log.Infof("Initializing gRPC connection to service: %s", clientGoodsServiceName)
+	conn, err := rpcserver.DialInsecure(
+		context.Background(),
+		rpcserver.WithBalancerName("p2c"),
+		rpcserver.WithEndpoint(clientGoodsServiceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientTimeout(10*time.Second),
+		rpcserver.WithClientOptions(grpc.WithNoProxy()),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 	)
 	if err != nil {
 		log.Errorf("Failed to create gRPC connection: %v", err)
@@ -103,35 +103,35 @@ func NewGoodsServiceClient(r registry.Discovery) gpbv1.GoodsClient {
 
 // NewInventoryServiceClient 创建库存服务的 gRPC 客户端，仅使用 Consul 服务发现
 func NewInventoryServiceClient(r registry.Discovery) ipb.InventoryClient {
-    log.Infof("Initializing gRPC connection to service: %s", clientInventoryServiceName)
-    conn, err := rpcserver.DialInsecure(
-        context.Background(),
-        rpcserver.WithBalancerName("selector"),
-        rpcserver.WithEndpoint(clientInventoryServiceName),
-        rpcserver.WithDiscovery(r),
-        rpcserver.WithClientTimeout(10*time.Second),
-        rpcserver.WithClientOptions(grpc.WithNoProxy()),
-        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
-    )
-    if err != nil {
-        log.Errorf("Failed to create gRPC connection: %v", err)
-        panic(err)
-    }
-    log.Info("gRPC connection established successfully")
-    return ipb.NewInventoryClient(conn)
+	log.Infof("Initializing gRPC connection to service: %s", clientInventoryServiceName)
+	conn, err := rpcserver.DialInsecure(
+		context.Background(),
+		rpcserver.WithBalancerName("p2c"),
+		rpcserver.WithEndpoint(clientInventoryServiceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientTimeout(10*time.Second),
+		rpcserver.WithClientOptions(grpc.WithNoProxy()),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	)
+	if err != nil {
+		log.Errorf("Failed to create gRPC connection: %v", err)
+		panic(err)
+	}
+	log.Info("gRPC connection established successfully")
+	return ipb.NewInventoryClient(conn)
 }
 
 // NewOrderServiceClient 创建订单服务的 gRPC 客户端
 func NewOrderServiceClient(r registry.Discovery) opbv1.OrderClient {
-    log.Infof("Initializing gRPC connection to service: %s", clientOrderServiceName)
-    conn, err := rpcserver.DialInsecure(
-        context.Background(),
-        rpcserver.WithBalancerName("selector"),
-        rpcserver.WithEndpoint(clientOrderServiceName),
-        rpcserver.WithDiscovery(r),
-        rpcserver.WithClientTimeout(10*time.Second),
-        rpcserver.WithClientOptions(grpc.WithNoProxy()),
-        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	log.Infof("Initializing gRPC connection to service: %s", clientOrderServiceName)
+	conn, err := rpcserver.DialInsecure(
+		context.Background(),
+		rpcserver.WithBalancerName("p2c"),
+		rpcserver.WithEndpoint(clientOrderServiceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientTimeout(10*time.Second),
+		rpcserver.WithClientOptions(grpc.WithNoProxy()),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 	)
 	if err != nil {
 		log.Errorf("Failed to create gRPC connection: %v", err)
@@ -144,15 +144,15 @@ func NewOrderServiceClient(r registry.Discovery) opbv1.OrderClient {
 
 // NewUserOpServiceClient 创建用户操作服务的 gRPC 客户端
 func NewUserOpServiceClient(r registry.Discovery) uoppbv1.UserOpClient {
-    log.Infof("Initializing gRPC connection to service: %s", clientUseropServiceName)
-    conn, err := rpcserver.DialInsecure(
-        context.Background(),
-        rpcserver.WithBalancerName("selector"),
-        rpcserver.WithEndpoint(clientUseropServiceName),
-        rpcserver.WithDiscovery(r),
-        rpcserver.WithClientTimeout(10*time.Second),
-        rpcserver.WithClientOptions(grpc.WithNoProxy()),
-        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	log.Infof("Initializing gRPC connection to service: %s", clientUseropServiceName)
+	conn, err := rpcserver.DialInsecure(
+		context.Background(),
+		rpcserver.WithBalancerName("p2c"),
+		rpcserver.WithEndpoint(clientUseropServiceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientTimeout(10*time.Second),
+		rpcserver.WithClientOptions(grpc.WithNoProxy()),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 	)
 	if err != nil {
 		log.Errorf("Failed to create gRPC connection: %v", err)
@@ -165,15 +165,15 @@ func NewUserOpServiceClient(r registry.Discovery) uoppbv1.UserOpClient {
 
 // NewCouponServiceClient 创建优惠券服务的 gRPC 客户端
 func NewCouponServiceClient(r registry.Discovery) cpbv1.CouponClient {
-    log.Infof("Initializing gRPC connection to service: %s", clientCouponServiceName)
-    conn, err := rpcserver.DialInsecure(
-        context.Background(),
-        rpcserver.WithBalancerName("selector"),
-        rpcserver.WithEndpoint(clientCouponServiceName),
-        rpcserver.WithDiscovery(r),
-        rpcserver.WithClientTimeout(10*time.Second),
-        rpcserver.WithClientOptions(grpc.WithNoProxy()),
-        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	log.Infof("Initializing gRPC connection to service: %s", clientCouponServiceName)
+	conn, err := rpcserver.DialInsecure(
+		context.Background(),
+		rpcserver.WithBalancerName("p2c"),
+		rpcserver.WithEndpoint(clientCouponServiceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientTimeout(10*time.Second),
+		rpcserver.WithClientOptions(grpc.WithNoProxy()),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 	)
 	if err != nil {
 		log.Errorf("Failed to create gRPC connection: %v", err)
@@ -206,15 +206,15 @@ func NewPaymentServiceClient(r registry.Discovery) ppbv1.PaymentClient {
 
 // NewLogisticsServiceClient 创建物流服务的 gRPC 客户端
 func NewLogisticsServiceClient(r registry.Discovery) lpbv1.LogisticsClient {
-    log.Infof("Initializing gRPC connection to service: %s", clientLogisticsServiceName)
-    conn, err := rpcserver.DialInsecure(
-        context.Background(),
-        rpcserver.WithBalancerName("selector"),
-        rpcserver.WithEndpoint(clientLogisticsServiceName),
-        rpcserver.WithDiscovery(r),
-        rpcserver.WithClientTimeout(10*time.Second),
-        rpcserver.WithClientOptions(grpc.WithNoProxy()),
-        rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
+	log.Infof("Initializing gRPC connection to service: %s", clientLogisticsServiceName)
+	conn, err := rpcserver.DialInsecure(
+		context.Background(),
+		rpcserver.WithBalancerName("p2c"),
+		rpcserver.WithEndpoint(clientLogisticsServiceName),
+		rpcserver.WithDiscovery(r),
+		rpcserver.WithClientTimeout(10*time.Second),
+		rpcserver.WithClientOptions(grpc.WithNoProxy()),
+		rpcserver.WithClientUnaryInterceptor(clientinterceptors.UnaryTracingInterceptor),
 	)
 	if err != nil {
 		log.Errorf("Failed to create gRPC connection: %v", err)
