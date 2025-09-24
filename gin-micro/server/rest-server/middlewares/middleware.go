@@ -7,9 +7,11 @@ import (
 var Middlewares = defaultMiddlewares()
 
 func defaultMiddlewares() map[string]gin.HandlerFunc {
-	return map[string]gin.HandlerFunc{
-		"recovery": gin.Recovery(),
-		"cors":     Cors(),
-		"context":  Context(),
-	}
+    return map[string]gin.HandlerFunc{
+        "recovery": gin.Recovery(),
+        "cors":     Cors(),
+        "context":  Context(),
+        // optional Sentinel HTTP protection; uses default config without prefix
+        "sentinel":  Sentinel(DefaultHTTPConfig("gin-micro")),
+    }
 }
