@@ -154,12 +154,19 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 			ordersGroup.GET("/by-user/:user_id", orderController.GetOrdersByUserId) // GET /v1/admin/orders/by-user/:user_id 按用户ID查询
 		}
 
-		// 优惠券管理（模板）
-		couponController := coupon.NewCouponController(g.Translator(), serviceFactory)
-		couponsGroup := adminGroup.Group("/coupons")
-		{
-			// 确保存在一个可用模板：没有则创建默认模板
-			couponsGroup.POST("/templates/ensure-default", couponController.EnsureDefaultTemplate)
-		}
-	}
+        // 优惠券管理（模板）
+        couponController := coupon.NewCouponController(g.Translator(), serviceFactory)
+        couponsGroup := adminGroup.Group("/coupons")
+        {
+            // 模板 CRUD
+            couponsGroup.GET("/templates", couponController.ListTemplates)                 // 列表
+            couponsGroup.POST("/templates", couponController.CreateTemplate)               // 创建
+            couponsGroup.GET("/templates/:id", couponController.GetTemplate)              // 详情
+            couponsGroup.PUT("/templates/:id", couponController.UpdateTemplate)           // 更新
+            couponsGroup.DELETE("/templates/:id", couponController.DeleteTemplate)        // 删除(逻辑)
+
+            // 工具：确保有默认模板
+            couponsGroup.POST("/templates/ensure-default", couponController.EnsureDefaultTemplate)
+        }
+    }
 }

@@ -37,3 +37,24 @@ func (c *coupon) CreateCouponTemplate(ctx context.Context, req *cpbv1.CreateCoup
     return resp, nil
 }
 
+func (c *coupon) GetCouponTemplate(ctx context.Context, req *cpbv1.GetCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error) {
+    log.Infof("[admin] GetCouponTemplate: id=%d", req.Id)
+    resp, err := c.cc.GetCouponTemplate(ctx, req)
+    if err != nil {
+        log.Errorf("[admin] GetCouponTemplate failed: %v", err)
+        return nil, err
+    }
+    log.Infof("[admin] GetCouponTemplate success, id=%d", resp.Id)
+    return resp, nil
+}
+
+func (c *coupon) UpdateCouponTemplate(ctx context.Context, req *cpbv1.UpdateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error) {
+    log.Infof("[admin] UpdateCouponTemplate: id=%d", req.Id)
+    resp, err := c.cc.UpdateCouponTemplate(ctx, req)
+    if err != nil {
+        log.Errorf("[admin] UpdateCouponTemplate failed: %v", err)
+        return nil, err
+    }
+    log.Infof("[admin] UpdateCouponTemplate success, id=%d", resp.Id)
+    return resp, nil
+}

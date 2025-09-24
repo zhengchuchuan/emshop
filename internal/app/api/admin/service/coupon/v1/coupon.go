@@ -13,6 +13,16 @@ import (
 type CouponSrv interface {
     // EnsureDefaultTemplate 检查是否存在可用模板，不存在则创建一个默认模板并返回
     EnsureDefaultTemplate(ctx context.Context) (*cpbv1.CouponTemplateResponse, error)
+    // ListTemplates 分页查询模板（可按状态筛选）
+    ListTemplates(ctx context.Context, req *cpbv1.ListCouponTemplatesRequest) (*cpbv1.ListCouponTemplatesResponse, error)
+    // GetTemplate 获取模板详情
+    GetTemplate(ctx context.Context, id int64) (*cpbv1.CouponTemplateResponse, error)
+    // CreateTemplate 创建模板
+    CreateTemplate(ctx context.Context, req *cpbv1.CreateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
+    // UpdateTemplate 更新模板（名称/状态/描述）
+    UpdateTemplate(ctx context.Context, req *cpbv1.UpdateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
+    // DeleteTemplate 逻辑删除模板（置为已结束）
+    DeleteTemplate(ctx context.Context, id int64) (*cpbv1.CouponTemplateResponse, error)
 }
 
 type couponService struct {
@@ -60,3 +70,24 @@ func (s *couponService) EnsureDefaultTemplate(ctx context.Context) (*cpbv1.Coupo
     return s.data.Coupon().CreateCouponTemplate(ctx, createReq)
 }
 
+func (s *couponService) ListTemplates(ctx context.Context, req *cpbv1.ListCouponTemplatesRequest) (*cpbv1.ListCouponTemplatesResponse, error) {
+    return s.data.Coupon().ListCouponTemplates(ctx, req)
+}
+
+func (s *couponService) GetTemplate(ctx context.Context, id int64) (*cpbv1.CouponTemplateResponse, error) {
+    return s.data.Coupon().GetCouponTemplate(ctx, &cpbv1.GetCouponTemplateRequest{Id: id})
+}
+
+func (s *couponService) CreateTemplate(ctx context.Context, req *cpbv1.CreateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error) {
+    return s.data.Coupon().CreateCouponTemplate(ctx, req)
+}
+
+func (s *couponService) UpdateTemplate(ctx context.Context, req *cpbv1.UpdateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error) {
+    return s.data.Coupon().UpdateCouponTemplate(ctx, req)
+}
+
+func (s *couponService) DeleteTemplate(ctx context.Context, id int64) (*cpbv1.CouponTemplateResponse, error) {
+    // 逻辑删除：将状态置为已结束(3)
+    status := int32(3)
+    return s.data.Coupon().UpdateCouponTemplate(ctx, &cpbv1.UpdateCouponTemplateRequest{Id: id, Status: &status})
+}

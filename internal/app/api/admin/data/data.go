@@ -101,4 +101,6 @@ type CouponData interface {
     // 优惠券模板
     ListCouponTemplates(ctx context.Context, req *cpbv1.ListCouponTemplatesRequest) (*cpbv1.ListCouponTemplatesResponse, error)
     CreateCouponTemplate(ctx context.Context, req *cpbv1.CreateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
+    GetCouponTemplate(ctx context.Context, req *cpbv1.GetCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
+    UpdateCouponTemplate(ctx context.Context, req *cpbv1.UpdateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
 }
