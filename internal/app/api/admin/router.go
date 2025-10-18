@@ -154,7 +154,7 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 			ordersGroup.GET("/by-user/:user_id", orderController.GetOrdersByUserId) // GET /v1/admin/orders/by-user/:user_id 按用户ID查询
 		}
 
-        // 优惠券管理（模板）
+        // 优惠券管理（模板、秒杀）
         couponController := coupon.NewCouponController(g.Translator(), serviceFactory)
         couponsGroup := adminGroup.Group("/coupons")
         {
@@ -167,6 +167,12 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 
             // 工具：确保有默认模板
             couponsGroup.POST("/templates/ensure-default", couponController.EnsureDefaultTemplate)
+
+            // 秒杀活动管理
+            fsAdmin := coupon.NewFlashSaleAdminController(g.Translator(), serviceFactory)
+            couponsGroup.POST("/flash-sale", fsAdmin.Create)                    // 创建秒杀活动
+            couponsGroup.GET("/flash-sale", fsAdmin.List)                       // 秒杀活动列表
+            couponsGroup.GET("/flash-sale/:id", fsAdmin.Get)                    // 秒杀活动详情
         }
     }
 }

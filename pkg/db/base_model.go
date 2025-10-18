@@ -8,10 +8,16 @@ import (
 
 type BaseModel struct {
 	ID        int32     `gorm:"primarykey"`
-	CreatedAt time.Time `gorm:"column:add_time"`
-	UpdatedAt time.Time `gorm:"column:update_time"`
-	DeletedAt gorm.DeletedAt	`gorm:"column:delete_time"`
-	IsDeleted bool		`gorm:"column:is_deleted"` //逻辑删除
+	// CreatedAt time.Time `gorm:"column:created_at"`
+	// UpdatedAt time.Time `gorm:"column:updated_at"`
+	// DeletedAt gorm.DeletedAt	`gorm:"column:deleted_at"`
+	BaseTimeModel
+}
+
+type BaseTimeModel struct {
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+	DeletedAt gorm.DeletedAt	`gorm:"column:deleted_at"`
 }
 
 //如果你的模型包含了 gorm.DeletedAt字段（该字段也被包含在gorm.Model中），那么该模型将会自动获得软删除的能力！

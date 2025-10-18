@@ -1,11 +1,11 @@
 package do
 
 import (
-	"emshop/internal/app/pkg/gorm"
+	"emshop/pkg/db"
 )
 
 type CategoryDO struct {
-	gorm.BaseModel
+	db.BaseModel
 	Name             string        `gorm:"type:varchar(20);not null" json:"name"`
 	ParentCategoryID int32         `json:"parent"`
 	ParentCategory   *CategoryDO   `json:"-"`

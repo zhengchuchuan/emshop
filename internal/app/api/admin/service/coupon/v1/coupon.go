@@ -23,6 +23,10 @@ type CouponSrv interface {
     UpdateTemplate(ctx context.Context, req *cpbv1.UpdateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
     // DeleteTemplate 逻辑删除模板（置为已结束）
     DeleteTemplate(ctx context.Context, id int64) (*cpbv1.CouponTemplateResponse, error)
+    // Flash sale
+    CreateFlashSaleActivity(ctx context.Context, req *cpbv1.CreateFlashSaleActivityRequest) (*cpbv1.FlashSaleActivityResponse, error)
+    GetFlashSaleActivity(ctx context.Context, id int64) (*cpbv1.FlashSaleActivityResponse, error)
+    ListFlashSaleActivities(ctx context.Context, req *cpbv1.ListFlashSaleActivitiesRequest) (*cpbv1.ListFlashSaleActivitiesResponse, error)
 }
 
 type couponService struct {
@@ -90,4 +94,17 @@ func (s *couponService) DeleteTemplate(ctx context.Context, id int64) (*cpbv1.Co
     // 逻辑删除：将状态置为已结束(3)
     status := int32(3)
     return s.data.Coupon().UpdateCouponTemplate(ctx, &cpbv1.UpdateCouponTemplateRequest{Id: id, Status: &status})
+}
+
+// ===== Flash sale (admin) =====
+func (s *couponService) CreateFlashSaleActivity(ctx context.Context, req *cpbv1.CreateFlashSaleActivityRequest) (*cpbv1.FlashSaleActivityResponse, error) {
+    return s.data.Coupon().CreateFlashSaleActivity(ctx, req)
+}
+
+func (s *couponService) GetFlashSaleActivity(ctx context.Context, id int64) (*cpbv1.FlashSaleActivityResponse, error) {
+    return s.data.Coupon().GetFlashSaleActivity(ctx, &cpbv1.GetFlashSaleActivityRequest{Id: id})
+}
+
+func (s *couponService) ListFlashSaleActivities(ctx context.Context, req *cpbv1.ListFlashSaleActivitiesRequest) (*cpbv1.ListFlashSaleActivitiesResponse, error) {
+    return s.data.Coupon().ListFlashSaleActivities(ctx, req)
 }

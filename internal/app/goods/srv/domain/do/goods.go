@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"database/sql/driver"
-	gorm2 "emshop/internal/app/pkg/gorm"
+	"emshop/pkg/db"
 )
 
 type GoodsSearchDO struct {
@@ -35,7 +35,7 @@ type GoodsSearchDOList struct {
 }
 
 type GoodsDO struct {
-	gorm2.BaseModel
+	db.BaseModel
 
 	CategoryID int32      `gorm:"column:category_id;type:int;not null"`
 	Category   CategoryDO `gorm:"foreignKey:CategoryID;references:ID" json:"category"`

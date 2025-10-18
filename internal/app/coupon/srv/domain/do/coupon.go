@@ -55,8 +55,8 @@ type CouponTemplateDO struct {
 	TotalCount         int32         `json:"total_count" gorm:"column:total_count;type:int;not null;default:0;comment:总发放数量"`
 	UsedCount          int32         `json:"used_count" gorm:"column:used_count;type:int;not null;default:0;comment:已使用数量"`
 	PerUserLimit       int32         `json:"per_user_limit" gorm:"column:per_user_limit;type:int;not null;default:1;comment:每用户限领数量"`
-	ValidStartTime     time.Time     `json:"valid_start_time" gorm:"column:valid_start_time;type:timestamp;not null;index:idx_valid_time;comment:有效期开始时间"`
-	ValidEndTime       time.Time     `json:"valid_end_time" gorm:"column:valid_end_time;type:timestamp;not null;index:idx_valid_time;comment:有效期结束时间"`
+    ValidStartTime     time.Time     `json:"valid_start_time" gorm:"column:valid_start_time;type:datetime;not null;index:idx_valid_time;comment:有效期开始时间(秒)"`
+    ValidEndTime       time.Time     `json:"valid_end_time" gorm:"column:valid_end_time;type:datetime;not null;index:idx_valid_time;comment:有效期结束时间(秒)"`
 	ValidDays          int32         `json:"valid_days" gorm:"column:valid_days;type:int;default:0;comment:有效天数"`
 	Status             CouponStatus  `json:"status" gorm:"column:status;type:tinyint;not null;default:1;index:idx_status;comment:状态"`
 	Description        string        `json:"description" gorm:"column:description;type:text;comment:使用说明"`
@@ -76,9 +76,9 @@ type UserCouponDO struct {
 	CouponCode       string           `json:"coupon_code" gorm:"column:coupon_code;type:varchar(32);not null;uniqueIndex:idx_coupon_code;comment:优惠券码"`
 	Status           UserCouponStatus `json:"status" gorm:"column:status;type:tinyint;not null;default:1;index:idx_status,idx_user_status;comment:状态"`
 	OrderSn          *string          `json:"order_sn" gorm:"column:order_sn;type:varchar(64);index:idx_order_sn;comment:使用的订单号"`
-	ReceivedAt       time.Time        `json:"received_at" gorm:"column:received_at;type:timestamp;default:CURRENT_TIMESTAMP;comment:领取时间"`
-	UsedAt           *time.Time       `json:"used_at" gorm:"column:used_at;type:timestamp;comment:使用时间"`
-	ExpiredAt        time.Time        `json:"expired_at" gorm:"column:expired_at;type:timestamp;not null;index:idx_expired_at;comment:过期时间"`
+    ReceivedAt       time.Time        `json:"received_at" gorm:"column:received_at;type:datetime;default:CURRENT_TIMESTAMP;comment:领取时间(秒)"`
+    UsedAt           *time.Time       `json:"used_at" gorm:"column:used_at;type:datetime;comment:使用时间(秒)"`
+    ExpiredAt        time.Time        `json:"expired_at" gorm:"column:expired_at;type:datetime;not null;index:idx_expired_at;comment:过期时间(秒)"`
 }
 
 // TableName 指定表名
@@ -97,7 +97,7 @@ type CouponUsageLogDO struct {
 	DiscountAmount float64 `json:"discount_amount" gorm:"column:discount_amount;type:decimal(10,2);not null;comment:优惠金额"`
 	FinalAmount    float64 `json:"final_amount" gorm:"column:final_amount;type:decimal(10,2);not null;comment:最终订单金额"`
 	Action         string  `json:"action" gorm:"column:action;type:varchar(32);not null;index:idx_action;comment:操作类型"`
-	CreatedAt      time.Time `json:"created_at" gorm:"column:created_at;type:timestamp;default:CURRENT_TIMESTAMP;index:idx_created_at"`
+    CreatedAt      time.Time `json:"created_at" gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP;index:idx_created_at"`
 }
 
 // TableName 指定表名

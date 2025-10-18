@@ -8,6 +8,7 @@ import (
 	"emshop/internal/app/userop/srv/domain/do"
 	"emshop/internal/app/userop/srv/domain/dto"
 	"emshop/pkg/log"
+	"emshop/pkg/db"
 	"gorm.io/gorm"
 )
 
@@ -114,7 +115,7 @@ func (s *addressService) UpdateAddress(ctx context.Context, req *AddressUpdateRe
 	log.Debugf("Updating address: ID=%d, userID=%d", req.ID, req.UserID)
 	
 	address := &do.Address{
-		BaseModel: do.BaseModel{
+		BaseModel: db.BaseModel{
 			ID: req.ID,
 		},
 		User:         req.UserID,

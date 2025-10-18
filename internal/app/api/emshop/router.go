@@ -143,6 +143,13 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
 		couponRouter.GET("user", jwtAuth, couponController.GetUserCoupons)                   // 获取用户优惠券列表
 		couponRouter.GET("available", jwtAuth, couponController.GetAvailableCoupons)         // 获取用户可用优惠券
 		couponRouter.POST("calculate-discount", jwtAuth, couponController.CalculateDiscount) // 计算优惠券折扣
+
+		// 秒杀相关
+		fsController := coupon.NewFlashSaleController(g.Translator(), serviceFactory)
+		couponRouter.GET("flash-sale/active", fsController.ListActive)                            // 进行中的秒杀活动
+		couponRouter.GET("flash-sale/:id/stock", fsController.GetStock)                          // 查询库存
+		couponRouter.POST("flash-sale/:id/participate", jwtAuth, fsController.Participate)       // 参与秒杀
+		couponRouter.GET("flash-sale/:id/record", jwtAuth, fsController.MyRecord)                 // 我的参与记录
 	}
 
 	//支付管理api

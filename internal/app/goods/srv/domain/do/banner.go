@@ -1,11 +1,11 @@
 package do
 
 import (
-	bgorm "emshop/internal/app/pkg/gorm"
+	"emshop/pkg/db"
 )
 
 type BannerDO struct {
-	bgorm.BaseModel
+	db.BaseModel
 	Image string `gorm:"type:varchar(200);not null"`
 	Url   string `gorm:"type:varchar(200);not null"`
 	Index int32  `gorm:"type:int;default:1;not null"`

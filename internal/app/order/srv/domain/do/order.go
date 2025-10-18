@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"emshop/internal/app/pkg/gorm"
+	"emshop/pkg/db"
 )
 
 type GormList []string
@@ -20,7 +20,7 @@ func (g *GormList) Scan(value interface{}) error {
 }
 
 type OrderInfoDO struct {
-	gorm.BaseModel
+	db.BaseModel
 
 	OrderGoods []*OrderGoodsDO `gorm:"foreignKey:Order;references:ID" json:"goods"`
 
@@ -51,7 +51,7 @@ func (OrderInfoDO) TableName() string {
 }
 
 type OrderGoodsDO struct {
-	gorm.BaseModel
+	db.BaseModel
 
 	Order int32 `gorm:"type:int;index"`
 	Goods int32 `gorm:"type:int;index"`

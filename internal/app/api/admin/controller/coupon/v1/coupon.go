@@ -123,12 +123,26 @@ func (cc *couponController) GetTemplate(ctx *gin.Context) {
 
 // CreateTemplate 创建模板（管理员）
 func (cc *couponController) CreateTemplate(ctx *gin.Context) {
-    var req cpbv1.CreateCouponTemplateRequest
-    if err := ctx.ShouldBindJSON(&req); err != nil {
+    var in CreateCouponTemplateJSON
+    if err := ctx.ShouldBindJSON(&in); err != nil {
         ctx.JSON(http.StatusBadRequest, gin.H{"msg": "invalid request body"})
         return
     }
-    resp, err := cc.srv.Coupon().CreateTemplate(ctx, &req)
+    req := &cpbv1.CreateCouponTemplateRequest{
+        Name:              in.Name,
+        Type:              in.Type,
+        DiscountType:      in.DiscountType,
+        DiscountValue:     in.DiscountValue,
+        MinOrderAmount:    in.MinOrderAmount,
+        MaxDiscountAmount: in.MaxDiscountAmount,
+        TotalCount:        in.TotalCount,
+        PerUserLimit:      in.PerUserLimit,
+        ValidStartTime:    in.ValidStartTime.AsUnix(),
+        ValidEndTime:      in.ValidEndTime.AsUnix(),
+        ValidDays:         in.ValidDays,
+        Description:       in.Description,
+    }
+    resp, err := cc.srv.Coupon().CreateTemplate(ctx, req)
     core.WriteResponse(ctx, err, resp)
 }
 

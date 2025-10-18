@@ -1,11 +1,12 @@
 package v1
 
 import (
-	"context"
+    "context"
 
-	"emshop/internal/app/api/emshop/data"
-	"emshop/internal/app/api/emshop/domain/dto/request"
-	"emshop/internal/app/api/emshop/domain/dto/response"
+    "emshop/internal/app/api/emshop/data"
+    "emshop/internal/app/api/emshop/domain/dto/request"
+    "emshop/internal/app/api/emshop/domain/dto/response"
+    cpbv1 "emshop/api/coupon/v1"
 )
 
 // CouponSrv 优惠券服务接口
@@ -22,13 +23,19 @@ type CouponSrv interface {
 	// GetAvailableCoupons 获取用户可用优惠券
 	GetAvailableCoupons(ctx context.Context, userID int64, req *request.GetAvailableCouponsRequest) (*response.AvailableCouponsResponse, error)
 
-	// CalculateDiscount 计算优惠券折扣
-	CalculateDiscount(ctx context.Context, userID int64, req *request.CalculateCouponDiscountRequest) (*response.CouponDiscountResponse, error)
+    // CalculateDiscount 计算优惠券折扣
+    CalculateDiscount(ctx context.Context, userID int64, req *request.CalculateCouponDiscountRequest) (*response.CouponDiscountResponse, error)
+
+    // Flash sale (user-facing)
+    ListActiveFlashSales(ctx context.Context) (*cpbv1.ListFlashSaleActivitiesResponse, error)
+    GetFlashSaleStock(ctx context.Context, activityID int64) (*cpbv1.FlashSaleStockResponse, error)
+    ParticipateFlashSale(ctx context.Context, userID int64, activityID int64) (*cpbv1.ParticipateFlashSaleResponse, error)
+    GetUserFlashSaleRecord(ctx context.Context, userID int64, activityID int64) (*cpbv1.ListFlashSaleRecordsResponse, error)
 }
 
 // couponService 优惠券服务实现
 type couponService struct {
-	data data.DataFactory
+    data data.DataFactory
 }
 
 // NewCouponService 创建优惠券服务实例
@@ -36,6 +43,24 @@ func NewCouponService(data data.DataFactory) CouponSrv {
 	return &couponService{
 		data: data,
 	}
+}
+
+// ===== Flash sale (user-facing) =====
+
+func (s *couponService) ListActiveFlashSales(ctx context.Context) (*cpbv1.ListFlashSaleActivitiesResponse, error) {
+    return s.data.Coupon().GetActiveFlashSales(ctx)
+}
+
+func (s *couponService) GetFlashSaleStock(ctx context.Context, activityID int64) (*cpbv1.FlashSaleStockResponse, error) {
+    return s.data.Coupon().GetFlashSaleStock(ctx, &cpbv1.GetFlashSaleStockRequest{FlashSaleId: activityID})
+}
+
+func (s *couponService) ParticipateFlashSale(ctx context.Context, userID int64, activityID int64) (*cpbv1.ParticipateFlashSaleResponse, error) {
+    return s.data.Coupon().ParticipateFlashSale(ctx, &cpbv1.ParticipateFlashSaleRequest{UserId: userID, FlashSaleId: activityID})
+}
+
+func (s *couponService) GetUserFlashSaleRecord(ctx context.Context, userID int64, activityID int64) (*cpbv1.ListFlashSaleRecordsResponse, error) {
+    return s.data.Coupon().GetUserFlashSaleRecord(ctx, &cpbv1.GetUserFlashSaleRecordRequest{UserId: userID, FlashSaleId: &activityID})
 }
 
 // ListTemplates 获取优惠券模板列表

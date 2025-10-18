@@ -1,11 +1,11 @@
 package do
 
 import (
-	bgorm "emshop/internal/app/pkg/gorm"
+	"emshop/pkg/db"
 )
 
 type BrandsDO struct {
-	bgorm.BaseModel
+	db.BaseModel
 
 	Name string `gorm:"type:varchar(20);not null"`
 	Logo string `gorm:"type:varchar(200);default:'';not null"`

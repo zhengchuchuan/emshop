@@ -1,11 +1,11 @@
 package do
 
 import (
-	bgorm "emshop/internal/app/pkg/gorm"
+	"emshop/pkg/db"
 )
 
 type GoodsCategoryBrandDO struct {
-	bgorm.BaseModel
+	db.BaseModel
 
 	CategoryID int32      `gorm:"type:int;index:idx_category_brand,unique"`
 	Category   CategoryDO `gorm:"foreignKey:CategoryID;references:ID" json:"category"`

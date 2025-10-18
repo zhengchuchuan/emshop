@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"
+	v1 "emshop/pkg/common/meta/v1"
 )
 
 // MockDataFactory 模拟数据工厂
@@ -93,9 +94,9 @@ func (m *MockCouponTemplateData) Get(ctx context.Context, db *gorm.DB, id int64)
 	return args.Get(0).(*do.CouponTemplateDO), args.Error(1)
 }
 
-func (m *MockCouponTemplateData) List(ctx context.Context, db *gorm.DB, status do.CouponStatus, meta interface{}, orderby []string) (*do.CouponTemplateDOList, error) {
-	args := m.Called(ctx, db, status, meta, orderby)
-	return args.Get(0).(*do.CouponTemplateDOList), args.Error(1)
+func (m *MockCouponTemplateData) List(ctx context.Context, db *gorm.DB, status do.CouponStatus, meta v1.ListMeta, orderby []string) (*do.CouponTemplateDOList, error) {
+    args := m.Called(ctx, db, status, meta, orderby)
+    return args.Get(0).(*do.CouponTemplateDOList), args.Error(1)
 }
 
 func (m *MockCouponTemplateData) GetByType(ctx context.Context, db *gorm.DB, couponType do.CouponType) ([]*do.CouponTemplateDO, error) {

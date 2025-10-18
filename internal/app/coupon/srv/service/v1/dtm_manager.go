@@ -85,7 +85,7 @@ func (dm *CouponDTMManager) ProcessFlashSaleWithInventory(ctx context.Context, r
 			if coreResult != nil {
 				failReason = coreResult.Message
 			}
-			return fmt.Errorf(failReason)
+			return fmt.Errorf("%s", failReason)
 		}
 		log.Infof("秒杀-库存分布式事务异步预扣成功, 用户: %d", req.UserID)
 		return nil

@@ -15,7 +15,7 @@ services:
       - ./conf/nacos-logback.xml:/home/nacos/conf/nacos-logback.xml:ro
     ports:
       - "8080:8080"
-      - "8848:8848"
+      - "18848:8848"
       - "9848:9848"
     restart: unless-stopped
     networks:

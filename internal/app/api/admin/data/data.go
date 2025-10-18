@@ -103,4 +103,8 @@ type CouponData interface {
     CreateCouponTemplate(ctx context.Context, req *cpbv1.CreateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
     GetCouponTemplate(ctx context.Context, req *cpbv1.GetCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
     UpdateCouponTemplate(ctx context.Context, req *cpbv1.UpdateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error)
+    // 秒杀活动管理
+    CreateFlashSaleActivity(ctx context.Context, req *cpbv1.CreateFlashSaleActivityRequest) (*cpbv1.FlashSaleActivityResponse, error)
+    GetFlashSaleActivity(ctx context.Context, req *cpbv1.GetFlashSaleActivityRequest) (*cpbv1.FlashSaleActivityResponse, error)
+    ListFlashSaleActivities(ctx context.Context, req *cpbv1.ListFlashSaleActivitiesRequest) (*cpbv1.ListFlashSaleActivitiesResponse, error)
 }

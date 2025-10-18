@@ -1,18 +1,8 @@
 package do
 
 import (
-	"gorm.io/gorm"
-	"time"
+	"emshop/pkg/db"
 )
-
-// BaseModel 基础模型结构
-type BaseModel struct {
-	ID        int32          `gorm:"primarykey;type:int" json:"id"`
-	CreatedAt time.Time      `gorm:"column:add_time" json:"-"`
-	UpdatedAt time.Time      `gorm:"column:update_time" json:"-"`
-	DeletedAt gorm.DeletedAt `json:"-"`
-	IsDeleted bool           `json:"-"`
-}
 
 // 留言类型常量
 const (
@@ -25,7 +15,7 @@ const (
 
 // LeavingMessages 用户留言模型
 type LeavingMessages struct {
-	BaseModel
+	db.BaseModel
 
 	User        int32  `gorm:"type:int;index"`
 	MessageType int32  `gorm:"type:int comment '留言类型: 1(留言),2(投诉),3(询问),4(售后),5(求购)'"`
@@ -40,7 +30,7 @@ func (LeavingMessages) TableName() string {
 
 // Address 用户地址模型
 type Address struct {
-	BaseModel
+	db.BaseModel
 
 	User         int32  `gorm:"type:int;index"`
 	Province     string `gorm:"type:varchar(10)"`
@@ -57,7 +47,7 @@ func (Address) TableName() string {
 
 // UserFav 用户收藏模型
 type UserFav struct {
-	BaseModel
+	db.BaseModel
 
 	User  int32 `gorm:"type:int;index:idx_user_goods,unique"`
 	Goods int32 `gorm:"type:int;index:idx_user_goods,unique"`

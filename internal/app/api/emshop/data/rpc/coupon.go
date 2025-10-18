@@ -1,10 +1,11 @@
 package rpc
 
 import (
-	"context"
-	cpbv1 "emshop/api/coupon/v1"
-	"emshop/internal/app/api/emshop/data"
-	"emshop/pkg/log"
+    "context"
+    cpbv1 "emshop/api/coupon/v1"
+    "emshop/internal/app/api/emshop/data"
+    "emshop/pkg/log"
+    "google.golang.org/protobuf/types/known/emptypb"
 )
 
 type coupon struct {
@@ -86,7 +87,50 @@ func (c *coupon) CalculateCouponDiscount(ctx context.Context, request *cpbv1.Cal
 	}
 	log.Infof("CalculateCouponDiscount gRPC call successful, discountAmount: %.2f, finalAmount: %.2f",
 		response.DiscountAmount, response.FinalAmount)
-	return response, nil
+    return response, nil
 }
 
 var _ data.CouponData = &coupon{}
+
+// ====== Flash sale (user-facing) ======
+
+func (c *coupon) GetActiveFlashSales(ctx context.Context) (*cpbv1.ListFlashSaleActivitiesResponse, error) {
+    log.Infof("Calling GetActiveFlashSales gRPC")
+    resp, err := c.cc.GetActiveFlashSales(ctx, &emptypb.Empty{})
+    if err != nil {
+        log.Errorf("GetActiveFlashSales gRPC call failed: %v", err)
+        return nil, err
+    }
+    log.Infof("GetActiveFlashSales gRPC ok, total=%d", resp.TotalCount)
+    return resp, nil
+}
+
+func (c *coupon) GetFlashSaleStock(ctx context.Context, request *cpbv1.GetFlashSaleStockRequest) (*cpbv1.FlashSaleStockResponse, error) {
+    log.Infof("Calling GetFlashSaleStock gRPC: activity=%d", request.GetFlashSaleId())
+    resp, err := c.cc.GetFlashSaleStock(ctx, request)
+    if err != nil {
+        log.Errorf("GetFlashSaleStock failed: %v", err)
+        return nil, err
+    }
+    return resp, nil
+}
+
+func (c *coupon) ParticipateFlashSale(ctx context.Context, request *cpbv1.ParticipateFlashSaleRequest) (*cpbv1.ParticipateFlashSaleResponse, error) {
+    log.Infof("Calling ParticipateFlashSale gRPC: user=%d activity=%d", request.UserId, request.FlashSaleId)
+    resp, err := c.cc.ParticipateFlashSale(ctx, request)
+    if err != nil {
+        log.Errorf("ParticipateFlashSale failed: %v", err)
+        return nil, err
+    }
+    return resp, nil
+}
+
+func (c *coupon) GetUserFlashSaleRecord(ctx context.Context, request *cpbv1.GetUserFlashSaleRecordRequest) (*cpbv1.ListFlashSaleRecordsResponse, error) {
+    log.Infof("Calling GetUserFlashSaleRecord gRPC: user=%d activity=%d", request.UserId, request.FlashSaleId)
+    resp, err := c.cc.GetUserFlashSaleRecord(ctx, request)
+    if err != nil {
+        log.Errorf("GetUserFlashSaleRecord failed: %v", err)
+        return nil, err
+    }
+    return resp, nil
+}

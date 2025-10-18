@@ -97,8 +97,14 @@ type CouponData interface {
 	GetUserCoupons(ctx context.Context, request *cpb.GetUserCouponsRequest) (*cpb.ListUserCouponsResponse, error)
 	GetAvailableCoupons(ctx context.Context, request *cpb.GetAvailableCouponsRequest) (*cpb.ListUserCouponsResponse, error)
 
-	// 优惠券计算和使用
-	CalculateCouponDiscount(ctx context.Context, request *cpb.CalculateCouponDiscountRequest) (*cpb.CalculateCouponDiscountResponse, error)
+    // 优惠券计算和使用
+    CalculateCouponDiscount(ctx context.Context, request *cpb.CalculateCouponDiscountRequest) (*cpb.CalculateCouponDiscountResponse, error)
+
+    // 秒杀相关（C端）
+    GetActiveFlashSales(ctx context.Context) (*cpb.ListFlashSaleActivitiesResponse, error)
+    GetFlashSaleStock(ctx context.Context, request *cpb.GetFlashSaleStockRequest) (*cpb.FlashSaleStockResponse, error)
+    ParticipateFlashSale(ctx context.Context, request *cpb.ParticipateFlashSaleRequest) (*cpb.ParticipateFlashSaleResponse, error)
+    GetUserFlashSaleRecord(ctx context.Context, request *cpb.GetUserFlashSaleRecordRequest) (*cpb.ListFlashSaleRecordsResponse, error)
 }
 
 type PaymentData interface {

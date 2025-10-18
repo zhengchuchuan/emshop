@@ -2,7 +2,7 @@ package do
 
 import (
 	"database/sql/driver"
-	bgorm "emshop/internal/app/pkg/gorm"
+	"emshop/pkg/db"
 	"encoding/json"
 )
 
@@ -27,7 +27,7 @@ func (g *GoodsDetailList) Scan(value interface{}) error {
 }
 
 type InventoryDO struct {
-	bgorm.BaseModel
+	db.BaseModel
 	Goods   int32 `gorm:"type:int;index"`
 	Stocks  int32 `gorm:"type:int"`
 	Version int32 `gorm:"type:int"` //分布式锁的乐观锁
@@ -39,7 +39,7 @@ func (id *InventoryDO) TableName() string {
 
 // TCC分布式事务支持的库存模型
 type InventoryNewDO struct {
-	bgorm.BaseModel
+	db.BaseModel
 	Goods   int32 `gorm:"type:int;index"`
 	Stocks  int32 `gorm:"type:int"`
 	Version int32 `gorm:"type:int"` //分布式锁的乐观锁
@@ -52,7 +52,7 @@ func (ind *InventoryNewDO) TableName() string {
 
 // 出库单，使用状态字段实现TCC分布式事务
 type DeliveryDO struct {
-	bgorm.BaseModel
+	db.BaseModel
 	Goods   int32  `gorm:"type:int;index"`
 	Nums    int32  `gorm:"type:int"`
 	OrderSn string `gorm:"type:varchar(200)"`
