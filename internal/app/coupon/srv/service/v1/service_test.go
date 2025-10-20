@@ -192,7 +192,7 @@ func TestService_Creation(t *testing.T) {
 	// 准备测试数据
 	mockData := &MockDataFactory{}
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "localhost:16379",
 		DB:   15, // 使用测试数据库
 	})
 	
@@ -293,7 +293,7 @@ func TestFlashSaleService_ParticipateFlashSale(t *testing.T) {
 	mockEventProducer := &MockFlashSaleEventProducer{}
 	
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "localhost:16379",
 		DB:   15,
 	})
 	
@@ -358,7 +358,7 @@ func TestTransactionProducer_Integration(t *testing.T) {
 	
 	mockData := &MockDataFactory{}
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "localhost:16379",
 		DB:   15,
 	})
 	
@@ -401,7 +401,7 @@ func BenchmarkFlashSaleCore_ParticipateFlashSale(b *testing.B) {
 	mockEventProducer := &MockFlashSaleEventProducer{}
 	
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "localhost:16379",
 		DB:   15,
 	})
 	

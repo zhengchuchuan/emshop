@@ -28,7 +28,7 @@ func MainExample() {
 	global.Config.MySQLOptions.Database = "emshop_inventory"
 	
 	global.Config.RedisOptions.Host = "localhost"
-	global.Config.RedisOptions.Port = 6379
+	global.Config.RedisOptions.Port = 16379
 
 	// 2. 初始化各种组件
 	initialize.InitDB()

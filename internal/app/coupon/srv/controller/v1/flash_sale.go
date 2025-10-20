@@ -7,7 +7,7 @@ import (
 	couponpb "emshop/api/coupon/v1"
 	"emshop/internal/app/coupon/srv/domain/dto"
 	"emshop/pkg/log"
-	
+
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -48,7 +48,7 @@ func (cs *couponServer) ListFlashSaleActivities(ctx context.Context, req *coupon
 		Page:     req.Page,
 		PageSize: req.PageSize,
 	}
-	
+
 	if req.Status != nil {
 		dto.Status = req.Status
 	}
@@ -162,7 +162,7 @@ func (cs *couponServer) GetUserFlashSaleRecord(ctx context.Context, req *couponp
 		Page:     req.Page,
 		PageSize: req.PageSize,
 	}
-	
+
 	if req.FlashSaleId != nil {
 		dto.FlashSaleID = req.FlashSaleId
 	}
@@ -214,6 +214,10 @@ func (cs *couponServer) convertFlashSaleRecordToProto(dto *dto.FlashSaleRecordDT
 		UserId:      dto.UserID,
 		Status:      dto.Status,
 		CreatedAt:   dto.CreatedAt.Unix(),
+	}
+
+	if !dto.OrderCreatedAt.IsZero() {
+		resp.OrderCreatedAt = dto.OrderCreatedAt.UnixMilli()
 	}
 
 	if dto.UserCouponID != nil {

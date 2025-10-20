@@ -1,8 +1,8 @@
 package dto
 
 import (
-	"time"
 	v1 "emshop/pkg/common/meta/v1"
+	"time"
 )
 
 // CreateFlashSaleActivityDTO 创建秒杀活动DTO
@@ -19,19 +19,19 @@ type CreateFlashSaleActivityDTO struct {
 type FlashSaleActivityDTO struct {
 	ID               int64              `json:"id"`
 	CouponTemplateID int64              `json:"coupon_template_id"`
-	CouponID         int64              `json:"coupon_id"`         // 兼容字段
+	CouponID         int64              `json:"coupon_id"` // 兼容字段
 	Name             string             `json:"name"`
 	StartTime        time.Time          `json:"start_time"`
 	EndTime          time.Time          `json:"end_time"`
 	FlashSaleCount   int32              `json:"flash_sale_count"`
 	SoldCount        int32              `json:"sold_count"`
-	RemainStock      int32              `json:"remain_stock"`      // 剩余库存
+	RemainStock      int32              `json:"remain_stock"` // 剩余库存
 	PerUserLimit     int32              `json:"per_user_limit"`
 	Status           int32              `json:"status"`
 	Template         *CouponTemplateDTO `json:"template,omitempty"`
 	CreatedAt        time.Time          `json:"created_at"`
 	UpdatedAt        time.Time          `json:"updated_at"`
-	
+
 	// 优惠券模板相关字段（冗余便于展示）
 	CouponName    string  `json:"coupon_name,omitempty"`
 	CouponType    int32   `json:"coupon_type,omitempty"`
@@ -42,7 +42,7 @@ type FlashSaleActivityDTO struct {
 type ListFlashSaleActivitiesDTO struct {
 	Status   *int32      `json:"status,omitempty" validate:"omitempty,min=1,max=4"`
 	ListMeta v1.ListMeta `json:",inline"`
-	
+
 	// 兼容字段
 	Page     int32 `json:"page" validate:"required,min=1"`
 	PageSize int32 `json:"page_size" validate:"required,min=1,max=100"`
@@ -50,9 +50,9 @@ type ListFlashSaleActivitiesDTO struct {
 
 // FlashSaleActivityListDTO 秒杀活动列表响应DTO
 type FlashSaleActivityListDTO struct {
-	TotalCount int64                    `json:"total_count"`
-	Items      []*FlashSaleActivityDTO  `json:"items"`
-	ListMeta   v1.ListMeta              `json:",inline"`
+	TotalCount int64                   `json:"total_count"`
+	Items      []*FlashSaleActivityDTO `json:"items"`
+	ListMeta   v1.ListMeta             `json:",inline"`
 }
 
 // ParticipateFlashSaleDTO 参与秒杀DTO
@@ -63,9 +63,9 @@ type ParticipateFlashSaleDTO struct {
 
 // ParticipateFlashSaleResultDTO 参与秒杀结果DTO
 type ParticipateFlashSaleResultDTO struct {
-	Status        int32   `json:"status"` // 1-成功, 2-失败
-	FailReason    *string `json:"fail_reason,omitempty"`
-	UserCouponID  *int64  `json:"user_coupon_id,omitempty"`
+	Status       int32   `json:"status"` // 1-成功, 2-失败
+	FailReason   *string `json:"fail_reason,omitempty"`
+	UserCouponID *int64  `json:"user_coupon_id,omitempty"`
 }
 
 // FlashSaleStockDTO 秒杀库存信息DTO
@@ -86,14 +86,15 @@ type GetUserFlashSaleRecordsDTO struct {
 
 // FlashSaleRecordDTO 秒杀记录DTO
 type FlashSaleRecordDTO struct {
-	ID           int64                  `json:"id"`
-	FlashSaleID  int64                  `json:"flash_sale_id"`
-	UserID       int64                  `json:"user_id"`
-	UserCouponID *int64                 `json:"user_coupon_id,omitempty"`
-	Status       int32                  `json:"status"`
-	FailReason   *string                `json:"fail_reason,omitempty"`
-	CreatedAt    time.Time              `json:"created_at"`
-	Activity     *FlashSaleActivityDTO  `json:"activity,omitempty"`
+	ID             int64                 `json:"id"`
+	FlashSaleID    int64                 `json:"flash_sale_id"`
+	UserID         int64                 `json:"user_id"`
+	UserCouponID   *int64                `json:"user_coupon_id,omitempty"`
+	Status         int32                 `json:"status"`
+	FailReason     *string               `json:"fail_reason,omitempty"`
+	CreatedAt      time.Time             `json:"created_at"`
+	OrderCreatedAt time.Time             `json:"order_created_at"`
+	Activity       *FlashSaleActivityDTO `json:"activity,omitempty"`
 }
 
 // FlashSaleRecordListDTO 秒杀记录列表响应DTO
@@ -109,7 +110,7 @@ type StartFlashSaleDTO struct {
 	ActivityID int64 `json:"activity_id" validate:"required"`
 }
 
-// StopFlashSaleDTO 停止秒杀活动DTO  
+// StopFlashSaleDTO 停止秒杀活动DTO
 type StopFlashSaleDTO struct {
 	ActivityID  int64 `json:"activity_id" validate:"required"`
 	CleanupData bool  `json:"cleanup_data,omitempty"` // 是否清理数据
@@ -126,11 +127,11 @@ type FlashSaleRequestDTO struct {
 // FlashSaleResultDTO 秒杀结果DTO
 type FlashSaleResultDTO struct {
 	Success     bool   `json:"success"`
-	Code        int    `json:"code"`         // 1:成功 -1:库存不足 -2:用户限制 -3:活动异常 -4:系统错误
+	Code        int    `json:"code"` // 1:成功 -1:库存不足 -2:用户限制 -3:活动异常 -4:系统错误
 	Message     string `json:"message"`
-	CouponSn    string `json:"coupon_sn,omitempty"`    // 优惠券编号（成功时）
-	RemainStock int32  `json:"remain_stock"`           // 剩余库存
-	Timestamp   int64  `json:"timestamp"`              // 操作时间戳
+	CouponSn    string `json:"coupon_sn,omitempty"` // 优惠券编号（成功时）
+	RemainStock int32  `json:"remain_stock"`        // 剩余库存
+	Timestamp   int64  `json:"timestamp"`           // 操作时间戳
 }
 
 // FlashSaleStatusDTO 查询秒杀状态DTO
@@ -143,10 +144,10 @@ type FlashSaleStatusDTO struct {
 type FlashSaleStatusResultDTO struct {
 	ActivityID             int64     `json:"activity_id"`
 	CouponID               int64     `json:"coupon_id"`
-	Status                 int32     `json:"status"`                   // 1:待开始 2:进行中 3:已结束
-	TotalCount             int32     `json:"total_count"`              // 总投放数量
-	SuccessCount           int32     `json:"success_count"`            // 成功抢购数量
-	RemainStock            int32     `json:"remain_stock"`             // 剩余库存
+	Status                 int32     `json:"status"`        // 1:待开始 2:进行中 3:已结束
+	TotalCount             int32     `json:"total_count"`   // 总投放数量
+	SuccessCount           int32     `json:"success_count"` // 成功抢购数量
+	RemainStock            int32     `json:"remain_stock"`  // 剩余库存
 	StartTime              time.Time `json:"start_time"`
 	EndTime                time.Time `json:"end_time"`
 	UserParticipated       bool      `json:"user_participated"`        // 用户是否已参与

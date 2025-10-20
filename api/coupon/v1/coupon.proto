@@ -257,6 +257,7 @@ message FlashSaleRecordResponse {
     optional string fail_reason = 6;    // 失败原因
     int64 created_at = 7;               // 创建时间
     FlashSaleActivityResponse activity = 8; // 关联的秒杀活动
+    int64 order_created_at = 9;         // 订单创建时间(毫秒)
 }
 
 message ListFlashSaleRecordsResponse {

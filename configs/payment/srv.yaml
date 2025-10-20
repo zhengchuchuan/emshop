@@ -49,6 +49,6 @@ dtm:
 # Redis配置(分布式锁和缓存使用)
 redis:
   host: "127.0.0.1"
-  port: "6379"
+  port: "16379"
   password: ""
   database: 0

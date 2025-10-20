@@ -23,7 +23,7 @@ func init() {
 	global.Config.MySQLOptions.Database = "inventory_test"
 
 	global.Config.RedisOptions.Host = "localhost"
-	global.Config.RedisOptions.Port = 6379
+	global.Config.RedisOptions.Port = 16379
 
 	// 初始化
 	initialize.InitDB()
