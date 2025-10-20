@@ -357,7 +357,7 @@ func newConsulRegistrar(registryOpts *options.RegistryOptions, dev bool) (regist
 		return nil, fmt.Errorf("创建Consul客户端失败: %w", err)
 	}
 
-    opts := []consul.Option{consul.WithHealthCheck(true)}
+    opts := []consul.Option{consul.WithHealthCheck(true), consul.WithHeartbeat(false)}
     if registryOpts.HealthCheckInterval > 0 {
         opts = append(opts, consul.WithHealthCheckInterval(registryOpts.HealthCheckInterval))
     }

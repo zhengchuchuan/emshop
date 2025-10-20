@@ -1,20 +1,24 @@
 package v1
 
 import (
-	"context"
-	"fmt"
-	"time"
+    "context"
+    "fmt"
+    stdErrors "errors"
+    "strings"
+    "time"
 
-	"emshop/internal/app/coupon/srv/data/v1/interfaces"
-	"emshop/internal/app/coupon/srv/domain/do"
-	"emshop/internal/app/coupon/srv/domain/dto"
-	"emshop/internal/app/coupon/srv/pkg/cache"
-	"emshop/internal/app/coupon/srv/pkg/scripts"
-	"emshop/internal/app/pkg/code"
-	v1 "emshop/pkg/common/meta/v1"
-	"emshop/pkg/errors"
-	"emshop/pkg/log"
-	"github.com/go-redis/redis/v8"
+    "emshop/internal/app/coupon/srv/data/v1/interfaces"
+    "emshop/internal/app/coupon/srv/domain/do"
+    "emshop/internal/app/coupon/srv/domain/dto"
+    "emshop/internal/app/coupon/srv/pkg/cache"
+    "emshop/internal/app/coupon/srv/pkg/scripts"
+    "emshop/internal/app/pkg/code"
+    v1 "emshop/pkg/common/meta/v1"
+    "emshop/pkg/errors"
+    "emshop/pkg/log"
+    mysqlDriver "github.com/go-sql-driver/mysql"
+    "github.com/go-redis/redis/v8"
+    "gorm.io/gorm"
 )
 
 // FlashSaleSrv 秒杀服务接口
@@ -244,17 +248,37 @@ func (fss *flashSaleService) ParticipateFlashSale(ctx context.Context, req *dto.
 		OrderCreatedAt: currentTime,
 	}
 
-	if err := fss.data.FlashSaleRecords().Create(ctx, tx, recordDO); err != nil {
-		tx.Rollback()
-		// 回滚Redis状态
-		fss.rollbackFlashSaleRedis(ctx, req.FlashSaleID, req.UserID)
+    if err := fss.data.FlashSaleRecords().Create(ctx, tx, recordDO); err != nil {
+        // 唯一键冲突：说明该用户已参与该活动，视为幂等处理；不要回滚Redis状态
+        if isDuplicateEntryError(err) {
+            tx.Rollback()
+            log.Warnf("重复参与秒杀: flashSaleID=%d userID=%d", req.FlashSaleID, req.UserID)
 
-		log.Errorf("创建秒杀记录失败: %v", err)
-		return &dto.ParticipateFlashSaleResultDTO{
-			Status:     2,
-			FailReason: stringPtr("创建记录失败"),
-		}, nil
-	}
+            // 若已有记录且已有优惠券ID，则直接返回成功；否则提示已参与过
+            if existed, getErr := fss.data.FlashSaleRecords().GetByFlashSaleAndUser(ctx, fss.data.DB(), req.FlashSaleID, req.UserID); getErr == nil && existed != nil {
+                if existed.UserCouponID != nil {
+                    return &dto.ParticipateFlashSaleResultDTO{
+                        Status:       1,
+                        UserCouponID: existed.UserCouponID,
+                    }, nil
+                }
+            }
+            return &dto.ParticipateFlashSaleResultDTO{
+                Status:     2,
+                FailReason: stringPtr("已参与过"),
+            }, nil
+        }
+
+        tx.Rollback()
+        // 仅在其它数据库错误时回滚Redis状态
+        fss.rollbackFlashSaleRedis(ctx, req.FlashSaleID, req.UserID)
+
+        log.Errorf("创建秒杀记录失败: %v", err)
+        return &dto.ParticipateFlashSaleResultDTO{
+            Status:     2,
+            FailReason: stringPtr("创建记录失败"),
+        }, nil
+    }
 
 	// 获取优惠券模板
 	templateDO, err := fss.data.CouponTemplates().Get(ctx, fss.data.DB(), activityDO.CouponTemplateID)
@@ -295,16 +319,28 @@ func (fss *flashSaleService) ParticipateFlashSale(ctx context.Context, req *dto.
 		}, nil
 	}
 
-	// 更新秒杀记录的优惠券ID
-	recordDO.UserCouponID = &userCouponDO.ID
-	if err := fss.data.FlashSaleRecords().UpdateUserCouponID(ctx, tx, recordDO.ID, userCouponDO.ID); err != nil {
-		log.Warnf("更新秒杀记录优惠券ID失败: %v", err)
-	}
+    // 更新秒杀记录的优惠券ID（失败即回滚，保证记录-优惠券-销量原子性）
+    recordDO.UserCouponID = &userCouponDO.ID
+    if err := fss.data.FlashSaleRecords().UpdateUserCouponID(ctx, tx, recordDO.ID, userCouponDO.ID); err != nil {
+        log.Errorf("更新秒杀记录优惠券ID失败: %v", err)
+        tx.Rollback()
+        fss.rollbackFlashSaleRedis(ctx, req.FlashSaleID, req.UserID)
+        return &dto.ParticipateFlashSaleResultDTO{
+            Status:     2,
+            FailReason: stringPtr("系统繁忙，请稍后重试"),
+        }, nil
+    }
 
-	// 更新活动已售数量
-	if err := fss.data.FlashSales().IncrementSoldCount(ctx, tx, req.FlashSaleID); err != nil {
-		log.Warnf("更新秒杀活动已售数量失败: %v", err)
-	}
+    // 更新活动已售数量（失败即回滚，确保库存与记录一致）
+    if err := fss.data.FlashSales().IncrementSoldCount(ctx, tx, req.FlashSaleID); err != nil {
+        log.Errorf("更新秒杀活动已售数量失败: %v", err)
+        tx.Rollback()
+        fss.rollbackFlashSaleRedis(ctx, req.FlashSaleID, req.UserID)
+        return &dto.ParticipateFlashSaleResultDTO{
+            Status:     2,
+            FailReason: stringPtr("系统繁忙，请稍后重试"),
+        }, nil
+    }
 
 	if err := tx.Commit().Error; err != nil {
 		log.Errorf("提交秒杀事务失败: %v", err)
@@ -475,5 +511,21 @@ func stringPtr(s string) *string {
 
 // generateCouponCode 生成优惠券码 (简化版)
 func generateCouponCode() string {
-	return fmt.Sprintf("CPN%d", time.Now().UnixNano()%100000000)
+    return fmt.Sprintf("CPN%d", time.Now().UnixNano()%100000000)
+}
+
+// isDuplicateEntryError 判断是否为 MySQL 唯一键冲突错误(1062)
+func isDuplicateEntryError(err error) bool {
+    if err == nil {
+        return false
+    }
+    if stdErrors.Is(err, gorm.ErrDuplicatedKey) {
+        return true
+    }
+    var me *mysqlDriver.MySQLError
+    if stdErrors.As(err, &me) {
+        return me.Number == 1062
+    }
+    // 兜底判断
+    return strings.Contains(err.Error(), "Duplicate entry")
 }

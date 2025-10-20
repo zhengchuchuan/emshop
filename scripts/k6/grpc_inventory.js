@@ -78,8 +78,16 @@ function resolveFromConsul(service, tag) {
   if (!entry || !entry.Service) {
     throw new Error(`Consul entry missing Service data for ${service}`);
   }
-  const host = entry.Service.Address || entry.Node.Address;
-  const port = entry.Service.Port;
+  const svc = entry.Service;
+  if (svc.TaggedAddresses && svc.TaggedAddresses.grpc && svc.TaggedAddresses.grpc.Address) {
+    const ep = String(svc.TaggedAddresses.grpc.Address);
+    const m = ep.match(/^[a-z]+:\/\/([^/?#]+)(?:\?.*)?$/i);
+    if (m && m[1]) {
+      return m[1];
+    }
+  }
+  const host = svc.Address || (entry.Node && entry.Node.Address);
+  const port = svc.Port;
   if (!host || !port) {
     throw new Error(`Invalid address/port resolved for ${service}: ${host}:${port}`);
   }
@@ -96,18 +104,19 @@ export function setup() {
 }
 
 function withClient(target, fn) {
-  client.connect(target, { plaintext: true });
-  try {
-    fn();
-  } finally {
-    client.close();
+  if (!withClient._connected || withClient._target !== target) {
+    try { client.close(); } catch (e) { /* ignore */ }
+    client.connect(target, { plaintext: true });
+    withClient._connected = true;
+    withClient._target = target;
   }
+  fn();
 }
 
 export function invDetail(data) {
   const goodsId = pickGoodsId();
   withClient(data.target, () => {
-    const res = client.invoke('proto.Inventory/InvDetail', { goodsId, num: 0 });
+    const res = client.invoke('Inventory/InvDetail', { goodsId, num: 0 });
     check(res, {
       'status OK': (r) => r && r.status === grpc.StatusOK,
       'has inventory': (r) => r && r.message && typeof r.message.num === 'number',
@@ -123,7 +132,7 @@ export function invSell(data) {
     orderSn: nextOrderSn(),
   };
   withClient(data.target, () => {
-    const res = client.invoke('proto.Inventory/Sell', body);
+    const res = client.invoke('Inventory/Sell', body);
     check(res, {
       'sell accepted': (r) => r && r.status === grpc.StatusOK,
     });
@@ -138,7 +147,7 @@ export function invReback(data) {
     orderSn: nextOrderSn(),
   };
   withClient(data.target, () => {
-    const res = client.invoke('proto.Inventory/Reback', body);
+    const res = client.invoke('Inventory/Reback', body);
     check(res, {
       'reback accepted': (r) => r && r.status === grpc.StatusOK,
     });
