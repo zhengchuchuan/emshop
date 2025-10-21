@@ -19,13 +19,14 @@ var (
 )
 
 type dataFactory struct {
-	db                     *gorm.DB
-	couponTemplateData     interfaces.CouponTemplateDataInterface
-	userCouponData         interfaces.UserCouponDataInterface
-	couponUsageLogData     interfaces.CouponUsageLogDataInterface
-	couponConfigData       interfaces.CouponConfigDataInterface
-	flashSaleData          interfaces.FlashSaleDataInterface
-	flashSaleRecordData    interfaces.FlashSaleRecordDataInterface
+    db                     *gorm.DB
+    couponTemplateData     interfaces.CouponTemplateDataInterface
+    userCouponData         interfaces.UserCouponDataInterface
+    couponUsageLogData     interfaces.CouponUsageLogDataInterface
+    couponConfigData       interfaces.CouponConfigDataInterface
+    flashSaleData          interfaces.FlashSaleDataInterface
+    flashSaleRecordData    interfaces.FlashSaleRecordDataInterface
+    flashSaleStockLogData  interfaces.FlashSaleStockLogDataInterface
 }
 
 // NewDataFactory 创建优惠券服务数据工厂
@@ -41,9 +42,10 @@ func NewDataFactory(mysqlOpts *options.MySQLOptions) (interfaces.DataFactory, er
 		factory.couponTemplateData = NewCouponTemplateData(factory.db)
 		factory.userCouponData = NewUserCouponData(factory.db)
 		factory.couponUsageLogData = NewCouponUsageLogData(factory.db)
-		factory.couponConfigData = NewCouponConfigData(factory.db)
-		factory.flashSaleData = NewFlashSaleData(factory.db)
-		factory.flashSaleRecordData = NewFlashSaleRecordData(factory.db)
+        factory.couponConfigData = NewCouponConfigData(factory.db)
+        factory.flashSaleData = NewFlashSaleData(factory.db)
+        factory.flashSaleRecordData = NewFlashSaleRecordData(factory.db)
+        factory.flashSaleStockLogData = NewFlashSaleStockLogData(factory.db)
 	})
 	
 	return factory, err
@@ -112,7 +114,12 @@ func (f *dataFactory) FlashSales() interfaces.FlashSaleDataInterface {
 
 // FlashSaleRecords 获取秒杀记录数据访问对象
 func (f *dataFactory) FlashSaleRecords() interfaces.FlashSaleRecordDataInterface {
-	return f.flashSaleRecordData
+    return f.flashSaleRecordData
+}
+
+// FlashSaleStockLogs 获取库存扣减日志数据访问对象
+func (f *dataFactory) FlashSaleStockLogs() interfaces.FlashSaleStockLogDataInterface {
+    return f.flashSaleStockLogData
 }
 
 // DB 获取数据库连接

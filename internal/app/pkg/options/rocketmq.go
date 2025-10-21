@@ -15,12 +15,12 @@ type RocketMQOptions struct {
 
 // NewRocketMQOptions 创建默认RocketMQ配置
 func NewRocketMQOptions() *RocketMQOptions {
-	return &RocketMQOptions{
-		NameServers:   []string{"localhost:9876"},
-		ConsumerGroup: "goods-sync-consumer-group",
-		Topic:         "goods-binlog-topic",
-		MaxReconsume:  3,
-	}
+    return &RocketMQOptions{
+        NameServers:   []string{"localhost:19876"},
+        ConsumerGroup: "goods-sync-consumer-group",
+        Topic:         "goods-binlog-topic",
+        MaxReconsume:  3,
+    }
 }
 
 // Validate 验证配置

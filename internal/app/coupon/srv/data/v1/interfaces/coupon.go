@@ -32,7 +32,8 @@ type UserCouponDataInterface interface {
 	Update(ctx context.Context, db *gorm.DB, userCoupon *do.UserCouponDO) error
 	Delete(ctx context.Context, db *gorm.DB, id int64) error
 	Get(ctx context.Context, db *gorm.DB, id int64) (*do.UserCouponDO, error)
-	GetByCouponCode(ctx context.Context, db *gorm.DB, couponCode string) (*do.UserCouponDO, error)
+    GetByCouponCode(ctx context.Context, db *gorm.DB, couponCode string) (*do.UserCouponDO, error)
+    GetByRequestID(ctx context.Context, db *gorm.DB, requestID string) (*do.UserCouponDO, error)
 	
 	// 用户优惠券查询
 	GetUserCoupons(ctx context.Context, db *gorm.DB, userID int64, status do.UserCouponStatus, meta v1.ListMeta) (*do.UserCouponDOList, error)
@@ -67,12 +68,13 @@ type CouponConfigDataInterface interface {
 
 // DataFactory 优惠券服务数据工厂接口
 type DataFactory interface {
-	CouponTemplates() CouponTemplateDataInterface
-	UserCoupons() UserCouponDataInterface
-	CouponUsageLogs() CouponUsageLogDataInterface
-	CouponConfigs() CouponConfigDataInterface
-	FlashSales() FlashSaleDataInterface
-	FlashSaleRecords() FlashSaleRecordDataInterface
+    CouponTemplates() CouponTemplateDataInterface
+    UserCoupons() UserCouponDataInterface
+    CouponUsageLogs() CouponUsageLogDataInterface
+    CouponConfigs() CouponConfigDataInterface
+    FlashSales() FlashSaleDataInterface
+    FlashSaleRecords() FlashSaleRecordDataInterface
+    FlashSaleStockLogs() FlashSaleStockLogDataInterface
 	
 	// 数据库操作
 	DB() *gorm.DB

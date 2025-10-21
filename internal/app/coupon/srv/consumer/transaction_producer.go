@@ -34,11 +34,12 @@ type TransactionConfig struct {
 
 // TransactionContext 事务上下文
 type TransactionContext struct {
-	ActivityID int64  `json:"activity_id"`
-	UserID     int64  `json:"user_id"`
-	CouponID   int64  `json:"coupon_id"`
-	CouponSn   string `json:"coupon_sn"`
-	Action     string `json:"action"` // "create_user_coupon", "update_stats", etc.
+    ActivityID int64  `json:"activity_id"`
+    UserID     int64  `json:"user_id"`
+    CouponID   int64  `json:"coupon_id"`
+    CouponSn   string `json:"coupon_sn"`
+    RequestID  string `json:"request_id,omitempty"`
+    Action     string `json:"action"` // "create_user_coupon", "update_stats", etc.
 }
 
 // NewTransactionProducer 创建事务消息生产者
@@ -75,14 +76,15 @@ func NewTransactionProducer(config *TransactionConfig, data interfaces.DataFacto
 
 // SendTransactionMessage 发送事务消息
 func (tp *TransactionProducer) SendTransactionMessage(ctx context.Context, event *FlashSaleSuccessEvent) error {
-	// 构建事务上下文
-	txnContext := &TransactionContext{
-		ActivityID: event.ActivityID,
-		UserID:     event.UserID,
-		CouponID:   event.CouponID,
-		CouponSn:   event.CouponSn,
-		Action:     "create_user_coupon",
-	}
+    // 构建事务上下文
+    txnContext := &TransactionContext{
+        ActivityID: event.ActivityID,
+        UserID:     event.UserID,
+        CouponID:   event.CouponID,
+        CouponSn:   event.CouponSn,
+        RequestID:  event.RequestID,
+        Action:     "create_user_coupon",
+    }
 
 	// 序列化事务上下文
 	contextData, err := json.Marshal(txnContext)
@@ -105,9 +107,12 @@ func (tp *TransactionProducer) SendTransactionMessage(ctx context.Context, event
 	msg.WithKeys([]string{fmt.Sprintf("txn_user_%d_activity_%d", event.UserID, event.ActivityID)})
 	msg.WithProperty("transaction_id", fmt.Sprintf("txn_%d_%d_%d", event.ActivityID, event.UserID, event.Timestamp))
 	msg.WithProperty("context", string(contextData))
-	msg.WithProperty("event_type", "flash_sale_success")
-	msg.WithProperty("user_id", fmt.Sprintf("%d", event.UserID))
-	msg.WithProperty("activity_id", fmt.Sprintf("%d", event.ActivityID))
+    msg.WithProperty("event_type", "flash_sale_success")
+    msg.WithProperty("user_id", fmt.Sprintf("%d", event.UserID))
+    msg.WithProperty("activity_id", fmt.Sprintf("%d", event.ActivityID))
+    if event.RequestID != "" {
+        msg.WithProperty("request_id", event.RequestID)
+    }
 
 	// 发送事务消息
 	result, err := tp.producer.SendMessageInTransaction(ctx, msg)
@@ -221,15 +226,21 @@ func (tp *TransactionProducer) executeCreateUserCouponTransaction(ctx context.Co
 		}
 	}()
 
-	// 4. 创建用户优惠券
-	userCouponDO := &do.UserCouponDO{
-		CouponTemplateID: txnContext.CouponID,
-		UserID:           txnContext.UserID,
-		CouponCode:       txnContext.CouponSn,
-		Status:           do.UserCouponStatusUnused,
-		ReceivedAt:       time.Now(),
-		ExpiredAt:        templateDO.ValidEndTime,
-	}
+    // 4. 创建用户优惠券
+    userCouponDO := &do.UserCouponDO{
+        CouponTemplateID: txnContext.CouponID,
+        UserID:           txnContext.UserID,
+        CouponCode:       txnContext.CouponSn,
+        RequestID:        txnContext.RequestID,
+        Status:           do.UserCouponStatusUnused,
+        ReceivedAt:       time.Now(),
+        ExpiredAt:        templateDO.ValidEndTime,
+    }
+
+    // 兜底：若未携带请求ID，则使用事务ID确保非空
+    if userCouponDO.RequestID == "" {
+        userCouponDO.RequestID = txnID
+    }
 
 	if err := tp.data.UserCoupons().Create(ctx, tx, userCouponDO); err != nil {
 		tx.Rollback()
@@ -253,13 +264,13 @@ func (tp *TransactionProducer) executeCreateUserCouponTransaction(ctx context.Co
 		return primitive.RollbackMessageState
 	}
 
-	// 6. 提交数据库事务
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		log.Errorf("提交数据库事务失败: %v, txnID=%s", err, txnID)
-		tp.redisClient.SetEX(ctx, idempotentKey, "rollback", time.Hour)
-		return primitive.RollbackMessageState
-	}
+    // 6. 提交数据库事务（注意：GORM v2 的 Commit 返回 *gorm.DB，需要取 .Error）
+    if err := tx.Commit().Error; err != nil {
+        _ = tx.Rollback()
+        log.Errorf("提交数据库事务失败: %v, txnID=%s", err, txnID)
+        tp.redisClient.SetEX(ctx, idempotentKey, "rollback", time.Hour)
+        return primitive.RollbackMessageState
+    }
 
 	// 7. 标记事务成功
 	tp.redisClient.SetEX(ctx, idempotentKey, "committed", time.Hour)

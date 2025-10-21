@@ -31,6 +31,12 @@ service Coupon {
     rpc ParticipateFlashSale(ParticipateFlashSaleRequest) returns (ParticipateFlashSaleResponse); // 参与秒杀
     rpc GetFlashSaleStock(GetFlashSaleStockRequest) returns (FlashSaleStockResponse); // 获取秒杀库存
     rpc GetUserFlashSaleRecord(GetUserFlashSaleRecordRequest) returns (ListFlashSaleRecordsResponse); // 用户秒杀记录
+
+    // 管理（Admin专用）
+    rpc StartFlashSaleActivity(StartFlashSaleRequest) returns (google.protobuf.Empty); // 启动/预热秒杀活动
+    rpc StopFlashSaleActivity(StopFlashSaleRequest) returns (google.protobuf.Empty);   // 停止秒杀活动
+    rpc GetManageConfig(GetManageConfigRequest) returns (GetManageConfigResponse);     // 获取配置
+    rpc SetManageConfig(SetManageConfigRequest) returns (google.protobuf.Empty);       // 设置配置
     
     // DTM分布式事务接口
     rpc SubmitOrderWithCoupons(SubmitOrderWithCouponsRequest) returns (SubmitOrderWithCouponsResponse); // 订单-优惠券分布式事务
@@ -263,6 +269,32 @@ message FlashSaleRecordResponse {
 message ListFlashSaleRecordsResponse {
     int64 total_count = 1;              // 总数量
     repeated FlashSaleRecordResponse items = 2; // 秒杀记录列表
+}
+
+// ========== 管理相关 ==========
+message StartFlashSaleRequest {
+    int64 id = 1;              // 活动ID
+}
+
+message StopFlashSaleRequest {
+    int64 id = 1;              // 活动ID
+    bool cleanup = 2;          // 是否清理数据
+}
+
+message GetManageConfigRequest {
+    string key = 1;            // 配置键
+}
+
+message GetManageConfigResponse {
+    string key = 1;            // 配置键
+    string value = 2;          // 配置值
+    string source = 3;         // 来源：redis|db
+}
+
+message SetManageConfigRequest {
+    string key = 1;            // 配置键
+    string value = 2;          // 配置值
+    string description = 3;    // 配置说明
 }
 
 // ========== DTM分布式事务相关 ==========

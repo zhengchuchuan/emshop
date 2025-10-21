@@ -37,7 +37,7 @@ telemetry:
 mysql:
   host: "localhost"
   port: 3306
-  password: "root" 
+  password: "123456"
   username: "root"
   database: "emshop_coupon_srv"
   max_idle_connections: 10
@@ -54,7 +54,7 @@ redis:
 
 # RocketMQ配置
 rocketmq:
-  nameservers: ["127.0.0.1:9876"]
+  nameservers: ["127.0.0.1:19876"]
   producer_group: "coupon-producer-group"
   consumer_group: "coupon-consumer-group"
   topic: "coupon-events"
@@ -74,14 +74,15 @@ ristretto:
   metrics: true                   # 开启监控指标
   
 # Canal缓存一致性配置  
-canal:
-  consumer_group: "coupon-cache-sync-consumer"  # Canal消费者组
-  topic: "coupon-binlog-topic"                  # Canal消息主题
-  watch_tables:                                 # 监听的表
-    - "coupon_templates"
-    - "user_coupons" 
-    - "flash_sale_activities"
-  batch_size: 32                               # 批量处理大小
+  canal:
+    consumer_group: "coupon-cache-sync-consumer"  # Canal消费者组
+    topic: "coupon-binlog-topic"                  # Canal消息主题
+    watch_tables:                                 # 监听的表
+      - "coupon_templates"
+      - "user_coupons" 
+      - "flash_sale_activities"
+      - "coupon_configs"
+    batch_size: 32                               # 批量处理大小
   
 # 业务配置
 business:
@@ -90,8 +91,13 @@ business:
     enable_async: true          # 是否启用异步秒杀链路
     max_qps_per_user: 5           # 单用户最大QPS
     stock_cache_ttl: "300s"       # 库存缓存TTL
-    user_limit_ttl: "1800s"       # 用户限制TTL
+    user_limit_ttl: "300s"        # 用户限制TTL（防重复下单5分钟）
     batch_size: 100               # 批量处理大小
+    reconcile_interval: "30s"     # 对账周期
+    reconcile_threshold: 0         # 差异大于该阈值才触发补偿
+    compensation_max_per_run: 100  # 单次最多补偿条数
+    compensation_cooldown: "60s"   # 每活动补偿冷却时间
+    skip_user_limit_for_test: false # 测试时跳过用户限购（同一用户可多次成功）
     
   # 优惠券配置
   coupon:

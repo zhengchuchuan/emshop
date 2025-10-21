@@ -91,14 +91,16 @@ func (cs *couponServer) GetActiveFlashSales(ctx context.Context, req *emptypb.Em
 
 // ParticipateFlashSale 参与秒杀
 func (cs *couponServer) ParticipateFlashSale(ctx context.Context, req *couponpb.ParticipateFlashSaleRequest) (*couponpb.ParticipateFlashSaleResponse, error) {
-	log.Infof("ParticipateFlashSale: userID=%d, flashSaleID=%d", req.UserId, req.FlashSaleId)
+    log.Infof("ParticipateFlashSale: userID=%d, flashSaleID=%d", req.UserId, req.FlashSaleId)
 
-	if cs.srv.AsyncFlashSaleEnabled() && cs.srv.FlashSaleCore != nil {
-		flashReq := &dto.FlashSaleRequestDTO{
-			ActivityID: req.FlashSaleId,
-			UserID:     req.UserId,
-		}
-		coreResult, err := cs.srv.FlashSaleCore.FlashSaleCoupon(ctx, flashReq)
+    // 简化触发条件：按活动async_enabled+全局可用性自动分流
+    if cs.srv.ShouldUseAsync(ctx, req.FlashSaleId) && cs.srv.FlashSaleCore != nil {
+		log.Infof("异步秒杀")
+        flashReq := &dto.FlashSaleRequestDTO{
+            ActivityID: req.FlashSaleId,
+            UserID:     req.UserId,
+        }
+        coreResult, err := cs.srv.FlashSaleCore.FlashSaleCoupon(ctx, flashReq)
 		if err != nil {
 			return nil, cs.handleError(err)
 		}
@@ -114,30 +116,34 @@ func (cs *couponServer) ParticipateFlashSale(ctx context.Context, req *couponpb.
 			}
 		}
 		return resp, nil
+	} else {
+		// 同步秒杀
+		log.Infof("同步秒杀")
+		dto := &dto.ParticipateFlashSaleDTO{
+			UserID:      req.UserId,
+			FlashSaleID: req.FlashSaleId,
+		}
+		
+		result, err := cs.srv.FlashSaleSrv.ParticipateFlashSale(ctx, dto)
+		if err != nil {
+			return nil, cs.handleError(err)
+		}
+
+		resp := &couponpb.ParticipateFlashSaleResponse{
+			Status: result.Status,
+		}
+
+		if result.FailReason != nil {
+			resp.FailReason = result.FailReason
+		}
+		if result.UserCouponID != nil {
+			resp.UserCouponId = result.UserCouponID
+		}
+
+		return resp, nil
 	}
 
-	dto := &dto.ParticipateFlashSaleDTO{
-		UserID:      req.UserId,
-		FlashSaleID: req.FlashSaleId,
-	}
 
-	result, err := cs.srv.FlashSaleSrv.ParticipateFlashSale(ctx, dto)
-	if err != nil {
-		return nil, cs.handleError(err)
-	}
-
-	resp := &couponpb.ParticipateFlashSaleResponse{
-		Status: result.Status,
-	}
-
-	if result.FailReason != nil {
-		resp.FailReason = result.FailReason
-	}
-	if result.UserCouponID != nil {
-		resp.UserCouponId = result.UserCouponID
-	}
-
-	return resp, nil
 }
 
 // GetFlashSaleStock 获取秒杀库存

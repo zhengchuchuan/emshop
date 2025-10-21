@@ -64,7 +64,7 @@ redis.call('DECR', stock_key)
 -- 增加用户购买计数
 redis.call('INCR', user_limit_key)
 
--- 设置用户限购key的过期时间(秒杀结束后1小时)
-redis.call('EXPIRE', user_limit_key, end_time - current_time + 3600)
+-- 设置用户限购key的过期时间为5分钟，避免长期占用导致误限购
+redis.call('EXPIRE', user_limit_key, 300)
 
 return 1  -- 成功

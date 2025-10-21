@@ -201,12 +201,12 @@ func TestService_Creation(t *testing.T) {
 		HttpServer: "localhost:36789",
 	}
 	
-	rocketmqOpts := &options.RocketMQOptions{
-		NameServers:   []string{"localhost:9876"},
-		ConsumerGroup: "test-consumer-group",
-		Topic:         "test-topic",
-		MaxReconsume:  3,
-	}
+    rocketmqOpts := &options.RocketMQOptions{
+        NameServers:   []string{"localhost:19876"},
+        ConsumerGroup: "test-consumer-group",
+        Topic:         "test-topic",
+        MaxReconsume:  3,
+    }
 	
 	cacheConfig := &cache.CacheConfig{
 		L1TTL:        10 * time.Minute,
@@ -350,11 +350,11 @@ func TestTransactionProducer_Integration(t *testing.T) {
 	}
 	
 	// 准备配置
-	config := &consumer.TransactionConfig{
-		NameServers: []string{"localhost:9876"},
-		GroupName:   "test-txn-group",
-		Topic:       "test-topic",
-	}
+    config := &consumer.TransactionConfig{
+        NameServers: []string{"localhost:19876"},
+        GroupName:   "test-txn-group",
+        Topic:       "test-topic",
+    }
 	
 	mockData := &MockDataFactory{}
 	redisClient := redis.NewClient(&redis.Options{

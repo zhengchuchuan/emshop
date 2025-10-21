@@ -7,6 +7,7 @@ import (
 	v1 "emshop/pkg/common/meta/v1"
 	"emshop/pkg/log"
 	"gorm.io/gorm"
+    "fmt"
 )
 
 type flashSaleData struct {
@@ -38,8 +39,15 @@ func (fsd *flashSaleData) Update(ctx context.Context, db *gorm.DB, activity *do.
 	if db == nil {
 		db = fsd.db
 	}
-	
-	if err := db.WithContext(ctx).Save(activity).Error; err != nil {
+
+    if activity == nil || activity.ID == 0 {
+        return fmt.Errorf("invalid activity payload")
+    }
+    // 使用 Updates 仅更新非零字段，避免将未赋值字段写入 0 值（如 '0000-00-00'）
+	if err := db.WithContext(ctx).
+        Model(&do.FlashSaleActivityDO{}).
+        Where("id = ?", activity.ID).
+        Updates(activity).Error; err != nil {
 		log.Errorf("更新秒杀活动失败: %v", err)
 		return err
 	}

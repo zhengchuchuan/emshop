@@ -47,6 +47,10 @@ func NewCouponService(data data.DataFactory) CouponSrv {
 
 // ===== Flash sale (user-facing) =====
 
+// ListActiveFlashSales 
+//	@param ctx 
+//	@return *cpbv1.ListFlashSaleActivitiesResponse 
+//	@return error 
 func (s *couponService) ListActiveFlashSales(ctx context.Context) (*cpbv1.ListFlashSaleActivitiesResponse, error) {
     return s.data.Coupon().GetActiveFlashSales(ctx)
 }

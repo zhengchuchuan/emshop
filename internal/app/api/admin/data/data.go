@@ -107,4 +107,11 @@ type CouponData interface {
     CreateFlashSaleActivity(ctx context.Context, req *cpbv1.CreateFlashSaleActivityRequest) (*cpbv1.FlashSaleActivityResponse, error)
     GetFlashSaleActivity(ctx context.Context, req *cpbv1.GetFlashSaleActivityRequest) (*cpbv1.FlashSaleActivityResponse, error)
     ListFlashSaleActivities(ctx context.Context, req *cpbv1.ListFlashSaleActivitiesRequest) (*cpbv1.ListFlashSaleActivitiesResponse, error)
+    GetFlashSaleStock(ctx context.Context, req *cpbv1.GetFlashSaleStockRequest) (*cpbv1.FlashSaleStockResponse, error)
+
+    // 管理：配置与活动预热（通过内部管理HTTP转发，保持admin调用链一致）
+    GetManageConfig(ctx context.Context, key string) (map[string]interface{}, error)
+    SetManageConfig(ctx context.Context, key, value, desc string) (map[string]interface{}, error)
+    StartFlashSale(ctx context.Context, activityID int64) (map[string]interface{}, error)
+    StopFlashSale(ctx context.Context, activityID int64) (map[string]interface{}, error)
 }

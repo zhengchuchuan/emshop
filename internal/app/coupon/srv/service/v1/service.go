@@ -1,15 +1,16 @@
 package v1
 
 import (
-	"context"
-	"emshop/internal/app/coupon/srv/config"
-	"emshop/internal/app/coupon/srv/consumer"
-	"emshop/internal/app/coupon/srv/data/v1/interfaces"
-	"emshop/internal/app/coupon/srv/pkg/cache"
-	"emshop/internal/app/pkg/options"
-	"emshop/pkg/log"
-	v1 "emshop/pkg/common/meta/v1"
-	"github.com/go-redis/redis/v8"
+    "context"
+    "emshop/internal/app/coupon/srv/config"
+    "emshop/internal/app/coupon/srv/consumer"
+    "emshop/internal/app/coupon/srv/data/v1/interfaces"
+    "emshop/internal/app/coupon/srv/pkg/cache"
+    "emshop/internal/app/pkg/options"
+    "emshop/pkg/log"
+    v1 "emshop/pkg/common/meta/v1"
+    "github.com/go-redis/redis/v8"
+    "fmt"
 )
 
 // Service 优惠券服务工厂
@@ -23,6 +24,7 @@ type Service struct {
 	TransactionProducer *consumer.TransactionFlashSaleEventProducer // 事务消息生产者
 	RetryManager        *consumer.RetryManager // 重试管理器
 	asyncFlashSale      bool
+    data                interfaces.DataFactory
 }
 
 // NewService 创建优惠券服务工厂
@@ -108,15 +110,16 @@ func NewService(
 		log.Info("使用事务消息生产者作为主要事件生产者")
 	}
 	
-	service := &Service{
-		CouponSrv:           NewCouponService(data, redisClient, dtmOpts, cacheManager),
-		FlashSaleSrv:        NewFlashSaleService(data, redisClient, cacheManager),
-		FlashSaleCore:       NewFlashSaleSrvCore(data, redisClient, cacheManager, finalEventProducer),
-		CacheManager:        cacheManager,
-		EventProducer:       eventProducer,
-		TransactionProducer: transactionProducer,
-		RetryManager:        retryManager,
-	}
+    service := &Service{
+        CouponSrv:           NewCouponService(data, redisClient, dtmOpts, cacheManager),
+        FlashSaleSrv:        NewFlashSaleService(data, redisClient, cacheManager),
+        FlashSaleCore:       NewFlashSaleSrvCore(data, redisClient, cacheManager, finalEventProducer, bizOpts != nil && bizOpts.FlashSale != nil && bizOpts.FlashSale.SkipUserLimitForTest),
+        CacheManager:        cacheManager,
+        EventProducer:       eventProducer,
+        TransactionProducer: transactionProducer,
+        RetryManager:        retryManager,
+        data:                data,
+    }
 
 	if bizOpts != nil && bizOpts.FlashSale != nil && bizOpts.FlashSale.EnableAsync && finalEventProducer != nil {
 		service.asyncFlashSale = true
@@ -130,7 +133,44 @@ func NewService(
 
 // AsyncFlashSaleEnabled 返回是否启用异步秒杀链路
 func (s *Service) AsyncFlashSaleEnabled() bool {
-	return s != nil && s.asyncFlashSale && s.FlashSaleCore != nil
+    return s != nil && s.asyncFlashSale && s.FlashSaleCore != nil
+}
+
+// ShouldUseAsync 根据活动配置+全局可用性判断是否使用异步链路
+// 规则：
+// 1) 活动 async_enabled=0 → 同步
+// 2) async_enabled=1 且全局 AsyncFlashSaleEnabled()=true → 异步
+// 3) 其它情况（如MQ未就绪）→ 同步（降级）
+func (s *Service) ShouldUseAsync(ctx context.Context, activityID int64) bool {
+    if s == nil || s.data == nil {
+        return false
+    }
+    act, err := s.data.FlashSales().Get(ctx, s.data.DB(), activityID)
+    if err != nil || act == nil {
+        return s.AsyncFlashSaleEnabled()
+    }
+    if !act.AsyncEnabled {
+        return false
+    }
+    return s.AsyncFlashSaleEnabled()
+}
+
+// 管理：配置读写
+func (s *Service) GetManageConfig(ctx context.Context, key string) (value string, source string, err error) {
+    if s == nil || s.data == nil {
+        return "", "", fmt.Errorf("service not initialized")
+    }
+    cfg, e := s.data.CouponConfigs().Get(ctx, s.data.DB(), key)
+    if e != nil { return "", "", e }
+    if cfg == nil { return "", "", fmt.Errorf("config not found") }
+    return cfg.ConfigValue, "db", nil
+}
+
+func (s *Service) SetManageConfig(ctx context.Context, key, value, desc string) error {
+    if s == nil || s.data == nil {
+        return fmt.Errorf("service not initialized")
+    }
+    return s.data.CouponConfigs().Set(ctx, s.data.DB(), key, value, desc)
 }
 
 // Shutdown 优雅关闭服务

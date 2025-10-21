@@ -36,7 +36,7 @@ redis.call('SET', stock_key, initial_stock)
 redis.call('SET', status_key, activity_status)
 
 -- 设置过期时间（活动结束后1小时自动清理）
-local expire_time = end_time - current_time + 3600
+local expire_time = end_time - current_time + 300
 redis.call('EXPIRE', stock_key, expire_time)
 redis.call('EXPIRE', status_key, expire_time)
 

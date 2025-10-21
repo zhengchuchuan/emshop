@@ -1,19 +1,19 @@
 package v1
 
 import (
-	"context"
-	"time"
+    "context"
+    "time"
 
-	couponpb "emshop/api/coupon/v1"
-	"emshop/internal/app/coupon/srv/domain/dto"
-	v1 "emshop/internal/app/coupon/srv/service/v1"
-	"emshop/internal/app/pkg/code"
-	"emshop/pkg/errors"
-	"emshop/pkg/log"
+    couponpb "emshop/api/coupon/v1"
+    "emshop/internal/app/coupon/srv/domain/dto"
+    v1 "emshop/internal/app/coupon/srv/service/v1"
+    "emshop/internal/app/pkg/code"
+    "emshop/pkg/errors"
+    "emshop/pkg/log"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
+    "google.golang.org/grpc/codes"
+    "google.golang.org/grpc/status"
+    "google.golang.org/protobuf/types/known/emptypb"
 )
 
 type couponServer struct {
@@ -23,9 +23,57 @@ type couponServer struct {
 
 // NewCouponServer 创建优惠券gRPC服务器
 func NewCouponServer(srv *v1.Service) couponpb.CouponServer {
-	return &couponServer{
-		srv: srv,
-	}
+    return &couponServer{
+        srv: srv,
+    }
+}
+
+// ===== 管理（Start/Stop/Config） =====
+func (cs *couponServer) StartFlashSaleActivity(ctx context.Context, req *couponpb.StartFlashSaleRequest) (*emptypb.Empty, error) {
+    if req == nil || req.Id <= 0 {
+        return nil, status.Error(codes.InvalidArgument, "invalid id")
+    }
+    if cs.srv == nil || cs.srv.FlashSaleCore == nil {
+        return nil, status.Error(codes.FailedPrecondition, "service not ready")
+    }
+    if err := cs.srv.FlashSaleCore.StartFlashSaleActivity(ctx, &dto.StartFlashSaleDTO{ActivityID: req.Id}); err != nil {
+        return nil, status.Error(codes.Internal, err.Error())
+    }
+    return &emptypb.Empty{}, nil
+}
+
+func (cs *couponServer) StopFlashSaleActivity(ctx context.Context, req *couponpb.StopFlashSaleRequest) (*emptypb.Empty, error) {
+    if req == nil || req.Id <= 0 {
+        return nil, status.Error(codes.InvalidArgument, "invalid id")
+    }
+    if cs.srv == nil || cs.srv.FlashSaleCore == nil {
+        return nil, status.Error(codes.FailedPrecondition, "service not ready")
+    }
+    if err := cs.srv.FlashSaleCore.StopFlashSaleActivity(ctx, &dto.StopFlashSaleDTO{ActivityID: req.Id, CleanupData: req.Cleanup}); err != nil {
+        return nil, status.Error(codes.Internal, err.Error())
+    }
+    return &emptypb.Empty{}, nil
+}
+
+func (cs *couponServer) GetManageConfig(ctx context.Context, req *couponpb.GetManageConfigRequest) (*couponpb.GetManageConfigResponse, error) {
+    if req == nil || req.Key == "" {
+        return nil, status.Error(codes.InvalidArgument, "empty key")
+    }
+    val, src, err := cs.srv.GetManageConfig(ctx, req.Key)
+    if err != nil {
+        return nil, status.Error(codes.Internal, err.Error())
+    }
+    return &couponpb.GetManageConfigResponse{Key: req.Key, Value: val, Source: src}, nil
+}
+
+func (cs *couponServer) SetManageConfig(ctx context.Context, req *couponpb.SetManageConfigRequest) (*emptypb.Empty, error) {
+    if req == nil || req.Key == "" {
+        return nil, status.Error(codes.InvalidArgument, "empty key")
+    }
+    if err := cs.srv.SetManageConfig(ctx, req.Key, req.Value, req.Description); err != nil {
+        return nil, status.Error(codes.Internal, err.Error())
+    }
+    return &emptypb.Empty{}, nil
 }
 
 // CreateCouponTemplate 创建优惠券模板

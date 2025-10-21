@@ -1,30 +1,36 @@
 package redis
 
-// FlashSaleLuaScript 优惠券秒杀原子操作Lua脚本
-// 确保库存扣减和用户记录的原子性，防止超卖
+// FlashSaleLuaScript 优惠券秒杀原子操作Lua脚本（含请求幂等与可选人均限购覆盖）
+// 确保库存扣减和用户记录的原子性；支持通过 ARGV[7] 覆盖活动的人均限购（<=0 表示不限制）
 const FlashSaleLuaScript = `
 -- 优惠券秒杀原子操作脚本
 -- KEYS[1]: 库存key - coupon:stock:{coupon_id}
 -- KEYS[2]: 用户key - coupon:user:{activity_id}:{user_id}  
 -- KEYS[3]: 日志key - coupon:log:{activity_id}
 -- KEYS[4]: 活动信息key - coupon:activity:{activity_id}
+-- KEYS[5]: 预留幂等key - coupon:reserve:{activity_id}:{user_id}:{request_id}
 
 -- ARGV[1]: 用户ID
 -- ARGV[2]: 活动ID
 -- ARGV[3]: 扣减数量 (通常为1)
 -- ARGV[4]: TTL秒数
 -- ARGV[5]: 当前时间戳
+-- ARGV[6]: 请求ID
+-- ARGV[7]: 人均限购覆盖值(>0生效，<=0 表示不限制)
 
 local stockKey = KEYS[1]
 local userKey = KEYS[2] 
 local logKey = KEYS[3]
 local activityKey = KEYS[4]
+local reserveKey = KEYS[5]
 
 local userId = ARGV[1]
 local activityId = ARGV[2]
 local decreNum = tonumber(ARGV[3])
 local ttl = tonumber(ARGV[4])
 local currentTime = tonumber(ARGV[5])
+local requestId = ARGV[6]
+local perUserLimitOverride = tonumber(ARGV[7]) or -1
 
 -- 1. 检查活动是否存在和有效
 local activityInfo = redis.call('HMGET', activityKey, 'status', 'start_time', 'end_time', 'per_user_limit')
@@ -47,13 +53,28 @@ if currentTime < startTime or currentTime > endTime then
     return {-3, 0, "不在活动时间内"}
 end
 
--- 2. 检查用户是否已参与（防重复抢购）
-local userParticipated = redis.call('GET', userKey)
-if userParticipated then
-    local participatedCount = tonumber(userParticipated)
-    if participatedCount >= perUserLimit then
-        return {-2, 0, "用户已达到参与上限"}
+-- 覆盖 per_user_limit（以DB/调用侧为准），<=0 表示不限制
+if perUserLimitOverride and perUserLimitOverride > 0 then
+    perUserLimit = perUserLimitOverride
+elseif perUserLimitOverride and perUserLimitOverride <= 0 then
+    perUserLimit = 0
+end
+
+-- 2. 检查用户是否已参与（防重复抢购）；perUserLimit<=0 表示无限制
+if perUserLimit > 0 then
+    local userParticipated = redis.call('GET', userKey)
+    if userParticipated then
+        local participatedCount = tonumber(userParticipated)
+        if participatedCount >= perUserLimit then
+            return {-2, 0, "用户已达到参与上限"}
+        end
     end
+end
+
+-- 2.1 幂等检查：若相同请求已预留，直接返回成功（不重复扣减）
+if redis.call('EXISTS', reserveKey) == 1 then
+    local currentStock = tonumber(redis.call('GET', stockKey) or '0')
+    return {1, currentStock, "重复请求"}
 end
 
 -- 3. 检查库存
@@ -73,12 +94,18 @@ local remainStock = stock - decreNum
 -- 扣减库存
 redis.call('SET', stockKey, remainStock)
 
--- 记录用户参与次数（累加）
-local newParticipatedCount = (tonumber(userParticipated) or 0) + decreNum
-redis.call('SETEX', userKey, ttl, newParticipatedCount)
+-- 记录用户参与次数（仅当有限购时）
+if perUserLimit > 0 then
+    local current = redis.call('GET', userKey)
+    local newParticipatedCount = (tonumber(current) or 0) + decreNum
+    redis.call('SETEX', userKey, ttl, newParticipatedCount)
+end
+
+-- 设置预留幂等key
+redis.call('SETEX', reserveKey, ttl, 1)
 
 -- 5. 记录抢购成功日志
-local logData = string.format("%s:%s:%d:%d", userId, activityId, decreNum, currentTime)
+local logData = string.format("%s:%s:%d:%d:%s", userId, activityId, decreNum, currentTime, requestId)
 redis.call('LPUSH', logKey, logData)
 redis.call('EXPIRE', logKey, ttl)
 
@@ -160,7 +187,7 @@ return {1, currentCount + 1, "检查通过"}
 `
 
 // StockRollbackLuaScript 库存回滚脚本
-// 用于异步处理失败时回滚库存
+// 用于异步处理失败时回滚库存：减少用户计数，不整表删除
 const StockRollbackLuaScript = `
 -- 库存回滚脚本
 -- KEYS[1]: 库存key
@@ -189,7 +216,18 @@ else
 end
 
 -- 删除用户记录
-redis.call('DEL', userKey)
+local cnt = tonumber(userRecord) - rollbackNum
+if cnt > 0 then
+    -- 保持原 TTL 不变（简化处理）
+    local ttl = redis.call('TTL', userKey)
+    if ttl and ttl > 0 then
+        redis.call('SETEX', userKey, ttl, cnt)
+    else
+        redis.call('SET', userKey, cnt)
+    end
+else
+    redis.call('DEL', userKey)
+end
 
 return {1, rollbackNum, "库存回滚成功"}
 `

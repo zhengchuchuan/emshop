@@ -36,6 +36,7 @@ type FlashSaleActivityDO struct {
 	SoldCount        int32           `json:"sold_count" gorm:"column:sold_count;type:int;not null;default:0;comment:已售数量"`
 	PerUserLimit     int32           `json:"per_user_limit" gorm:"column:per_user_limit;type:int;not null;default:1;comment:每用户限抢数量"`
 	Status           FlashSaleStatus `json:"status" gorm:"column:status;type:tinyint;not null;default:1;index:idx_status;comment:状态"`
+	AsyncEnabled     bool            `json:"async_enabled" gorm:"column:async_enabled;type:tinyint(1);not null;default:1;comment:是否启用异步链路(1异步,0同步)"`
 	SortOrder        int32           `json:"sort_order" gorm:"column:sort_order;type:int;default:0;index:idx_sort_order;comment:排序权重"`
 }
 

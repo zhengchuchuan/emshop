@@ -27,6 +27,13 @@ type CouponSrv interface {
     CreateFlashSaleActivity(ctx context.Context, req *cpbv1.CreateFlashSaleActivityRequest) (*cpbv1.FlashSaleActivityResponse, error)
     GetFlashSaleActivity(ctx context.Context, id int64) (*cpbv1.FlashSaleActivityResponse, error)
     ListFlashSaleActivities(ctx context.Context, req *cpbv1.ListFlashSaleActivitiesRequest) (*cpbv1.ListFlashSaleActivitiesResponse, error)
+    GetFlashSaleStock(ctx context.Context, id int64) (*cpbv1.FlashSaleStockResponse, error)
+
+    // 管理：配置与活动预热
+    GetManageConfig(ctx context.Context, key string) (map[string]interface{}, error)
+    SetManageConfig(ctx context.Context, key, value, desc string) (map[string]interface{}, error)
+    StartFlashSale(ctx context.Context, activityID int64) (map[string]interface{}, error)
+    StopFlashSale(ctx context.Context, activityID int64) (map[string]interface{}, error)
 }
 
 type couponService struct {
@@ -107,4 +114,25 @@ func (s *couponService) GetFlashSaleActivity(ctx context.Context, id int64) (*cp
 
 func (s *couponService) ListFlashSaleActivities(ctx context.Context, req *cpbv1.ListFlashSaleActivitiesRequest) (*cpbv1.ListFlashSaleActivitiesResponse, error) {
     return s.data.Coupon().ListFlashSaleActivities(ctx, req)
+}
+
+func (s *couponService) GetFlashSaleStock(ctx context.Context, id int64) (*cpbv1.FlashSaleStockResponse, error) {
+    return s.data.Coupon().GetFlashSaleStock(ctx, &cpbv1.GetFlashSaleStockRequest{FlashSaleId: id})
+}
+
+// ===== Manage (admin) =====
+func (s *couponService) GetManageConfig(ctx context.Context, key string) (map[string]interface{}, error) {
+    return s.data.Coupon().GetManageConfig(ctx, key)
+}
+
+func (s *couponService) SetManageConfig(ctx context.Context, key, value, desc string) (map[string]interface{}, error) {
+    return s.data.Coupon().SetManageConfig(ctx, key, value, desc)
+}
+
+func (s *couponService) StartFlashSale(ctx context.Context, activityID int64) (map[string]interface{}, error) {
+    return s.data.Coupon().StartFlashSale(ctx, activityID)
+}
+
+func (s *couponService) StopFlashSale(ctx context.Context, activityID int64) (map[string]interface{}, error) {
+    return s.data.Coupon().StopFlashSale(ctx, activityID)
 }

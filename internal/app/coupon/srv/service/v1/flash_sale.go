@@ -303,6 +303,7 @@ func (fss *flashSaleService) ParticipateFlashSale(ctx context.Context, req *dto.
 		CouponTemplateID: activityDO.CouponTemplateID,
 		UserID:           req.UserID,
 		CouponCode:       generateCouponCode(),
+		RequestID:        generateSyncRequestID(req.UserID, req.FlashSaleID),
 		Status:           do.UserCouponStatusUnused,
 		ReceivedAt:       currentTime,
 		ExpiredAt:        expiredAt,
@@ -512,6 +513,11 @@ func stringPtr(s string) *string {
 // generateCouponCode 生成优惠券码 (简化版)
 func generateCouponCode() string {
     return fmt.Sprintf("CPN%d", time.Now().UnixNano()%100000000)
+}
+
+// generateSyncRequestID 生成同步路径下的请求幂等ID，避免DB唯一键冲突
+func generateSyncRequestID(userID, flashSaleID int64) string {
+    return fmt.Sprintf("sync_%d_%d_%d", flashSaleID, userID, time.Now().UnixNano())
 }
 
 // isDuplicateEntryError 判断是否为 MySQL 唯一键冲突错误(1062)

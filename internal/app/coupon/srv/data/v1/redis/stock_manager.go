@@ -23,12 +23,14 @@ type StockManager struct {
 
 // FlashSaleRequest 秒杀请求
 type FlashSaleRequest struct {
-	ActivityID   int64  `json:"activity_id"`
-	CouponID     int64  `json:"coupon_id"`
-	UserID       int64  `json:"user_id"`
-	RequestCount int32  `json:"request_count"` // 请求数量，通常为1
-	ClientIP     string `json:"client_ip"`
-	UserAgent    string `json:"user_agent"`
+    ActivityID   int64  `json:"activity_id"`
+    CouponID     int64  `json:"coupon_id"`
+    UserID       int64  `json:"user_id"`
+    RequestCount int32  `json:"request_count"` // 请求数量，通常为1
+    ClientIP     string `json:"client_ip"`
+    UserAgent    string `json:"user_agent"`
+    RequestID    string `json:"request_id"`
+    PerUserLimitOverride int32 `json:"per_user_limit_override"`
 }
 
 // FlashSaleResult 秒杀结果
@@ -71,22 +73,25 @@ func (sm *StockManager) FlashSale(ctx context.Context, req *FlashSaleRequest) (*
 		req.ActivityID, req.UserID, req.CouponID)
 
 	// 构建Redis keys
-	keys := []string{
-		fmt.Sprintf("coupon:stock:%d", req.CouponID),           // 库存key
-		fmt.Sprintf("coupon:user:%d:%d", req.ActivityID, req.UserID), // 用户参与记录key
-		fmt.Sprintf("coupon:log:%d", req.ActivityID),          // 日志key
-		fmt.Sprintf("coupon:activity:%d", req.ActivityID),     // 活动信息key
-	}
+    keys := []string{
+        fmt.Sprintf("coupon:stock:%d", req.CouponID),           // 库存key
+        fmt.Sprintf("coupon:user:%d:%d", req.ActivityID, req.UserID), // 用户参与记录key
+        fmt.Sprintf("coupon:log:%d", req.ActivityID),          // 日志key
+        fmt.Sprintf("coupon:activity:%d", req.ActivityID),     // 活动信息key
+        fmt.Sprintf("coupon:reserve:%d:%d:%s", req.ActivityID, req.UserID, req.RequestID), // 预留幂等key
+    }
 
 	// 构建参数
 	currentTime := time.Now().Unix()
-	args := []interface{}{
-		req.UserID,
-		req.ActivityID,
-		req.RequestCount,
-		1800, // 30分钟TTL
-		currentTime,
-	}
+    args := []interface{}{
+        req.UserID,
+        req.ActivityID,
+        req.RequestCount,
+        300, // 5分钟TTL 用于用户参与计数与请求幂等
+        currentTime,
+        req.RequestID,
+        req.PerUserLimitOverride,
+    }
 
 	// 执行Lua脚本
 	result, err := sm.flashSaleScript.Run(ctx, sm.redis, keys, args...).Result()

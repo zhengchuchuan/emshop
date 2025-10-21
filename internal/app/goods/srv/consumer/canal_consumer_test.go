@@ -41,12 +41,12 @@ func TestCanalConsumer_processMessage(t *testing.T) {
 	mockSyncManager := new(MockSyncManager)
 	
 	// 创建消费者配置
-	config := &CanalConsumerConfig{
-		NameServers:   []string{"localhost:9876"},
-		ConsumerGroup: "test-group",
-		Topic:         "test-topic",
-		MaxReconsume:  3,
-	}
+    config := &CanalConsumerConfig{
+        NameServers:   []string{"localhost:19876"},
+        ConsumerGroup: "test-group",
+        Topic:         "test-topic",
+        MaxReconsume:  3,
+    }
 	
 	// 创建消费者
 	consumer := NewCanalConsumer(config, mockSyncManager)
@@ -185,12 +185,12 @@ func TestCanalConsumer_processMessage(t *testing.T) {
 func TestCanalConsumer_handleGoodsChange(t *testing.T) {
 	mockSyncManager := new(MockSyncManager)
 	
-	config := &CanalConsumerConfig{
-		NameServers:   []string{"localhost:9876"},
-		ConsumerGroup: "test-group",
-		Topic:         "test-topic",
-		MaxReconsume:  3,
-	}
+    config := &CanalConsumerConfig{
+        NameServers:   []string{"localhost:19876"},
+        ConsumerGroup: "test-group",
+        Topic:         "test-topic",
+        MaxReconsume:  3,
+    }
 	
 	consumer := NewCanalConsumer(config, mockSyncManager)
 

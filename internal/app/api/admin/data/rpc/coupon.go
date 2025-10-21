@@ -79,6 +79,16 @@ func (c *coupon) GetCouponTemplate(ctx context.Context, req *cpbv1.GetCouponTemp
     return resp, nil
 }
 
+func (c *coupon) GetFlashSaleStock(ctx context.Context, req *cpbv1.GetFlashSaleStockRequest) (*cpbv1.FlashSaleStockResponse, error) {
+    log.Infof("[admin] GetFlashSaleStock: id=%d", req.FlashSaleId)
+    resp, err := c.cc.GetFlashSaleStock(ctx, req)
+    if err != nil {
+        log.Errorf("[admin] GetFlashSaleStock failed: %v", err)
+        return nil, err
+    }
+    return resp, nil
+}
+
 func (c *coupon) UpdateCouponTemplate(ctx context.Context, req *cpbv1.UpdateCouponTemplateRequest) (*cpbv1.CouponTemplateResponse, error) {
     log.Infof("[admin] UpdateCouponTemplate: id=%d", req.Id)
     resp, err := c.cc.UpdateCouponTemplate(ctx, req)

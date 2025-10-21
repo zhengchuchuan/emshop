@@ -5,7 +5,7 @@ services:
     image: apache/rocketmq:${ROCKETMQ_VERSION}
     container_name: rmqnamesrv
     ports:
-      - 9876:9876
+      - 19876:9876
     volumes:
       - ./data/namesrv/logs:/home/rocketmq/logs
     networks:

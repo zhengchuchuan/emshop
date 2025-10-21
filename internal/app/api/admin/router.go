@@ -14,6 +14,7 @@ import (
     "emshop/internal/app/api/admin/data/rpc"
 	"emshop/internal/app/api/admin/service"
 	"emshop/internal/app/pkg/middleware"
+    
 )
 
 func initRouter(g *restserver.Server, cfg *config.Config) {
@@ -173,6 +174,13 @@ func initRouter(g *restserver.Server, cfg *config.Config) {
             couponsGroup.POST("/flash-sale", fsAdmin.Create)                    // 创建秒杀活动
             couponsGroup.GET("/flash-sale", fsAdmin.List)                       // 秒杀活动列表
             couponsGroup.GET("/flash-sale/:id", fsAdmin.Get)                    // 秒杀活动详情
+
+            // 管理接口（合并到 FlashSaleAdminController，保持统一调用链）
+            couponsGroup.GET("/manage/config/:key", fsAdmin.GetConfig)		// 获取配置
+            couponsGroup.POST("/manage/config", fsAdmin.SetConfig)			// 设置配置
+            couponsGroup.POST("/flash-sale/:id/start", fsAdmin.Start)		// 开启秒杀预热
+            couponsGroup.POST("/flash-sale/:id/stop", fsAdmin.Stop)			// 停止秒杀活动
+            couponsGroup.GET("/flash-sale/:id/status", fsAdmin.Status)		// 查询秒杀状态
         }
     }
 }

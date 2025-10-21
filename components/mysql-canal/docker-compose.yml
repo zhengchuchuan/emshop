@@ -6,9 +6,9 @@ services:
     container_name: emshop-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: 123456
       MYSQL_USER: user
-      MYSQL_PASSWORD: root
+      MYSQL_PASSWORD: 123456
       TZ: Asia/Shanghai
     ports:
       - "3306:3306"
@@ -19,7 +19,7 @@ services:
     networks:
       - emshop-net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -46,4 +46,3 @@ volumes:
   emshop-mysql-data:
     name: emshop-mysql-data
     external: true
-

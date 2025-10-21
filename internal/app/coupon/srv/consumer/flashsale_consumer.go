@@ -204,9 +204,13 @@ func (fsc *FlashSaleConsumer) ConsumeFlashSaleSuccessMessage(ctx context.Context
 
 // handleFlashSaleSuccess 处理秒杀成功事件
 func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event *FlashSaleSuccessEvent, msgID string) error {
-	// 1. 检查幂等性（避免重复处理）
-	idempotentKey := fmt.Sprintf("flashsale:processed:%s", msgID)
-	exists, err := fsc.redisClient.Exists(ctx, idempotentKey).Result()
+    // 1. 检查幂等性（避免重复处理）优先使用 request_id，其次 msgID
+    dedupeKey := msgID
+    if event.RequestID != "" {
+        dedupeKey = "req:" + event.RequestID
+    }
+    idempotentKey := fmt.Sprintf("flashsale:processed:%s", dedupeKey)
+    exists, err := fsc.redisClient.Exists(ctx, idempotentKey).Result()
 	if err != nil {
 		log.Errorf("检查幂等性失败: %v", err)
 	} else if exists > 0 {
@@ -233,14 +237,15 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
 	}
 
 	// 4. 创建用户优惠券记录
-	userCouponDO := &do.UserCouponDO{
-		CouponTemplateID: event.CouponID,
-		UserID:           event.UserID,
-		CouponCode:       event.CouponSn,
-		Status:           do.UserCouponStatusUnused,
-		ReceivedAt:       time.Now(),
-		ExpiredAt:        fsc.calculateExpiryTime(templateDO),
-	}
+    userCouponDO := &do.UserCouponDO{
+        CouponTemplateID: event.CouponID,
+        UserID:           event.UserID,
+        CouponCode:       event.CouponSn,
+        RequestID:        event.RequestID,
+        Status:           do.UserCouponStatusUnused,
+        ReceivedAt:       time.Now(),
+        ExpiredAt:        fsc.calculateExpiryTime(templateDO),
+    }
 
 	// 5. 开始数据库事务
 	tx := fsc.data.DB().Begin()
@@ -252,17 +257,34 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
 	}()
 
 	// 6. 创建用户优惠券
-	if err := fsc.data.UserCoupons().Create(ctx, tx, userCouponDO); err != nil {
-		tx.Rollback()
-		// 如果是因为重复创建导致的错误，可能是并发问题，进行库存回滚
-		if fsc.isDuplicateError(err) {
-			log.Warnf("用户优惠券可能已存在，进行库存回滚: userID=%d, couponSn=%s", 
-				event.UserID, event.CouponSn)
-			fsc.rollbackStockIfNeeded(ctx, event)
-			return nil
-		}
-		return fmt.Errorf("创建用户优惠券失败: %v", err)
-	}
+    if err := fsc.data.UserCoupons().Create(ctx, tx, userCouponDO); err != nil {
+        tx.Rollback()
+        // 如果是重复（幂等）错误，则查询已有记录并视为成功
+        if fsc.isDuplicateError(err) {
+            var existed *do.UserCouponDO
+            var getErr error
+            if event.RequestID != "" {
+                existed, getErr = fsc.data.UserCoupons().GetByRequestID(ctx, fsc.data.DB(), event.RequestID)
+            }
+            if existed == nil && getErr == nil {
+                existed, getErr = fsc.data.UserCoupons().GetByCouponCode(ctx, fsc.data.DB(), event.CouponSn)
+            }
+            if getErr != nil {
+                return fmt.Errorf("查询已存在的用户优惠券失败: %v", getErr)
+            }
+            if existed != nil {
+                log.Warnf("检测到幂等重复创建，跳过: userID=%d, requestID=%s", event.UserID, event.RequestID)
+                // 标记幂等成功
+                fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour)
+                return nil
+            }
+            // 若查询不到，则回滚库存并返回错误
+            log.Warnf("幂等冲突但查询不到记录，执行回滚: userID=%d, requestID=%s", event.UserID, event.RequestID)
+            fsc.rollbackStockIfNeeded(ctx, event)
+            return nil
+        }
+        return fmt.Errorf("创建用户优惠券失败: %v", err)
+    }
 
 	// 7. 更新优惠券模板使用统计
 	if err := fsc.updateCouponTemplateStats(ctx, tx, event.CouponID); err != nil {
@@ -278,14 +300,14 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
 		// 统计更新失败不影响主流程，记录日志即可
 	}
 
-	// 9. 提交事务
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("提交事务失败: %v", err)
-	}
+    // 9. 提交事务（GORM v2：Commit().Error）
+    if err := tx.Commit().Error; err != nil {
+        _ = tx.Rollback()
+        return fmt.Errorf("提交事务失败: %v", err)
+    }
 
-	// 10. 设置幂等性标记（7天过期）
-	fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour)
+    // 10. 设置幂等性标记（7天过期）
+    fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour)
 
 	log.Infof("秒杀成功事件处理完成: userID=%d, userCouponID=%d, couponSn=%s", 
 		event.UserID, userCouponDO.ID, event.CouponSn)

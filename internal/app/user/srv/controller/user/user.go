@@ -24,5 +24,5 @@ type userServer struct {
 func NewUserServer(srv srv1.UserSrv) v1.UserServer {
 	return &userServer{srv: srv}
 }
-
+// 接口完整性校验
 var _ v1.UserServer = &userServer{}

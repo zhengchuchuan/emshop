@@ -1,9 +1,12 @@
 package v1
 
 import (
-	"context"
-	"fmt"
-	"time"
+    "context"
+    "fmt"
+    "strconv"
+    "strings"
+    "time"
+    "sync"
 
 	"emshop/internal/app/coupon/srv/consumer"
 	"emshop/internal/app/coupon/srv/data/v1/interfaces"
@@ -32,22 +35,32 @@ type FlashSaleSrvCore interface {
 
 // flashSaleSrvCore 秒杀服务核心实现
 type flashSaleSrvCore struct {
-	data          interfaces.DataFactory
-	redisClient   *redisClient.Client
-	cacheManager  cache.CacheManager
-	stockManager  *redis.StockManager
-	eventProducer consumer.FlashSaleEventProducer
+    data          interfaces.DataFactory
+    redisClient   *redisClient.Client
+    cacheManager  cache.CacheManager
+    stockManager  *redis.StockManager
+    eventProducer consumer.FlashSaleEventProducer
+    skipUserLimit bool
+    // db-config cache
+    lastSkipCheck time.Time
+    cachedSkip    bool
+
+    // per_user_limit 本地3秒缓存，减少DB读取
+    perLimitCache map[int64]int32
+    perLimitLast  map[int64]time.Time
+    perLimitMu    sync.RWMutex
 }
 
 // NewFlashSaleSrvCore 创建秒杀服务核心
-func NewFlashSaleSrvCore(data interfaces.DataFactory, redisClient *redisClient.Client, cacheManager cache.CacheManager, eventProducer consumer.FlashSaleEventProducer) FlashSaleSrvCore {
-	return &flashSaleSrvCore{
-		data:          data,
-		redisClient:   redisClient,
-		cacheManager:  cacheManager,
-		stockManager:  redis.NewStockManager(redisClient),
-		eventProducer: eventProducer,
-	}
+func NewFlashSaleSrvCore(data interfaces.DataFactory, redisClient *redisClient.Client, cacheManager cache.CacheManager, eventProducer consumer.FlashSaleEventProducer, skipUserLimit bool) FlashSaleSrvCore {
+    return &flashSaleSrvCore{
+        data:          data,
+        redisClient:   redisClient,
+        cacheManager:  cacheManager,
+        stockManager:  redis.NewStockManager(redisClient),
+        eventProducer: eventProducer,
+        skipUserLimit: skipUserLimit,
+    }
 }
 
 // StartFlashSaleActivity 启动秒杀活动
@@ -63,10 +76,10 @@ func (fss *flashSaleSrvCore) StartFlashSaleActivity(ctx context.Context, req *dt
 		return fmt.Errorf("活动不存在")
 	}
 
-	// 检查活动状态
-	if activityDO.Status != do.FlashSaleStatusPending {
-		return fmt.Errorf("活动状态不允许启动")
-	}
+    // 检查活动状态：允许 Pending 或已 Active 幂等启动；Finished 禁止
+    if activityDO.Status == do.FlashSaleStatusFinished {
+        return fmt.Errorf("活动状态不允许启动")
+    }
 
 	// 获取优惠券模板信息
 	templateDO, err := fss.data.CouponTemplates().Get(ctx, fss.data.DB(), activityDO.CouponTemplateID)
@@ -151,11 +164,15 @@ func (fss *flashSaleSrvCore) StopFlashSaleActivity(ctx context.Context, req *dto
 
 // FlashSaleCoupon 执行秒杀
 func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.FlashSaleRequestDTO) (*dto.FlashSaleResultDTO, error) {
-	log.Infof("执行秒杀请求: activityID=%d, userID=%d", req.ActivityID, req.UserID)
+    log.Infof("执行秒杀请求: activityID=%d, userID=%d", req.ActivityID, req.UserID)
 
-	if fss.eventProducer == nil {
-		return nil, fmt.Errorf("秒杀事件生产者未配置，无法执行异步落库")
-	}
+    if fss.eventProducer == nil {
+        return nil, fmt.Errorf("秒杀事件生产者未配置，无法执行异步落库")
+    }
+
+    // 统一生成并注入同一个 request_id，贯穿 Redis/消息/落库
+    rid := getRequestID(ctx)
+    ctx = context.WithValue(ctx, "request_id", rid)
 
 	// 获取活动信息（优先从Redis获取）
 	activityInfo, err := fss.stockManager.GetActivityStatus(ctx, req.ActivityID)
@@ -188,15 +205,43 @@ func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.Flash
 		}, nil
 	}
 
-	// 构建秒杀请求
-	flashSaleReq := &redis.FlashSaleRequest{
-		ActivityID:   req.ActivityID,
-		CouponID:     activityInfo.CouponID,
-		UserID:       req.UserID,
-		RequestCount: 1, // 每次只能秒杀1张
-		ClientIP:     req.ClientIP,
-		UserAgent:    req.UserAgent,
-	}
+    // 构建秒杀请求：读取DB per_user_limit（3s缓存，<=0 表示不限制）
+    perLimit := activityInfo.PerUserLimit
+    if fss.data != nil {
+        needRefresh := false
+        fss.perLimitMu.RLock()
+        if last, ok := fss.perLimitLast[req.ActivityID]; !ok || time.Since(last) >= 3*time.Second {
+            needRefresh = true
+        } else {
+            if v, ok2 := fss.perLimitCache[req.ActivityID]; ok2 {
+                perLimit = v
+            }
+        }
+        fss.perLimitMu.RUnlock()
+
+        if needRefresh {
+            if act, err := fss.data.FlashSales().Get(ctx, fss.data.DB(), req.ActivityID); err == nil && act != nil {
+                perLimit = act.PerUserLimit
+            }
+            fss.perLimitMu.Lock()
+            if fss.perLimitCache == nil { fss.perLimitCache = make(map[int64]int32) }
+            if fss.perLimitLast == nil { fss.perLimitLast = make(map[int64]time.Time) }
+            fss.perLimitCache[req.ActivityID] = perLimit
+            fss.perLimitLast[req.ActivityID] = time.Now()
+            fss.perLimitMu.Unlock()
+        }
+    }
+
+    flashSaleReq := &redis.FlashSaleRequest{
+        ActivityID:   req.ActivityID,
+        CouponID:     activityInfo.CouponID,
+        UserID:       req.UserID,
+        RequestCount: 1, // 每次只能秒杀1张
+        ClientIP:     req.ClientIP,
+        UserAgent:    req.UserAgent,
+        RequestID:    rid,
+        PerUserLimitOverride: perLimit,
+    }
 
 	// 执行Redis秒杀
 	result, err := fss.stockManager.FlashSale(ctx, flashSaleReq)
@@ -222,16 +267,16 @@ func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.Flash
 	// 如果秒杀成功，发送异步消息进行后续处理
 	if result.Success {
 		// 发送秒杀成功事件到RocketMQ
-		successEvent := &consumer.FlashSaleSuccessEvent{
-			ActivityID: req.ActivityID,
-			CouponID:   activityInfo.CouponID,
-			UserID:     req.UserID,
-			CouponSn:   result.CouponSn,
-			ClientIP:   req.ClientIP,
-			UserAgent:  req.UserAgent,
-			Timestamp:  time.Now().Unix(),
-			RequestID:  getRequestID(ctx),
-		}
+        successEvent := &consumer.FlashSaleSuccessEvent{
+            ActivityID: req.ActivityID,
+            CouponID:   activityInfo.CouponID,
+            UserID:     req.UserID,
+            CouponSn:   result.CouponSn,
+            ClientIP:   req.ClientIP,
+            UserAgent:  req.UserAgent,
+            Timestamp:  time.Now().Unix(),
+            RequestID:  rid,
+        }
 		
 		// 异步发送，避免影响响应时间
 		go func() {
@@ -287,6 +332,44 @@ func getRequestID(ctx context.Context) string {
 		}
 	}
 	return fmt.Sprintf("req_%d", time.Now().UnixNano())
+}
+
+// getSkipUserLimit 优先读取数据库配置（coupon_configs.flashsale_skip_user_limit_for_test），
+// 否则回退到YAML开关；结果缓存3s以降低DB压力。
+func (fss *flashSaleSrvCore) getSkipUserLimit(ctx context.Context) bool {
+    if time.Since(fss.lastSkipCheck) < 3*time.Second {
+        return fss.cachedSkip
+    }
+    // 1) 先查Redis一级缓存
+    const redisKey = "coupon:config:flashsale_skip_user_limit_for_test"
+    if fss.redisClient != nil {
+        if val, err := fss.redisClient.Get(ctx, redisKey).Result(); err == nil && val != "" {
+            v := strings.TrimSpace(strings.ToLower(val))
+            skip := (v == "1" || v == "true" || v == "yes")
+            fss.cachedSkip = skip
+            fss.lastSkipCheck = time.Now()
+            return skip
+        }
+    }
+    // 2) 查DB，回写Redis（60s）
+    skip := fss.skipUserLimit // YAML默认
+    if fss.data != nil {
+        if cfg, err := fss.data.CouponConfigs().Get(ctx, fss.data.DB(), "flashsale_skip_user_limit_for_test"); err == nil && cfg != nil {
+            v := strings.TrimSpace(strings.ToLower(cfg.ConfigValue))
+            if v == "1" || v == "true" || v == "yes" {
+                skip = true
+            }
+            if v == "0" || v == "false" || v == "no" {
+                skip = false
+            }
+            if fss.redisClient != nil {
+                _ = fss.redisClient.SetEX(ctx, redisKey, strconv.FormatBool(skip), 60*time.Second).Err()
+            }
+        }
+    }
+    fss.cachedSkip = skip
+    fss.lastSkipCheck = time.Now()
+    return skip
 }
 
 // GetFlashSaleStatus 获取秒杀状态

@@ -39,7 +39,7 @@ telemetry:
 mysql:
   host: "localhost" # MySQL 机器 ip，与Canal测试环境保持一致
   port: 3306 # 端口号统一为数值类型
-  password: "root" # MySQL 用户密码
+  password: "123456" # MySQL 用户密码
   username: "root" # MySQL 用户名(建议授权最小权限集)
   database: "emshop_goods_srv" # 商品服务数据库名
   max_idle_connections: 10 # MySQL 最大空闲连接数，Canal配置优化值

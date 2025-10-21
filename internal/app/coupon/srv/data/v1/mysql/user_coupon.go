@@ -93,6 +93,22 @@ func (ucd *userCouponData) GetByCouponCode(ctx context.Context, db *gorm.DB, cou
 	return &userCoupon, nil
 }
 
+// GetByRequestID 根据请求ID获取用户优惠券
+func (ucd *userCouponData) GetByRequestID(ctx context.Context, db *gorm.DB, requestID string) (*do.UserCouponDO, error) {
+    if db == nil {
+        db = ucd.db
+    }
+    var userCoupon do.UserCouponDO
+    if err := db.WithContext(ctx).Where("request_id = ?", requestID).First(&userCoupon).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            return nil, nil
+        }
+        log.Errorf("根据请求ID获取用户优惠券失败: %v", err)
+        return nil, err
+    }
+    return &userCoupon, nil
+}
+
 // GetUserCoupons 获取用户优惠券列表
 func (ucd *userCouponData) GetUserCoupons(ctx context.Context, db *gorm.DB, userID int64, status do.UserCouponStatus, meta v1.ListMeta) (*do.UserCouponDOList, error) {
 	if db == nil {

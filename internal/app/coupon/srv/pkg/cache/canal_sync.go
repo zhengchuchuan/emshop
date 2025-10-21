@@ -167,6 +167,10 @@ func (csm *CanalSyncManager) handleDataChange(canalMsg CanalMessage) error {
 	case "flash_sale_activities":
 		keys := csm.generateFlashSaleKeys(canalMsg)
 		invalidateKeys = append(invalidateKeys, keys...)
+
+	case "coupon_configs":
+		keys := csm.generateConfigKeys(canalMsg)
+		invalidateKeys = append(invalidateKeys, keys...)
 		
 	default:
 		log.Warnf("未处理的表变更: %s", canalMsg.Table)
@@ -270,6 +274,26 @@ func (csm *CanalSyncManager) generateFlashSaleKeys(canalMsg CanalMessage) []stri
 	return keys
 }
 
+// generateConfigKeys 生成配置项缓存键
+func (csm *CanalSyncManager) generateConfigKeys(canalMsg CanalMessage) []string {
+    keys := make([]string, 0)
+    for _, row := range canalMsg.Data {
+        if k, ok := row["config_key"]; ok {
+            key := fmt.Sprintf("coupon:config:%v", k)
+            keys = append(keys, key)
+        }
+    }
+    if canalMsg.Type == "UPDATE" {
+        for _, row := range canalMsg.Old {
+            if k, ok := row["config_key"]; ok {
+                key := fmt.Sprintf("coupon:config:%v", k)
+                keys = append(keys, key)
+            }
+        }
+    }
+    return keys
+}
+
 // getDDLCachePatterns 获取DDL操作需要清理的缓存模式
 func (csm *CanalSyncManager) getDDLCachePatterns(tableName string) []string {
 	patterns := make([]string, 0)
@@ -281,6 +305,8 @@ func (csm *CanalSyncManager) getDDLCachePatterns(tableName string) []string {
 		patterns = append(patterns, "coupon:user:*")
 	case "flash_sale_activities":
 		patterns = append(patterns, "flashsale:*")
+	case "coupon_configs":
+		patterns = append(patterns, "coupon:config:*")
 	}
 	
 	return patterns

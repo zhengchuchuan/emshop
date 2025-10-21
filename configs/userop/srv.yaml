@@ -33,7 +33,7 @@ telemetry:
 mysql:
   host: "127.0.0.1" # MySQL 机器 ip，默认 127.0.0.1
   port: "3306"
-  password: "root" # MySQL 用户密码
+  password: "123456" # MySQL 用户密码
   username: "root" # MySQL 用户名(建议授权最小权限集)
   database: "emshop_userop_srv" # iam 系统所用的数据库名
   max-idle-connections: 100 # MySQL 最大空闲连接数，默认 100

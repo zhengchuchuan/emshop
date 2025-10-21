@@ -37,6 +37,10 @@ const (
 	Coupon_ParticipateFlashSale_FullMethodName          = "/Coupon/ParticipateFlashSale"
 	Coupon_GetFlashSaleStock_FullMethodName             = "/Coupon/GetFlashSaleStock"
 	Coupon_GetUserFlashSaleRecord_FullMethodName        = "/Coupon/GetUserFlashSaleRecord"
+	Coupon_StartFlashSaleActivity_FullMethodName        = "/Coupon/StartFlashSaleActivity"
+	Coupon_StopFlashSaleActivity_FullMethodName         = "/Coupon/StopFlashSaleActivity"
+	Coupon_GetManageConfig_FullMethodName               = "/Coupon/GetManageConfig"
+	Coupon_SetManageConfig_FullMethodName               = "/Coupon/SetManageConfig"
 	Coupon_SubmitOrderWithCoupons_FullMethodName        = "/Coupon/SubmitOrderWithCoupons"
 	Coupon_ProcessFlashSaleWithInventory_FullMethodName = "/Coupon/ProcessFlashSaleWithInventory"
 	Coupon_GetTransactionStatus_FullMethodName          = "/Coupon/GetTransactionStatus"
@@ -71,6 +75,11 @@ type CouponClient interface {
 	ParticipateFlashSale(ctx context.Context, in *ParticipateFlashSaleRequest, opts ...grpc.CallOption) (*ParticipateFlashSaleResponse, error)
 	GetFlashSaleStock(ctx context.Context, in *GetFlashSaleStockRequest, opts ...grpc.CallOption) (*FlashSaleStockResponse, error)
 	GetUserFlashSaleRecord(ctx context.Context, in *GetUserFlashSaleRecordRequest, opts ...grpc.CallOption) (*ListFlashSaleRecordsResponse, error)
+	// 管理（Admin专用）
+	StartFlashSaleActivity(ctx context.Context, in *StartFlashSaleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	StopFlashSaleActivity(ctx context.Context, in *StopFlashSaleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetManageConfig(ctx context.Context, in *GetManageConfigRequest, opts ...grpc.CallOption) (*GetManageConfigResponse, error)
+	SetManageConfig(ctx context.Context, in *SetManageConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// DTM分布式事务接口
 	SubmitOrderWithCoupons(ctx context.Context, in *SubmitOrderWithCouponsRequest, opts ...grpc.CallOption) (*SubmitOrderWithCouponsResponse, error)
 	ProcessFlashSaleWithInventory(ctx context.Context, in *ProcessFlashSaleWithInventoryRequest, opts ...grpc.CallOption) (*ProcessFlashSaleWithInventoryResponse, error)
@@ -259,6 +268,46 @@ func (c *couponClient) GetUserFlashSaleRecord(ctx context.Context, in *GetUserFl
 	return out, nil
 }
 
+func (c *couponClient) StartFlashSaleActivity(ctx context.Context, in *StartFlashSaleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Coupon_StartFlashSaleActivity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *couponClient) StopFlashSaleActivity(ctx context.Context, in *StopFlashSaleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Coupon_StopFlashSaleActivity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *couponClient) GetManageConfig(ctx context.Context, in *GetManageConfigRequest, opts ...grpc.CallOption) (*GetManageConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetManageConfigResponse)
+	err := c.cc.Invoke(ctx, Coupon_GetManageConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *couponClient) SetManageConfig(ctx context.Context, in *SetManageConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Coupon_SetManageConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *couponClient) SubmitOrderWithCoupons(ctx context.Context, in *SubmitOrderWithCouponsRequest, opts ...grpc.CallOption) (*SubmitOrderWithCouponsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SubmitOrderWithCouponsResponse)
@@ -345,6 +394,11 @@ type CouponServer interface {
 	ParticipateFlashSale(context.Context, *ParticipateFlashSaleRequest) (*ParticipateFlashSaleResponse, error)
 	GetFlashSaleStock(context.Context, *GetFlashSaleStockRequest) (*FlashSaleStockResponse, error)
 	GetUserFlashSaleRecord(context.Context, *GetUserFlashSaleRecordRequest) (*ListFlashSaleRecordsResponse, error)
+	// 管理（Admin专用）
+	StartFlashSaleActivity(context.Context, *StartFlashSaleRequest) (*emptypb.Empty, error)
+	StopFlashSaleActivity(context.Context, *StopFlashSaleRequest) (*emptypb.Empty, error)
+	GetManageConfig(context.Context, *GetManageConfigRequest) (*GetManageConfigResponse, error)
+	SetManageConfig(context.Context, *SetManageConfigRequest) (*emptypb.Empty, error)
 	// DTM分布式事务接口
 	SubmitOrderWithCoupons(context.Context, *SubmitOrderWithCouponsRequest) (*SubmitOrderWithCouponsResponse, error)
 	ProcessFlashSaleWithInventory(context.Context, *ProcessFlashSaleWithInventoryRequest) (*ProcessFlashSaleWithInventoryResponse, error)
@@ -413,6 +467,18 @@ func (UnimplementedCouponServer) GetFlashSaleStock(context.Context, *GetFlashSal
 }
 func (UnimplementedCouponServer) GetUserFlashSaleRecord(context.Context, *GetUserFlashSaleRecordRequest) (*ListFlashSaleRecordsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserFlashSaleRecord not implemented")
+}
+func (UnimplementedCouponServer) StartFlashSaleActivity(context.Context, *StartFlashSaleRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartFlashSaleActivity not implemented")
+}
+func (UnimplementedCouponServer) StopFlashSaleActivity(context.Context, *StopFlashSaleRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopFlashSaleActivity not implemented")
+}
+func (UnimplementedCouponServer) GetManageConfig(context.Context, *GetManageConfigRequest) (*GetManageConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetManageConfig not implemented")
+}
+func (UnimplementedCouponServer) SetManageConfig(context.Context, *SetManageConfigRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetManageConfig not implemented")
 }
 func (UnimplementedCouponServer) SubmitOrderWithCoupons(context.Context, *SubmitOrderWithCouponsRequest) (*SubmitOrderWithCouponsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitOrderWithCoupons not implemented")
@@ -759,6 +825,78 @@ func _Coupon_GetUserFlashSaleRecord_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Coupon_StartFlashSaleActivity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartFlashSaleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CouponServer).StartFlashSaleActivity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Coupon_StartFlashSaleActivity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CouponServer).StartFlashSaleActivity(ctx, req.(*StartFlashSaleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Coupon_StopFlashSaleActivity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopFlashSaleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CouponServer).StopFlashSaleActivity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Coupon_StopFlashSaleActivity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CouponServer).StopFlashSaleActivity(ctx, req.(*StopFlashSaleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Coupon_GetManageConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetManageConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CouponServer).GetManageConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Coupon_GetManageConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CouponServer).GetManageConfig(ctx, req.(*GetManageConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Coupon_SetManageConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetManageConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CouponServer).SetManageConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Coupon_SetManageConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CouponServer).SetManageConfig(ctx, req.(*SetManageConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Coupon_SubmitOrderWithCoupons_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SubmitOrderWithCouponsRequest)
 	if err := dec(in); err != nil {
@@ -941,6 +1079,22 @@ var Coupon_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserFlashSaleRecord",
 			Handler:    _Coupon_GetUserFlashSaleRecord_Handler,
+		},
+		{
+			MethodName: "StartFlashSaleActivity",
+			Handler:    _Coupon_StartFlashSaleActivity_Handler,
+		},
+		{
+			MethodName: "StopFlashSaleActivity",
+			Handler:    _Coupon_StopFlashSaleActivity_Handler,
+		},
+		{
+			MethodName: "GetManageConfig",
+			Handler:    _Coupon_GetManageConfig_Handler,
+		},
+		{
+			MethodName: "SetManageConfig",
+			Handler:    _Coupon_SetManageConfig_Handler,
 		},
 		{
 			MethodName: "SubmitOrderWithCoupons",

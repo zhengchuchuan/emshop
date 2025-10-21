@@ -168,17 +168,19 @@ func (ccc *CouponCanalConsumer) ConsumeCanalMessage(ctx context.Context, msgs ..
 
 // handleTableChange 根据表变更处理缓存
 func (ccc *CouponCanalConsumer) handleTableChange(msg *CanalMessage) error {
-	switch msg.Table {
-	case "coupon_templates":
-		return ccc.handleCouponTemplateChange(msg)
-	case "user_coupons":
-		return ccc.handleUserCouponChange(msg)
-	case "flash_sale_activities":
-		return ccc.handleFlashSaleChange(msg)
-	default:
-		log.Warnf("未处理的表变更: %s", msg.Table)
-		return nil
-	}
+    switch msg.Table {
+    case "coupon_templates":
+        return ccc.handleCouponTemplateChange(msg)
+    case "user_coupons":
+        return ccc.handleUserCouponChange(msg)
+    case "flash_sale_activities":
+        return ccc.handleFlashSaleChange(msg)
+    case "coupon_configs":
+        return ccc.handleCouponConfigChange(msg)
+    default:
+        log.Warnf("未处理的表变更: %s", msg.Table)
+        return nil
+    }
 }
 
 // handleCouponTemplateChange 处理优惠券模板变更
@@ -300,4 +302,18 @@ func (ccc *CouponCanalConsumer) handleFlashSaleChange(msg *CanalMessage) error {
 	}
 
 	return nil
+}
+
+// handleCouponConfigChange 处理配置变更（失效 Redis 一级缓存）
+func (ccc *CouponCanalConsumer) handleCouponConfigChange(msg *CanalMessage) error {
+    for _, data := range msg.Data {
+        key, ok := data["config_key"].(string)
+        if !ok || key == "" {
+            continue
+        }
+        // 失效对应的配置缓存
+        ccc.cacheManager.InvalidateCache(fmt.Sprintf("coupon:config:%s", key))
+        log.Infof("优惠券配置缓存失效: key=%s, type=%s", key, msg.Type)
+    }
+    return nil
 }

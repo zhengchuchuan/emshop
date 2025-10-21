@@ -59,15 +59,15 @@ func NewDiscovery(opts *options.RegistryOptions) registry.Discovery {
 }
 
 var (
-	dbFactory data.DataFactory
-	once      sync.Once
+    dbFactory data.DataFactory
+    once      sync.Once
 )
 
 // GetDataFactoryOr rpc的连接， 基于服务发现
 func GetDataFactoryOr(options *options.RegistryOptions) (data.DataFactory, error) {
-	if options == nil && dbFactory == nil {
-		return nil, fmt.Errorf("failed to get grpc store fatory")
-	}
+    if options == nil && dbFactory == nil {
+        return nil, fmt.Errorf("failed to get grpc store fatory")
+    }
 
 	//这里负责依赖的所有的rpc连接
     once.Do(func() {

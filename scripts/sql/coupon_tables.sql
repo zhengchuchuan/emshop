@@ -33,6 +33,7 @@ CREATE TABLE user_coupons (
     coupon_code VARCHAR(32) NOT NULL UNIQUE COMMENT '优惠券码',
     status TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 1-未使用, 2-已使用, 3-已过期, 4-已冻结',
     order_sn VARCHAR(64) COMMENT '使用的订单号',
+    request_id VARCHAR(64) DEFAULT '' COMMENT '请求幂等ID',
     received_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '领取时间',
     used_at DATETIME NULL COMMENT '使用时间',
     expired_at DATETIME NOT NULL COMMENT '过期时间',
@@ -43,6 +44,7 @@ CREATE TABLE user_coupons (
     INDEX idx_user_id (user_id),
     INDEX idx_status (status),
     INDEX idx_order_sn (order_sn),
+    INDEX idx_request_id (request_id),
     INDEX idx_expired_at (expired_at),
     INDEX idx_user_status (user_id, status),
     

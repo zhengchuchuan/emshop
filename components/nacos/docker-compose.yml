@@ -16,7 +16,7 @@ services:
     ports:
       - "8080:8080"
       - "18848:8848"
-      - "9848:9848"
+      - "19848:9848"
     restart: unless-stopped
     networks:
       - emshop-net

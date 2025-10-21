@@ -1,30 +1,59 @@
 /*
-  - 直连验证（先绕开 Consul，确认逻辑正确）
-    k6 run -e GRPC_COUPON_TARGET=127.0.0.1:28056 -e USER_ID_MODE=PER_ITER -e FLASH_PARTICIPATE_RPS=800 -e PRE_VUS=40 -e MAX_VUS=400 scripts/k6/grpc_coupon.js
-  - Consul 验证（启用后）
-      - 确保 coupon 服务已读取更新后的 configs/coupon/srv.yaml 并重启注册
-      k6 run \
-            -e CONSUL_HTTP_ADDR=http://127.0.0.1:8500 \
-            -e CONSUL_SERVICE=emshop-coupon-srv \
-            -e USER_ID_MODE=PER_ITER \
-            -e FLASH_PARTICIPATE_RPS=800 \
-            -e PRE_VUS=40 \
-            -e MAX_VUS=400 \
-            scripts/k6/grpc_coupon.js
+脚本用途：压测 Coupon gRPC 接口（参与秒杀/库存查询/优惠计算）。
 
-
+快速执行（推荐，仅压参与秒杀）
   k6 run \
-  -e CONSUL_HTTP_ADDR=http://127.0.0.1:8500 \
-  -e CONSUL_SERVICE=emshop-coupon-srv \
-  -e FLASH_SALE_ID=1 \
-  -e USER_ID_MODE=PER_VU \
-  -e USER_ID_BASE=1000000 \
-  -e FLASH_PARTICIPATE_RPS=5000 \
-  -e PRE_VUS=500 \
-  -e MAX_VUS=5000 \
-  -e DURATION=30s \
-  scripts/k6/grpc_coupon.js
+    -e GRPC_COUPON_TARGET=127.0.0.1:28056 \
+    -e FLASH_SALE_ID=1 \
+    -e USER_ID_MODE=PER_ITER \
+    -e FLASH_PARTICIPATE_RPS=3000 \
+    -e PRE_VUS=100 \
+    -e MAX_VUS=3000 \
+    -e GRPC_TIMEOUT=3s \
+    -e ENABLE_FLASH_STOCK=0 \
+    -e ENABLE_COUPON_CALC=0 \
+    -e DURATION=120s \
+    -e SUMMARY_HTML=./k6-summary.html \
+    scripts/k6/grpc_coupon.js
 
+更多用法（可按需调整 RPS）：
+1) 仅压参与秒杀（直连，超时 3s，PER_ITER 生成唯一用户）：
+   k6 run \
+     -e GRPC_COUPON_TARGET=127.0.0.1:28056 \
+     -e FLASH_SALE_ID=1 \
+     -e USER_ID_MODE=PER_ITER \
+     -e FLASH_PARTICIPATE_RPS=800 \
+     -e PRE_VUS=60 \
+     -e MAX_VUS=800 \
+     -e GRPC_TIMEOUT=3s \
+     -e ENABLE_FLASH_STOCK=0 \
+     -e ENABLE_COUPON_CALC=0 \
+     -e DURATION=120s \
+     scripts/k6/grpc_coupon.js
+
+2) 同时压三种场景（可按需调整 RPS）：
+   k6 run \
+     -e GRPC_COUPON_TARGET=127.0.0.1:28056 \
+     -e FLASH_SALE_ID=1 \
+     -e FLASH_STOCK_RPS=800 \
+     -e FLASH_PARTICIPATE_RPS=5000 \
+     -e COUPON_CALC_RPS=400 \
+     -e PRE_VUS=80 \
+     -e MAX_VUS=2000 \
+     -e GRPC_TIMEOUT=3s \
+     -e DURATION=120s \
+     scripts/k6/grpc_coupon.js
+
+3) 使用 Consul 解析（不直连时）：
+   k6 run \
+     -e CONSUL_HTTP_ADDR=http://127.0.0.1:8500 \
+     -e CONSUL_SERVICE=emshop-coupon-srv \
+     -e FLASH_SALE_ID=1 \
+     -e FLASH_PARTICIPATE_RPS=800 \
+     -e PRE_VUS=60 \
+     -e MAX_VUS=800 \
+     -e DURATION=120s \
+     scripts/k6/grpc_coupon.js
 */
 import http from 'k6/http';
 import grpc from 'k6/net/grpc';
@@ -97,7 +126,9 @@ function buildScenarios() {
 export const options = {
   scenarios: buildScenarios(),
   thresholds: {
+    // 关键场景的可用性与延迟门限（可按需调整）
     'checks{scenario:flashsale_participate}': ['rate>0.98'],
+    'grpc_req_duration': ['p(95)<800'], // 95 分位 < 800ms
   },
 };
 
@@ -167,7 +198,7 @@ function withClient(target, fn) {
   // 长连接：避免每次调用反复握手，降低端口耗尽风险
   if (!withClient._connected || withClient._target !== target) {
     try { client.close(); } catch (e) { /* ignore */ }
-    client.connect(target, { plaintext: true });
+    client.connect(target, { plaintext: true, timeout: '5s' });
     withClient._connected = true;
     withClient._target = target;
   }
@@ -178,7 +209,7 @@ export function flashSaleStock(data) {
   withClient(data.target, () => {
     const res = client.invoke('Coupon/GetFlashSaleStock', {
       flashSaleId: FLASH_SALE_ID,
-    });
+    }, { timeout: __ENV.GRPC_TIMEOUT || '2s' });
     check(res, {
       'stock fetched': (r) => r && r.status === grpc.StatusOK,
       'has remaining': (r) => r && r.message && typeof r.message.remainingStock === 'number',
@@ -193,7 +224,7 @@ export function flashSaleParticipate(data) {
     const res = client.invoke('Coupon/ParticipateFlashSale', {
       userId: userId,
       flashSaleId: FLASH_SALE_ID,
-    });
+    }, { timeout: __ENV.GRPC_TIMEOUT || '3s' });
     const ok = check(res, {
       'grpc ok': (r) => r && r.status === grpc.StatusOK,
     });
@@ -220,10 +251,30 @@ export function calculateDiscount(data) {
       orderItems: [
         { goodsId: Number(__ENV.GOODS_ID) || 1, quantity: 1, price: ORDER_AMOUNT },
       ],
-    });
+    }, { timeout: __ENV.GRPC_TIMEOUT || '2s' });
     check(res, {
       'calc ok': (r) => r && r.status === grpc.StatusOK,
     });
   });
   sleep(__ENV.SLEEP || 0.1);
+}
+
+// 自定义总结：输出 HTML 和 JSON（可通过环境变量关闭/改变路径）
+export function handleSummary(data) {
+  const out = {};
+  const jsonPath = __ENV.SUMMARY_JSON || '';
+  if (jsonPath) {
+    out[jsonPath] = JSON.stringify(data);
+  }
+  // 控制台简要输出关键配置与阈值
+  out['stdout'] = JSON.stringify({
+    scenarios: Object.keys(options.scenarios || {}),
+    rps: {
+      stock: Number(__ENV.FLASH_STOCK_RPS) || 0,
+      participate: Number(__ENV.FLASH_PARTICIPATE_RPS) || 0,
+      calc: Number(__ENV.COUPON_CALC_RPS) || 0,
+    },
+    thresholds: options.thresholds || {},
+  }, null, 2);
+  return out;
 }

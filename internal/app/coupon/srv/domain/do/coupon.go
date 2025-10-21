@@ -69,13 +69,14 @@ func (CouponTemplateDO) TableName() string {
 
 // UserCouponDO 用户优惠券数据对象
 type UserCouponDO struct {
-	db.BaseModel
-	ID        int64     `gorm:"primarykey" json:"id"`
-	CouponTemplateID int64            `json:"coupon_template_id" gorm:"column:coupon_template_id;type:bigint;not null;index:idx_coupon_template_id;comment:优惠券模板ID"`
-	UserID           int64            `json:"user_id" gorm:"column:user_id;type:bigint;not null;index:idx_user_id,idx_user_status;comment:用户ID"`
-	CouponCode       string           `json:"coupon_code" gorm:"column:coupon_code;type:varchar(32);not null;uniqueIndex:idx_coupon_code;comment:优惠券码"`
-	Status           UserCouponStatus `json:"status" gorm:"column:status;type:tinyint;not null;default:1;index:idx_status,idx_user_status;comment:状态"`
-	OrderSn          *string          `json:"order_sn" gorm:"column:order_sn;type:varchar(64);index:idx_order_sn;comment:使用的订单号"`
+    db.BaseModel
+    ID        int64     `gorm:"primarykey" json:"id"`
+    CouponTemplateID int64            `json:"coupon_template_id" gorm:"column:coupon_template_id;type:bigint;not null;index:idx_coupon_template_id;comment:优惠券模板ID"`
+    UserID           int64            `json:"user_id" gorm:"column:user_id;type:bigint;not null;index:idx_user_id,idx_user_status;comment:用户ID"`
+    CouponCode       string           `json:"coupon_code" gorm:"column:coupon_code;type:varchar(32);not null;uniqueIndex:idx_coupon_code;comment:优惠券码"`
+    RequestID        string           `json:"request_id" gorm:"column:request_id;type:varchar(64);index:idx_request_id,uniqueIndex:uk_usercoupon_req;comment:请求幂等ID"`
+    Status           UserCouponStatus `json:"status" gorm:"column:status;type:tinyint;not null;default:1;index:idx_status,idx_user_status;comment:状态"`
+    OrderSn          *string          `json:"order_sn" gorm:"column:order_sn;type:varchar(64);index:idx_order_sn;comment:使用的订单号"`
     ReceivedAt       time.Time        `json:"received_at" gorm:"column:received_at;type:datetime;default:CURRENT_TIMESTAMP;comment:领取时间(秒)"`
     UsedAt           *time.Time       `json:"used_at" gorm:"column:used_at;type:datetime;comment:使用时间(秒)"`
     ExpiredAt        time.Time        `json:"expired_at" gorm:"column:expired_at;type:datetime;not null;index:idx_expired_at;comment:过期时间(秒)"`

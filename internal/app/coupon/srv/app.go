@@ -16,18 +16,20 @@ import (
 	rpcserver "emshop/gin-micro/server/rpc-server"
 	"emshop/internal/app/coupon/srv/config"
 	"emshop/internal/app/coupon/srv/consumer"
-	controllerv1 "emshop/internal/app/coupon/srv/controller/v1"
-	datav1 "emshop/internal/app/coupon/srv/data/v1"
-	"emshop/internal/app/coupon/srv/data/v1/interfaces"
-	"emshop/internal/app/coupon/srv/pkg/cache"
-	servicev1 "emshop/internal/app/coupon/srv/service/v1"
+    controllerv1 "emshop/internal/app/coupon/srv/controller/v1"
+    datav1 "emshop/internal/app/coupon/srv/data/v1"
+    "emshop/internal/app/coupon/srv/data/v1/interfaces"
+    "emshop/internal/app/coupon/srv/pkg/cache"
+    servicev1 "emshop/internal/app/coupon/srv/service/v1"
+	"emshop/internal/app/coupon/srv/tasks"
 	"emshop/internal/app/pkg/options"
 	appframework "emshop/pkg/app"
 	"emshop/pkg/log"
 
-	redis "github.com/go-redis/redis/v8"
-	"github.com/google/uuid"
-	"github.com/hashicorp/consul/api"
+    redis "github.com/go-redis/redis/v8"
+    "github.com/google/uuid"
+    "github.com/hashicorp/consul/api"
+    restserver "emshop/gin-micro/server/rest-server"
 )
 
 // NewApp returns a CLI application wired for the coupon service.
@@ -83,10 +85,15 @@ type CouponApp struct {
 	redisClient     *redis.Client
 	dataFactory     interfaces.DataFactory
 	factoryManager  *datav1.FactoryManager
-	rpcServer       *rpcserver.Server
+    rpcServer       *rpcserver.Server
+    restServer      *restserver.Server
 	service         *servicev1.Service
 	registrar       registry.Registrar
 	serviceInstance *registry.ServiceInstance
+
+	// background tasks
+	stockLogSyncer *tasks.StockLogSyncer
+	reconciler     *tasks.Reconciler
 }
 
 // NewCouponApp 创建优惠券应用
@@ -200,9 +207,9 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 		log.Warn("未配置服务注册信息，将跳过Consul服务注册")
 	}
 
-	log.Info("优惠券应用初始化成功")
+    log.Info("优惠券应用初始化成功")
 
-	return &CouponApp{
+	app := &CouponApp{
 		config:          cfg,
 		cacheManager:    cacheManager,
 		canalConsumer:   canalConsumer,
@@ -211,11 +218,35 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 		redisClient:     redisClient,
 		dataFactory:     dataFactory,
 		factoryManager:  factoryManager,
-		rpcServer:       rpcSrv,
+        rpcServer:       rpcSrv,
+        restServer:      nil,
 		service:         service,
 		registrar:       registrar,
 		serviceInstance: serviceInstance,
-	}, nil
+	}
+
+	// 后台任务：Redis 扣减日志落库 & 对账
+    if service.AsyncFlashSaleEnabled() {
+        batch := 100
+        if cfg.Business != nil && cfg.Business.FlashSale != nil && cfg.Business.FlashSale.BatchSize > 0 {
+            batch = int(cfg.Business.FlashSale.BatchSize)
+        }
+        app.stockLogSyncer = tasks.NewStockLogSyncer(dataFactory, redisClient, batch, 2*time.Second)
+        // 使用最终事件生产者（事务或普通）做补偿
+        var interval = 30 * time.Second
+        var threshold = 0
+        var maxPerRun = 100
+        var cooldown = 60 * time.Second
+        if cfg.Business != nil && cfg.Business.FlashSale != nil {
+            if cfg.Business.FlashSale.ReconcileInterval > 0 { interval = cfg.Business.FlashSale.ReconcileInterval }
+            if cfg.Business.FlashSale.ReconcileThreshold >= 0 { threshold = cfg.Business.FlashSale.ReconcileThreshold }
+            if cfg.Business.FlashSale.CompensationMaxPerRun > 0 { maxPerRun = cfg.Business.FlashSale.CompensationMaxPerRun }
+            if cfg.Business.FlashSale.CompensationCooldown > 0 { cooldown = cfg.Business.FlashSale.CompensationCooldown }
+        }
+        app.reconciler = tasks.NewReconciler(dataFactory, redisClient, interval, service.TransactionProducer, threshold, maxPerRun, cooldown)
+    }
+
+	return app, nil
 }
 
 // Run 运行应用
@@ -238,12 +269,24 @@ func (app *CouponApp) Run(ctx context.Context) error {
 		log.Warn("Canal消费者未初始化，跳过缓存同步")
 	}
 
+	// 启动后台任务
+	if app.stockLogSyncer != nil {
+		app.stockLogSyncer.Start()
+		log.Info("库存扣减日志落库任务已启动")
+	}
+	if app.reconciler != nil {
+		app.reconciler.Start()
+		log.Info("库存对账任务已启动")
+	}
+
 	// 启动gRPC服务器
 	go func() {
 		if err := app.rpcServer.Start(context.Background()); err != nil {
 			log.Fatalf("gRPC服务器启动失败: %v", err)
 		}
 	}()
+
+    // 已移除内部管理REST服务器（改用 gRPC 管理接口）
 
 	if app.registrar != nil && app.serviceInstance != nil {
 		regCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -286,6 +329,8 @@ func (app *CouponApp) Stop() error {
 		log.Info("gRPC服务器已停止")
 	}
 
+    // 无REST管理服务可停止
+
 	// 关闭服务层（包括RocketMQ生产者）
 	if app.service != nil {
 		if err := app.service.Shutdown(); err != nil {
@@ -310,6 +355,10 @@ func (app *CouponApp) Stop() error {
 	if app.cacheManager != nil {
 		app.cacheManager.Close()
 	}
+
+	// 停止后台任务
+	if app.stockLogSyncer != nil { app.stockLogSyncer.Stop() }
+	if app.reconciler != nil { app.reconciler.Stop() }
 
 	// 关闭Redis连接
 	if app.redisClient != nil {
