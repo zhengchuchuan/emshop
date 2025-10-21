@@ -1,10 +1,10 @@
 package consumer
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"time"
+    "context"
+    "encoding/json"
+    "fmt"
+    "time"
 
 	"emshop/internal/app/coupon/srv/data/v1/interfaces"
 	"emshop/internal/app/coupon/srv/data/v1/redis"
@@ -14,10 +14,16 @@ import (
 	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/apache/rocketmq-client-go/v2/producer"
-	rocketmq "github.com/apache/rocketmq-client-go/v2"
-	redisClient "github.com/go-redis/redis/v8"
-	"gorm.io/gorm"
+    rocketmq "github.com/apache/rocketmq-client-go/v2"
+    redisClient "github.com/go-redis/redis/v8"
+    "gorm.io/gorm"
 )
+
+// safeShutdown 保护性关闭，避免上游库在未完全初始化时 panic
+func safeShutdown(c rocketmq.PushConsumer) {
+    defer func() { _ = recover() }()
+    if c != nil { _ = c.Shutdown() }
+}
 
 // FlashSaleSuccessEvent 秒杀成功事件
 type FlashSaleSuccessEvent struct {
@@ -80,20 +86,20 @@ func (fsc *FlashSaleConsumer) Start(config *FlashSaleConsumerConfig) error {
 	if config.BatchSize > 0 {
 		options = append(options, consumer.WithConsumeMessageBatchMaxSize(config.BatchSize))
 	}
-	pushConsumer, err := rocketmq.NewPushConsumer(options...)
-	if err != nil {
-		return fmt.Errorf("创建RocketMQ消费者失败: %w", err)
-	}
+    pushConsumer, err := rocketmq.NewPushConsumer(options...)
+    if err != nil {
+        return fmt.Errorf("创建RocketMQ消费者失败: %w", err)
+    }
 
-	if err := pushConsumer.Subscribe(config.Topic, consumer.MessageSelector{}, fsc.dispatchConsumeMessage); err != nil {
-		pushConsumer.Shutdown()
-		return fmt.Errorf("订阅秒杀事件失败: %w", err)
-	}
+    if err := pushConsumer.Subscribe(config.Topic, consumer.MessageSelector{}, fsc.dispatchConsumeMessage); err != nil {
+        safeShutdown(pushConsumer)
+        return fmt.Errorf("订阅秒杀事件失败: %w", err)
+    }
 
-	if err := pushConsumer.Start(); err != nil {
-		pushConsumer.Shutdown()
-		return fmt.Errorf("启动秒杀事件消费者失败: %w", err)
-	}
+    if err := pushConsumer.Start(); err != nil {
+        safeShutdown(pushConsumer)
+        return fmt.Errorf("启动秒杀事件消费者失败: %w", err)
+    }
 
 	fsc.mqConsumer = pushConsumer
 	fsc.retryConfig = fsc.buildRetryConfig(config)
@@ -176,8 +182,8 @@ func (fsc *FlashSaleConsumer) ConsumeFlashSaleSuccessMessage(ctx context.Context
 		log.Infof("处理秒杀成功事件: userID=%d, activityID=%d, couponSn=%s", 
 			event.UserID, event.ActivityID, event.CouponSn)
 
-		// 处理秒杀成功事件
-		if err := fsc.handleFlashSaleSuccess(ctx, &event, msg.MsgId); err != nil {
+        // 处理秒杀成功事件
+        if err := fsc.handleFlashSaleSuccess(ctx, &event, msg); err != nil {
 			handled := false
 			if fsc.retryManager != nil {
 				retryCfg := fsc.retryConfig
@@ -203,7 +209,8 @@ func (fsc *FlashSaleConsumer) ConsumeFlashSaleSuccessMessage(ctx context.Context
 }
 
 // handleFlashSaleSuccess 处理秒杀成功事件
-func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event *FlashSaleSuccessEvent, msgID string) error {
+func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event *FlashSaleSuccessEvent, msg *primitive.MessageExt) error {
+    msgID := msg.MsgId
     // 1. 检查幂等性（避免重复处理）优先使用 request_id，其次 msgID
     dedupeKey := msgID
     if event.RequestID != "" {
@@ -218,17 +225,42 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
 		return nil
 	}
 
-	// 2. 获取活动信息
-	activityDO, err := fsc.data.FlashSales().Get(ctx, fsc.data.DB(), event.ActivityID)
-	if err != nil {
-		return fmt.Errorf("获取活动信息失败: %v", err)
-	}
+    // 2. 若为事务消息，优先信任本地事务已落库，仅做确认与幂等标记
+    isTxn := (msg.GetProperty("TRAN_MSG") == "true") || (msg.GetProperty("transaction_id") != "") || (msg.GetProperty("__transactionId__") != "")
+    if isTxn {
+        // 快速确认是否已存在
+        var existed *do.UserCouponDO
+        var getErr error
+        if event.RequestID != "" {
+            existed, getErr = fsc.data.UserCoupons().GetByRequestID(ctx, fsc.data.DB(), event.RequestID)
+        }
+        if existed == nil && getErr == nil && event.CouponSn != "" {
+            existed, getErr = fsc.data.UserCoupons().GetByCouponCode(ctx, fsc.data.DB(), event.CouponSn)
+        }
+        if getErr != nil {
+            log.Warnf("事务消息确认查询失败，继续后续处理: %v", getErr)
+        }
+        if existed != nil {
+            // 标记幂等成功后返回
+            _ = fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour).Err()
+            log.Infof("事务消息确认：记录已存在，跳过重建 user_coupon, userID=%d, requestID=%s", event.UserID, event.RequestID)
+            return nil
+        }
+        // 未查到：极小概率补偿（可能是跨库延迟/故障），继续走创建流程
+        log.Warnf("事务消息未查到记录，进入补偿创建: userID=%d, requestID=%s", event.UserID, event.RequestID)
+    }
+
+    // 3. 获取活动信息
+    activityDO, err := fsc.data.FlashSales().Get(ctx, fsc.data.DB(), event.ActivityID)
+    if err != nil {
+        return fmt.Errorf("获取活动信息失败: %v", err)
+    }
 	if activityDO == nil {
 		return fmt.Errorf("活动不存在: activityID=%d", event.ActivityID)
 	}
 
-	// 3. 获取优惠券模板信息
-	templateDO, err := fsc.data.CouponTemplates().Get(ctx, fsc.data.DB(), event.CouponID)
+    // 4. 获取优惠券模板信息
+    templateDO, err := fsc.data.CouponTemplates().Get(ctx, fsc.data.DB(), event.CouponID)
 	if err != nil {
 		return fmt.Errorf("获取优惠券模板失败: %v", err)
 	}
@@ -236,7 +268,7 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
 		return fmt.Errorf("优惠券模板不存在: couponID=%d", event.CouponID)
 	}
 
-	// 4. 创建用户优惠券记录
+    // 5. 创建用户优惠券记录
     userCouponDO := &do.UserCouponDO{
         CouponTemplateID: event.CouponID,
         UserID:           event.UserID,
@@ -247,8 +279,8 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
         ExpiredAt:        fsc.calculateExpiryTime(templateDO),
     }
 
-	// 5. 开始数据库事务
-	tx := fsc.data.DB().Begin()
+    // 6. 开始数据库事务
+    tx := fsc.data.DB().Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -256,7 +288,7 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
 		}
 	}()
 
-	// 6. 创建用户优惠券
+    // 7. 创建用户优惠券
     if err := fsc.data.UserCoupons().Create(ctx, tx, userCouponDO); err != nil {
         tx.Rollback()
         // 如果是重复（幂等）错误，则查询已有记录并视为成功
@@ -278,35 +310,43 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
                 fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour)
                 return nil
             }
-            // 若查询不到，则回滚库存并返回错误
-            log.Warnf("幂等冲突但查询不到记录，执行回滚: userID=%d, requestID=%s", event.UserID, event.RequestID)
-            fsc.rollbackStockIfNeeded(ctx, event)
-            return nil
+            // 若查询不到，则根据消息类型选择补救策略
+            if isTxn {
+                // 事务消息：不回滚库存，仅标记处理，避免与本地事务产生相反操作
+                log.Warnf("幂等冲突且未查到记录(事务消息)，标记已处理: userID=%d, requestID=%s", event.UserID, event.RequestID)
+                _ = fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour).Err()
+                return nil
+            } else {
+                // 普通消息：可能是并发/超时导致，回滚库存以尽量保证一致
+                log.Warnf("幂等冲突但查询不到记录(普通消息)，执行回滚: userID=%d, requestID=%s", event.UserID, event.RequestID)
+                fsc.rollbackStockIfNeeded(ctx, event)
+                return nil
+            }
         }
         return fmt.Errorf("创建用户优惠券失败: %v", err)
     }
 
-	// 7. 更新优惠券模板使用统计
-	if err := fsc.updateCouponTemplateStats(ctx, tx, event.CouponID); err != nil {
-		tx.Rollback()
-		log.Errorf("更新优惠券模板统计失败: %v", err)
-		// 统计更新失败不影响主流程，记录日志即可
-	}
+    // 8. 更新优惠券模板使用统计
+    if err := fsc.updateCouponTemplateStats(ctx, tx, event.CouponID); err != nil {
+        tx.Rollback()
+        log.Errorf("更新优惠券模板统计失败: %v", err)
+        // 统计更新失败不影响主流程，记录日志即可
+    }
 
-	// 8. 更新活动统计
-	if err := fsc.updateFlashSaleStats(ctx, tx, event.ActivityID); err != nil {
-		tx.Rollback()
-		log.Errorf("更新活动统计失败: %v", err)
-		// 统计更新失败不影响主流程，记录日志即可
-	}
+    // 9. 更新活动统计
+    if err := fsc.updateFlashSaleStats(ctx, tx, event.ActivityID); err != nil {
+        tx.Rollback()
+        log.Errorf("更新活动统计失败: %v", err)
+        // 统计更新失败不影响主流程，记录日志即可
+    }
 
-    // 9. 提交事务（GORM v2：Commit().Error）
+    // 10. 提交事务（GORM v2：Commit().Error）
     if err := tx.Commit().Error; err != nil {
         _ = tx.Rollback()
         return fmt.Errorf("提交事务失败: %v", err)
     }
 
-    // 10. 设置幂等性标记（7天过期）
+    // 11. 设置幂等性标记（7天过期）
     fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour)
 
 	log.Infof("秒杀成功事件处理完成: userID=%d, userCouponID=%d, couponSn=%s", 
@@ -350,14 +390,19 @@ func (fsc *FlashSaleConsumer) rollbackStockIfNeeded(ctx context.Context, event *
 
 // updateCouponTemplateStats 更新优惠券模板统计
 func (fsc *FlashSaleConsumer) updateCouponTemplateStats(ctx context.Context, tx *gorm.DB, couponID int64) error {
-	// 简化处理：直接执行SQL更新
-	return tx.Exec("UPDATE coupon_templates SET used_count = used_count + 1 WHERE id = ?", couponID).Error
+    // 改为 Redis 累加，异步合并到DB
+    if fsc.redisClient != nil {
+        return fsc.redisClient.HIncrBy(ctx, "coupon:stats:template", fmt.Sprintf("%d", couponID), 1).Err()
+    }
+    return nil
 }
 
 // updateFlashSaleStats 更新秒杀活动统计
 func (fsc *FlashSaleConsumer) updateFlashSaleStats(ctx context.Context, tx *gorm.DB, activityID int64) error {
-	// 增加售出数量
-	return fsc.data.FlashSales().IncrementSoldCount(ctx, tx, activityID)
+    if fsc.redisClient != nil {
+        return fsc.redisClient.HIncrBy(ctx, "coupon:stats:flashsale", fmt.Sprintf("%d", activityID), 1).Err()
+    }
+    return nil
 }
 
 // ConsumeFlashSaleFailureMessage 消费秒杀失败消息（可选）
@@ -411,12 +456,55 @@ type FlashSaleFailureEvent struct {
 
 // flashSaleEventProducer RocketMQ事件生产者实现
 type flashSaleEventProducer struct {
-	producer rocketmq.Producer
-	topic    string
+    producer rocketmq.Producer
+    topic    string
+    async    bool
+}
+
+// queuedEventProducer 将成功事件放入内存有界队列，由N个worker后台发送（OneWay/Sync由底层producer决定）。
+type queuedEventProducer struct {
+    base    FlashSaleEventProducer
+    ch      chan *FlashSaleSuccessEvent
+}
+
+// NewQueuedFlashSaleEventProducer 包装底层生产者，workers个后台协程消费，capacity为有界队列大小；队列满则直接丢弃（计数可另行添加）。
+func NewQueuedFlashSaleEventProducer(base FlashSaleEventProducer, workers, capacity int) FlashSaleEventProducer {
+    if workers <= 0 { workers = 8 }
+    if capacity <= 0 { capacity = 100000 }
+    q := &queuedEventProducer{ base: base, ch: make(chan *FlashSaleSuccessEvent, capacity) }
+    for i := 0; i < workers; i++ {
+        go func() {
+            for evt := range q.ch {
+                // 忽略错误（压测优先吞吐）
+                _ = q.base.SendFlashSaleSuccessEvent(evt)
+            }
+        }()
+    }
+    return q
+}
+
+func (q *queuedEventProducer) SendFlashSaleSuccessEvent(event *FlashSaleSuccessEvent) error {
+    select {
+    case q.ch <- event:
+    default:
+        // 队列满丢弃
+    }
+    return nil
+}
+
+func (q *queuedEventProducer) SendFlashSaleFailureEvent(event *FlashSaleFailureEvent) error {
+    // 失败事件直接透传，不进入队列
+    return q.base.SendFlashSaleFailureEvent(event)
+}
+
+func (q *queuedEventProducer) Shutdown() error {
+    // 最简实现：直接关闭底层；队列不做drain（压测优先）
+    close(q.ch)
+    return q.base.Shutdown()
 }
 
 // NewFlashSaleEventProducer 创建秒杀事件生产者
-func NewFlashSaleEventProducer(nameServers []string, groupName, topic string) (FlashSaleEventProducer, error) {
+func NewFlashSaleEventProducer(nameServers []string, groupName, topic string, async bool) (FlashSaleEventProducer, error) {
 	// 创建RocketMQ Producer
 	p, err := rocketmq.NewProducer(
 		producer.WithNameServer(nameServers),
@@ -436,10 +524,11 @@ func NewFlashSaleEventProducer(nameServers []string, groupName, topic string) (F
 	log.Infof("RocketMQ Producer启动成功, nameServers: %v, group: %s, topic: %s", 
 		nameServers, groupName, topic)
 
-	return &flashSaleEventProducer{
-		producer: p,
-		topic:    topic,
-	}, nil
+    return &flashSaleEventProducer{
+        producer: p,
+        topic:    topic,
+        async:    async,
+    }, nil
 }
 
 // SendFlashSaleSuccessEvent 发送秒杀成功事件
@@ -467,21 +556,23 @@ func (p *flashSaleEventProducer) SendFlashSaleSuccessEvent(event *FlashSaleSucce
 	msg.WithProperty("activity_id", fmt.Sprintf("%d", event.ActivityID))
 	msg.WithProperty("timestamp", fmt.Sprintf("%d", event.Timestamp))
 	
-	// 发送消息
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	
-	result, err := p.producer.SendSync(ctx, msg)
-	if err != nil {
-		log.Errorf("发送秒杀成功事件失败: %v, userID=%d, activityID=%d", 
-			err, event.UserID, event.ActivityID)
-		return fmt.Errorf("发送秒杀成功事件失败: %v", err)
-	}
-
-	log.Infof("发送秒杀成功事件成功: userID=%d, activityID=%d, msgID=%s, queueID=%d", 
-		event.UserID, event.ActivityID, result.MsgID, result.MessageQueue.QueueId)
-	
-	return nil
+    // 发送消息（支持异步以提高吞吐）
+    if p.async {
+        // 为避免 go client 在超时回调路径上的崩溃风险，使用 OneWay 提升吞吐并规避回调。
+        ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+        defer cancel()
+        return p.producer.SendOneWay(ctx, msg)
+    } else {
+        ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+        defer cancel()
+        result, err := p.producer.SendSync(ctx, msg)
+        if err != nil {
+            log.Errorf("发送秒杀成功事件失败: %v, userID=%d, activityID=%d", err, event.UserID, event.ActivityID)
+            return fmt.Errorf("发送秒杀成功事件失败: %v", err)
+        }
+        log.Infof("发送秒杀成功事件成功: userID=%d, activityID=%d, msgID=%s, queueID=%d", event.UserID, event.ActivityID, result.MsgID, result.MessageQueue.QueueId)
+        return nil
+    }
 }
 
 // SendFlashSaleFailureEvent 发送秒杀失败事件
@@ -517,21 +608,21 @@ func (p *flashSaleEventProducer) SendFlashSaleFailureEvent(event *FlashSaleFailu
 	msg.WithProperty("code", fmt.Sprintf("%d", event.Code))
 	msg.WithProperty("timestamp", fmt.Sprintf("%d", event.Timestamp))
 
-	// 发送消息
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	
-	result, err := p.producer.SendSync(ctx, msg)
-	if err != nil {
-		log.Errorf("发送秒杀失败事件失败: %v, userID=%d, activityID=%d, reason=%s", 
-			err, event.UserID, event.ActivityID, event.Reason)
-		return fmt.Errorf("发送秒杀失败事件失败: %v", err)
-	}
-
-	log.Infof("发送秒杀失败事件成功: userID=%d, activityID=%d, reason=%s, msgID=%s", 
-		event.UserID, event.ActivityID, event.Reason, result.MsgID)
-	
-	return nil
+    if p.async {
+        ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+        defer cancel()
+        return p.producer.SendOneWay(ctx, msg)
+    } else {
+        ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+        defer cancel()
+        result, err := p.producer.SendSync(ctx, msg)
+        if err != nil {
+            log.Errorf("发送秒杀失败事件失败: %v, userID=%d, activityID=%d, reason=%s", err, event.UserID, event.ActivityID, event.Reason)
+            return fmt.Errorf("发送秒杀失败事件失败: %v", err)
+        }
+        log.Infof("发送秒杀失败事件成功: userID=%d, activityID=%d, reason=%s, msgID=%s", event.UserID, event.ActivityID, event.Reason, result.MsgID)
+        return nil
+    }
 }
 
 // Shutdown 优雅关闭生产者

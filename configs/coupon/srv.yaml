@@ -59,6 +59,8 @@ rocketmq:
   consumer_group: "coupon-consumer-group"
   topic: "coupon-events"
   max_reconsume: 3
+  use_transaction: false   # 方案B：关闭事务消息
+  async_send: true         # 提高吞吐，异步发送MQ
 
 # DTM配置
 dtm:
@@ -89,13 +91,13 @@ business:
   # 秒杀配置
   flashsale:
     enable_async: true          # 是否启用异步秒杀链路
-    max_qps_per_user: 5           # 单用户最大QPS
+    max_qps_per_user: 100           # 单用户最大QPS
     stock_cache_ttl: "300s"       # 库存缓存TTL
     user_limit_ttl: "300s"        # 用户限制TTL（防重复下单5分钟）
-    batch_size: 100               # 批量处理大小
-    reconcile_interval: "30s"     # 对账周期
+    batch_size: 5000               # 批量处理大小
+    reconcile_interval: "0s"     # 对账周期
     reconcile_threshold: 0         # 差异大于该阈值才触发补偿
-    compensation_max_per_run: 100  # 单次最多补偿条数
+    compensation_max_per_run: 1000  # 单次最多补偿条数
     compensation_cooldown: "60s"   # 每活动补偿冷却时间
     skip_user_limit_for_test: false # 测试时跳过用户限购（同一用户可多次成功）
     

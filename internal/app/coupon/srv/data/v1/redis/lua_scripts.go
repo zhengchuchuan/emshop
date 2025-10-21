@@ -107,7 +107,6 @@ redis.call('SETEX', reserveKey, ttl, 1)
 -- 5. 记录抢购成功日志
 local logData = string.format("%s:%s:%d:%d:%s", userId, activityId, decreNum, currentTime, requestId)
 redis.call('LPUSH', logKey, logData)
-redis.call('EXPIRE', logKey, ttl)
 
 -- 6. 更新活动统计信息
 redis.call('HINCRBY', activityKey, 'success_count', decreNum)

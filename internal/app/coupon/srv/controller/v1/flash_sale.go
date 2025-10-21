@@ -91,11 +91,12 @@ func (cs *couponServer) GetActiveFlashSales(ctx context.Context, req *emptypb.Em
 
 // ParticipateFlashSale 参与秒杀
 func (cs *couponServer) ParticipateFlashSale(ctx context.Context, req *couponpb.ParticipateFlashSaleRequest) (*couponpb.ParticipateFlashSaleResponse, error) {
-    log.Infof("ParticipateFlashSale: userID=%d, flashSaleID=%d", req.UserId, req.FlashSaleId)
+    // 压测模式下抑制成功路径日志，避免IO瓶颈
+    // log.Infof("ParticipateFlashSale: userID=%d, flashSaleID=%d", req.UserId, req.FlashSaleId)
 
     // 简化触发条件：按活动async_enabled+全局可用性自动分流
     if cs.srv.ShouldUseAsync(ctx, req.FlashSaleId) && cs.srv.FlashSaleCore != nil {
-		log.Infof("异步秒杀")
+        // log.Debug("异步秒杀")
         flashReq := &dto.FlashSaleRequestDTO{
             ActivityID: req.FlashSaleId,
             UserID:     req.UserId,

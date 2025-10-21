@@ -7,10 +7,12 @@ import (
 
 // RocketMQOptions RocketMQ配置选项
 type RocketMQOptions struct {
-	NameServers   []string `json:"nameservers" mapstructure:"nameservers"`
-	ConsumerGroup string   `json:"consumer_group" mapstructure:"consumer_group"`
-	Topic         string   `json:"topic" mapstructure:"topic"`
-	MaxReconsume  int32    `json:"max_reconsume" mapstructure:"max_reconsume"`
+    NameServers   []string `json:"nameservers" mapstructure:"nameservers"`
+    ConsumerGroup string   `json:"consumer_group" mapstructure:"consumer_group"`
+    Topic         string   `json:"topic" mapstructure:"topic"`
+    MaxReconsume  int32    `json:"max_reconsume" mapstructure:"max_reconsume"`
+    UseTransaction bool    `json:"use_transaction" mapstructure:"use_transaction"`
+    AsyncSend      bool    `json:"async_send" mapstructure:"async_send"`
 }
 
 // NewRocketMQOptions 创建默认RocketMQ配置
@@ -20,6 +22,8 @@ func NewRocketMQOptions() *RocketMQOptions {
         ConsumerGroup: "goods-sync-consumer-group",
         Topic:         "goods-binlog-topic",
         MaxReconsume:  3,
+        UseTransaction: false,
+        AsyncSend:      true,
     }
 }
 
@@ -57,6 +61,10 @@ func (o *RocketMQOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.Topic, "rocketmq.topic", o.Topic,
 		"RocketMQ topic name")
 	
-	fs.Int32Var(&o.MaxReconsume, "rocketmq.max-reconsume", o.MaxReconsume,
-		"Maximum number of reconsume attempts")
+    fs.Int32Var(&o.MaxReconsume, "rocketmq.max-reconsume", o.MaxReconsume,
+        "Maximum number of reconsume attempts")
+    fs.BoolVar(&o.UseTransaction, "rocketmq.use-transaction", o.UseTransaction,
+        "Use RocketMQ transaction messages for seckill events")
+    fs.BoolVar(&o.AsyncSend, "rocketmq.async-send", o.AsyncSend,
+        "Send messages with async mode to improve throughput")
 }

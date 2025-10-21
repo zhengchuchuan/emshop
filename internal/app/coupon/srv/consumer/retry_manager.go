@@ -16,10 +16,11 @@ import (
 
 // RetryManager 重试管理器
 type RetryManager struct {
-	producer    rocketmq.Producer
-	redisClient *redisClient.Client
-	topic       string
-	maxRetries  int
+    producer    rocketmq.Producer
+    redisClient *redisClient.Client
+    topic       string
+    maxRetries  int
+    groupName   string
 }
 
 // RetryConfig 重试配置
@@ -62,11 +63,12 @@ type MessageFailureRecord struct {
 // NewRetryManager 创建重试管理器
 func NewRetryManager(nameServers []string, groupName, topic string, redisClient *redisClient.Client, maxRetries int) (*RetryManager, error) {
 	// 创建RocketMQ Producer
-	p, err := rocketmq.NewProducer(
-		producer.WithNameServer(nameServers),
-		producer.WithRetry(3),
-		producer.WithGroupName(groupName+"-retry"),
-	)
+    finalGroup := groupName + "-retry"
+    p, err := rocketmq.NewProducer(
+        producer.WithNameServer(nameServers),
+        producer.WithRetry(3),
+        producer.WithGroupName(finalGroup),
+    )
 	if err != nil {
 		return nil, fmt.Errorf("创建重试管理器失败: %v", err)
 	}
@@ -76,12 +78,13 @@ func NewRetryManager(nameServers []string, groupName, topic string, redisClient 
 		return nil, fmt.Errorf("启动重试生产者失败: %v", err)
 	}
 
-	return &RetryManager{
-		producer:    p,
-		redisClient: redisClient,
-		topic:       topic,
-		maxRetries:  maxRetries,
-	}, nil
+    return &RetryManager{
+        producer:    p,
+        redisClient: redisClient,
+        topic:       topic,
+        maxRetries:  maxRetries,
+        groupName:   finalGroup,
+    }, nil
 }
 
 // ScheduleRetry 调度重试
@@ -135,10 +138,13 @@ func (rm *RetryManager) ScheduleRetry(ctx context.Context, originalMsg *primitiv
 	}
 	retryMsg.WithDelayTimeLevel(delayLevel)
 
-	// 复制原消息的属性并更新重试信息
-	for key, value := range originalMsg.GetProperties() {
-		retryMsg.WithProperty(key, value)
-	}
+    // 复制原消息的属性并更新重试信息（避免复制 PGROUP 等由客户端维护的属性）
+    for key, value := range originalMsg.GetProperties() {
+        if key == "PGROUP" || key == "PROPERTY_PRODUCER_GROUP" { // 兼容不同key命名
+            continue
+        }
+        retryMsg.WithProperty(key, value)
+    }
 	retryMsg.WithProperty("retry_count", fmt.Sprintf("%d", retryRecord.RetryCount))
 	retryMsg.WithProperty("original_msg_id", originalMsg.MsgId)
 	retryMsg.WithProperty("retry_reason", err.Error())
@@ -237,10 +243,13 @@ func (rm *RetryManager) sendToDeadLetterQueue(ctx context.Context, originalMsg *
 		deadLetterMsg.WithKeys([]string{keys})
 	}
 
-	// 复制原消息的属性
-	for key, value := range originalMsg.GetProperties() {
-		deadLetterMsg.WithProperty(key, value)
-	}
+    // 复制原消息的属性（过滤 PGROUP）
+    for key, value := range originalMsg.GetProperties() {
+        if key == "PGROUP" || key == "PROPERTY_PRODUCER_GROUP" {
+            continue
+        }
+        deadLetterMsg.WithProperty(key, value)
+    }
 	deadLetterMsg.WithProperty("original_msg_id", originalMsg.MsgId)
 	deadLetterMsg.WithProperty("dead_letter_reason", err.Error())
 	deadLetterMsg.WithProperty("dead_letter_timestamp", fmt.Sprintf("%d", time.Now().Unix()))

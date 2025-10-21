@@ -264,9 +264,9 @@ func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.Flash
 		Timestamp:    result.Timestamp,
 	}
 
-	// 如果秒杀成功，发送异步消息进行后续处理
-	if result.Success {
-		// 发送秒杀成功事件到RocketMQ
+    // 如果秒杀成功，发送异步消息进行后续处理
+    if result.Success {
+        // 发送秒杀成功事件到RocketMQ
         successEvent := &consumer.FlashSaleSuccessEvent{
             ActivityID: req.ActivityID,
             CouponID:   activityInfo.CouponID,
@@ -277,30 +277,28 @@ func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.Flash
             Timestamp:  time.Now().Unix(),
             RequestID:  rid,
         }
-		
-		// 异步发送，避免影响响应时间
-		go func() {
-			if err := fss.eventProducer.SendFlashSaleSuccessEvent(successEvent); err != nil {
-				log.Errorf("发送秒杀成功事件失败: %v, userID=%d, activityID=%d", 
-					err, req.UserID, req.ActivityID)
-				
-				// 发送失败事件
-				failureEvent := &consumer.FlashSaleFailureEvent{
-					ActivityID: req.ActivityID,
-					UserID:     req.UserID,
-					Reason:     fmt.Sprintf("消息发送失败: %v", err),
-					Code:       -5,
-					ClientIP:   req.ClientIP,
-					UserAgent:  req.UserAgent,
-					Timestamp:  time.Now().Unix(),
-				}
-				fss.eventProducer.SendFlashSaleFailureEvent(failureEvent)
-			}
-		}()
-		
-		log.Infof("秒杀成功，已发送异步消息: userID=%d, activityID=%d, couponSn=%s", 
-			req.UserID, req.ActivityID, result.CouponSn)
-	} else {
+        
+        // 异步发送，避免影响响应时间
+        go func() {
+            if err := fss.eventProducer.SendFlashSaleSuccessEvent(successEvent); err != nil {
+                log.Errorf("发送秒杀成功事件失败: %v, userID=%d, activityID=%d", 
+                    err, req.UserID, req.ActivityID)
+                
+                // 发送失败事件
+                failureEvent := &consumer.FlashSaleFailureEvent{
+                    ActivityID: req.ActivityID,
+                    UserID:     req.UserID,
+                    Reason:     fmt.Sprintf("消息发送失败: %v", err),
+                    Code:       -5,
+                    ClientIP:   req.ClientIP,
+                    UserAgent:  req.UserAgent,
+                    Timestamp:  time.Now().Unix(),
+                }
+                fss.eventProducer.SendFlashSaleFailureEvent(failureEvent)
+            }
+        }()
+        log.Infof("秒杀成功，已发送异步消息: userID=%d, activityID=%d, couponSn=%s", req.UserID, req.ActivityID, result.CouponSn)
+    } else {
 		// 秒杀失败，发送失败事件用于统计和监控
 		failureEvent := &consumer.FlashSaleFailureEvent{
 			ActivityID: req.ActivityID,

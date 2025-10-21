@@ -1,10 +1,11 @@
 package redis
 
 import (
-	"context"
-	"fmt"
-	"strconv"
-	"time"
+    "context"
+    "fmt"
+    "strings"
+    "strconv"
+    "time"
 
 	"emshop/pkg/log"
 	"github.com/go-redis/redis/v8"
@@ -13,12 +14,13 @@ import (
 // StockManager 高性能库存管理器
 // 基于Redis Lua脚本实现原子操作，确保零超卖
 type StockManager struct {
-	redis                 *redis.Client
-	flashSaleScript       *redis.Script
-	prewarmScript         *redis.Script
-	userLimitScript       *redis.Script
-	rollbackScript        *redis.Script
-	activityStatusScript  *redis.Script
+    redis                 *redis.Client
+    flashSaleScript       *redis.Script
+    prewarmScript         *redis.Script
+    userLimitScript       *redis.Script
+    rollbackScript        *redis.Script
+    activityStatusScript  *redis.Script
+    suppressLogs          bool
 }
 
 // FlashSaleRequest 秒杀请求
@@ -55,22 +57,31 @@ type ActivityInfo struct {
 	PerUserLimit int32     `json:"per_user_limit"`
 }
 
-// NewStockManager 创建库存管理器
+// NewStockManager 创建库存管理器（默认不抑制日志）
 func NewStockManager(redisClient *redis.Client) *StockManager {
-	return &StockManager{
-		redis:                redisClient,
-		flashSaleScript:      redis.NewScript(FlashSaleLuaScript),
-		prewarmScript:        redis.NewScript(StockPrewarmLuaScript),
-		userLimitScript:      redis.NewScript(UserLimitCheckLuaScript),
-		rollbackScript:       redis.NewScript(StockRollbackLuaScript),
-		activityStatusScript: redis.NewScript(ActivityStatusLuaScript),
-	}
+    return &StockManager{
+        redis:                redisClient,
+        flashSaleScript:      redis.NewScript(FlashSaleLuaScript),
+        prewarmScript:        redis.NewScript(StockPrewarmLuaScript),
+        userLimitScript:      redis.NewScript(UserLimitCheckLuaScript),
+        rollbackScript:       redis.NewScript(StockRollbackLuaScript),
+        activityStatusScript: redis.NewScript(ActivityStatusLuaScript),
+        suppressLogs:         false,
+    }
+}
+
+// NewStockManagerWithOptions 创建库存管理器（可抑制日志）
+func NewStockManagerWithOptions(redisClient *redis.Client, suppressLogs bool) *StockManager {
+    sm := NewStockManager(redisClient)
+    sm.suppressLogs = suppressLogs
+    return sm
 }
 
 // FlashSale 执行秒杀操作
 func (sm *StockManager) FlashSale(ctx context.Context, req *FlashSaleRequest) (*FlashSaleResult, error) {
-	log.Infof("开始执行秒杀: activityID=%d, userID=%d, couponID=%d", 
-		req.ActivityID, req.UserID, req.CouponID)
+    if !sm.suppressLogs {
+        log.Infof("开始执行秒杀: activityID=%d, userID=%d, couponID=%d", req.ActivityID, req.UserID, req.CouponID)
+    }
 
 	// 构建Redis keys
     keys := []string{
@@ -118,15 +129,17 @@ func (sm *StockManager) FlashSale(ctx context.Context, req *FlashSaleRequest) (*
 		Timestamp:   currentTime,
 	}
 
-	// 如果秒杀成功，生成优惠券编号
-	if flashSaleResult.Success {
-		flashSaleResult.CouponSn = sm.generateCouponSn(req.ActivityID, req.UserID, currentTime)
-		log.Infof("秒杀成功: userID=%d, couponSn=%s, remainStock=%d", 
-			req.UserID, flashSaleResult.CouponSn, flashSaleResult.RemainStock)
-	} else {
-		log.Warnf("秒杀失败: userID=%d, code=%d, message=%s", 
-			req.UserID, flashSaleResult.Code, flashSaleResult.Message)
-	}
+    // 如果秒杀成功，生成优惠券编号（引入 request_id 派生，防止并发碰撞）
+    if flashSaleResult.Success {
+        flashSaleResult.CouponSn = sm.generateCouponSn(req.ActivityID, req.UserID, currentTime, req.RequestID)
+        if !sm.suppressLogs {
+            log.Infof("秒杀成功: userID=%d, couponSn=%s, remainStock=%d", req.UserID, flashSaleResult.CouponSn, flashSaleResult.RemainStock)
+        }
+    } else {
+        if !sm.suppressLogs {
+            log.Warnf("秒杀失败: userID=%d, code=%d, message=%s", req.UserID, flashSaleResult.Code, flashSaleResult.Message)
+        }
+    }
 
 	return flashSaleResult, nil
 }
@@ -137,7 +150,7 @@ func (sm *StockManager) PrewarmStock(ctx context.Context, stockMaps map[int64]in
 		return nil
 	}
 
-	log.Infof("开始库存预热，预热%d个优惠券", len(stockMaps))
+    if !sm.suppressLogs { log.Infof("开始库存预热，预热%d个优惠券", len(stockMaps)) }
 
 	// 构建keys数组（key, value交替）
 	keys := make([]string, 0, len(stockMaps)*2)
@@ -159,9 +172,7 @@ func (sm *StockManager) PrewarmStock(ctx context.Context, stockMaps map[int64]in
 	code := resultSlice[0].(int64)
 	successCount := resultSlice[1].(int64)
 	
-	if code == 1 {
-		log.Infof("库存预热成功，成功设置%d个库存", successCount)
-	}
+    if code == 1 && !sm.suppressLogs { log.Infof("库存预热成功，成功设置%d个库存", successCount) }
 
 	return nil
 }
@@ -189,8 +200,7 @@ func (sm *StockManager) CheckUserLimit(ctx context.Context, userID int64, timeWi
 
 // RollbackStock 回滚库存（用于异步处理失败）
 func (sm *StockManager) RollbackStock(ctx context.Context, activityID, userID int64, couponID int64, rollbackCount int32) error {
-	log.Infof("开始回滚库存: activityID=%d, userID=%d, couponID=%d, count=%d", 
-		activityID, userID, couponID, rollbackCount)
+    if !sm.suppressLogs { log.Infof("开始回滚库存: activityID=%d, userID=%d, couponID=%d, count=%d", activityID, userID, couponID, rollbackCount) }
 
 	keys := []string{
 		fmt.Sprintf("coupon:stock:%d", couponID),
@@ -209,11 +219,9 @@ func (sm *StockManager) RollbackStock(ctx context.Context, activityID, userID in
 	code := resultSlice[0].(int64)
 	message := resultSlice[2].(string)
 
-	if code == 1 {
-		log.Infof("库存回滚成功: %s", message)
-	} else {
-		log.Warnf("库存回滚跳过: %s", message)
-	}
+    if !sm.suppressLogs {
+        if code == 1 { log.Infof("库存回滚成功: %s", message) } else { log.Warnf("库存回滚跳过: %s", message) }
+    }
 
 	return nil
 }
@@ -355,12 +363,37 @@ func (sm *StockManager) GetCurrentStock(ctx context.Context, couponID int64) (in
 }
 
 // generateCouponSn 生成优惠券编号
-func (sm *StockManager) generateCouponSn(activityID, userID, timestamp int64) string {
-	// 格式: FLASH{活动ID}{用户ID后4位}{时间戳后6位}
-	return fmt.Sprintf("FLASH%d%04d%06d", 
-		activityID, 
-		userID%10000, 
-		timestamp%1000000)
+func (sm *StockManager) generateCouponSn(activityID, userID, timestamp int64, requestID string) string {
+    // 基于 request_id 派生短码，避免并发下同秒碰撞
+    // 结构: FLASH{活动ID}{用户ID后4位}{base36(request_id哈希,5)}
+    // 长度示例: FLASH1 0793 ABCDE => 总长 <= 5+1+4+5 = 15
+    h := fnv32a(requestID)
+    base := toBase36(uint64(h % 60466176)) // 36^5
+    // 左填充至5位
+    for len(base) < 5 { base = "0" + base }
+    return fmt.Sprintf("FLASH%d%04d%s", activityID, userID%10000, strings.ToUpper(base))
+}
+
+// fnv32a 计算FNV-1a哈希
+func fnv32a(s string) uint32 {
+    var h uint32 = 2166136261
+    for i := 0; i < len(s); i++ {
+        h ^= uint32(s[i])
+        h *= 16777619
+    }
+    return h
+}
+
+// toBase36 将数字转换为base36字符串
+func toBase36(n uint64) string {
+    const chars = "0123456789abcdefghijklmnopqrstuvwxyz"
+    if n == 0 { return "0" }
+    b := make([]byte, 0, 16)
+    for n > 0 {
+        b = append([]byte{chars[n%36]}, b...)
+        n /= 36
+    }
+    return string(b)
 }
 
 // GetUserParticipationCount 获取用户参与次数

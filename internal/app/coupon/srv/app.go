@@ -154,22 +154,26 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 
 	var flashSaleConsumer *consumer.FlashSaleConsumer
 	var flashSaleCfg *consumer.FlashSaleConsumerConfig
-	if service.AsyncFlashSaleEnabled() && cfg.Business != nil && cfg.Business.FlashSale != nil {
-		flashSaleCfg = &consumer.FlashSaleConsumerConfig{
-			NameServers:   cfg.RocketMQ.NameServers,
-			ConsumerGroup: cfg.RocketMQ.ConsumerGroup,
-			Topic:         cfg.RocketMQ.Topic,
-			BatchSize:     int(cfg.Business.FlashSale.BatchSize),
-			MaxRetries:    int(cfg.RocketMQ.MaxReconsume),
-		}
-		if flashSaleCfg.BatchSize <= 0 {
-			flashSaleCfg.BatchSize = 16
-		}
-		if flashSaleCfg.MaxRetries <= 0 {
-			flashSaleCfg.MaxRetries = 3
-		}
-		flashSaleConsumer = consumer.NewFlashSaleConsumer(dataFactory, redisClient, service.RetryManager)
-	}
+    if service.AsyncFlashSaleEnabled() && cfg.Business != nil && cfg.Business.FlashSale != nil {
+        // 注意：RocketMQ PushConsumer 批量范围 [1,1024]
+        mqBatch := int(cfg.Business.FlashSale.BatchSize)
+        if mqBatch <= 0 { mqBatch = 16 }
+        if mqBatch > 1024 {
+            log.Warnf("RocketMQ batch_size=%d 超出范围，自动调整为 1024", mqBatch)
+            mqBatch = 1024
+        }
+        flashSaleCfg = &consumer.FlashSaleConsumerConfig{
+            NameServers:   cfg.RocketMQ.NameServers,
+            ConsumerGroup: cfg.RocketMQ.ConsumerGroup,
+            Topic:         cfg.RocketMQ.Topic,
+            BatchSize:     mqBatch,
+            MaxRetries:    int(cfg.RocketMQ.MaxReconsume),
+        }
+        if flashSaleCfg.MaxRetries <= 0 {
+            flashSaleCfg.MaxRetries = 3
+        }
+        flashSaleConsumer = consumer.NewFlashSaleConsumer(dataFactory, redisClient, service.RetryManager)
+    }
 
 	// 初始化链路追踪
 	if cfg.Telemetry != nil {
@@ -231,7 +235,7 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
         if cfg.Business != nil && cfg.Business.FlashSale != nil && cfg.Business.FlashSale.BatchSize > 0 {
             batch = int(cfg.Business.FlashSale.BatchSize)
         }
-        app.stockLogSyncer = tasks.NewStockLogSyncer(dataFactory, redisClient, batch, 2*time.Second)
+        app.stockLogSyncer = tasks.NewStockLogSyncer(dataFactory, redisClient, batch, 100*time.Millisecond, 8, 2*time.Second)
         // 使用最终事件生产者（事务或普通）做补偿
         var interval = 30 * time.Second
         var threshold = 0
@@ -243,7 +247,24 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
             if cfg.Business.FlashSale.CompensationMaxPerRun > 0 { maxPerRun = cfg.Business.FlashSale.CompensationMaxPerRun }
             if cfg.Business.FlashSale.CompensationCooldown > 0 { cooldown = cfg.Business.FlashSale.CompensationCooldown }
         }
-        app.reconciler = tasks.NewReconciler(dataFactory, redisClient, interval, service.TransactionProducer, threshold, maxPerRun, cooldown)
+        // 当 interval <= 0 时，关闭对账任务
+        if interval > 0 {
+        // 方案B下（非事务消息），使用普通事件生产者做补偿；避免传入 typed-nil 事务生产者引发 panic。
+        var compProducer consumer.FlashSaleEventProducer
+        if service.TransactionProducer != nil {
+            compProducer = service.TransactionProducer
+        } else if service.EventProducer != nil {
+            compProducer = service.EventProducer
+        }
+        app.reconciler = tasks.NewReconciler(dataFactory, redisClient, interval, compProducer, threshold, maxPerRun, cooldown)
+        } else {
+            app.reconciler = nil
+            log.Warn("库存对账任务已禁用（reconcile_interval<=0）")
+        }
+
+        // 启动统计合并任务（将 Redis 增量合并到 DB）
+        statsMerge := tasks.NewStatsMergeSyncer(dataFactory, redisClient, 1*time.Second)
+        statsMerge.Start()
     }
 
 	return app, nil

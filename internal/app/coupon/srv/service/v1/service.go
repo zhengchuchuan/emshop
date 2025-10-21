@@ -49,30 +49,32 @@ func NewService(
 	
 	// 创建RocketMQ事件生产者
 	var eventProducer consumer.FlashSaleEventProducer
-	if rocketmqOpts != nil {
-		producer, err := consumer.NewFlashSaleEventProducer(
-			rocketmqOpts.NameServers,
-			"coupon-producer-group", // 生产者组名
-			rocketmqOpts.Topic,
-		)
-		if err != nil {
-			log.Errorf("初始化RocketMQ事件生产者失败: %v", err)
-			// 可以考虑使用fallback或mock实现
-			eventProducer = nil
-		} else {
-			eventProducer = producer
-			log.Info("RocketMQ事件生产者初始化成功")
-		}
-	}
+    if rocketmqOpts != nil {
+        producer, err := consumer.NewFlashSaleEventProducer(
+            rocketmqOpts.NameServers,
+            "coupon-producer-group", // 生产者组名
+            rocketmqOpts.Topic,
+            rocketmqOpts.AsyncSend,
+        )
+        if err != nil {
+            log.Errorf("初始化RocketMQ事件生产者失败: %v", err)
+            // 可以考虑使用fallback或mock实现
+            eventProducer = nil
+        } else {
+            // 包装为内存队列生产者，后台SendOneWay，满则丢弃（压测优先吞吐）
+            eventProducer = consumer.NewQueuedFlashSaleEventProducer(producer, 8, 100000)
+            log.Info("RocketMQ事件生产者初始化成功")
+        }
+    }
 	
 	// 创建事务消息生产者
-	var transactionProducer *consumer.TransactionFlashSaleEventProducer
-	if rocketmqOpts != nil && eventProducer != nil {
-		txnConfig := &consumer.TransactionConfig{
-			NameServers: rocketmqOpts.NameServers,
-			GroupName:   "coupon-txn-producer-group",
-			Topic:       rocketmqOpts.Topic,
-		}
+    var transactionProducer *consumer.TransactionFlashSaleEventProducer
+    if rocketmqOpts != nil && eventProducer != nil && rocketmqOpts.UseTransaction {
+        txnConfig := &consumer.TransactionConfig{
+            NameServers: rocketmqOpts.NameServers,
+            GroupName:   "coupon-txn-producer-group",
+            Topic:       rocketmqOpts.Topic,
+        }
 		
 		txnProducer, err := consumer.NewTransactionFlashSaleEventProducer(
 			txnConfig, data, redisClient, eventProducer,
@@ -104,16 +106,21 @@ func NewService(
 	}
 	
 	// 优先使用事务消息生产者，fallback到普通生产者
-	finalEventProducer := eventProducer
-	if transactionProducer != nil {
-		finalEventProducer = transactionProducer
-		log.Info("使用事务消息生产者作为主要事件生产者")
-	}
+    finalEventProducer := eventProducer
+    if transactionProducer != nil {
+        finalEventProducer = transactionProducer
+        log.Info("使用事务消息生产者作为主要事件生产者")
+    } else {
+        log.Info("使用普通RocketMQ生产者（非事务）作为主要事件生产者")
+    }
 	
     service := &Service{
         CouponSrv:           NewCouponService(data, redisClient, dtmOpts, cacheManager),
         FlashSaleSrv:        NewFlashSaleService(data, redisClient, cacheManager),
-        FlashSaleCore:       NewFlashSaleSrvCore(data, redisClient, cacheManager, finalEventProducer, bizOpts != nil && bizOpts.FlashSale != nil && bizOpts.FlashSale.SkipUserLimitForTest),
+        FlashSaleCore:       NewFlashSaleSrvCore(
+            data, redisClient, cacheManager, finalEventProducer,
+            bizOpts != nil && bizOpts.FlashSale != nil && bizOpts.FlashSale.SkipUserLimitForTest,
+        ),
         CacheManager:        cacheManager,
         EventProducer:       eventProducer,
         TransactionProducer: transactionProducer,

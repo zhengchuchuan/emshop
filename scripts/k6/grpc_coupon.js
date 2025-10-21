@@ -28,7 +28,7 @@
      -e GRPC_TIMEOUT=3s \
      -e ENABLE_FLASH_STOCK=0 \
      -e ENABLE_COUPON_CALC=0 \
-     -e DURATION=120s \
+     -e DURATION=10s \
      scripts/k6/grpc_coupon.js
 
 2) 同时压三种场景（可按需调整 RPS）：
@@ -53,6 +53,21 @@
      -e PRE_VUS=60 \
      -e MAX_VUS=800 \
      -e DURATION=120s \
+     scripts/k6/grpc_coupon.js
+
+4) 10K RPS 快速压测（10 秒）
+   k6 run \
+     -e GRPC_COUPON_TARGET=127.0.0.1:28056 \
+     -e FLASH_SALE_ID=1 \
+     -e USER_ID_MODE=PER_ITER \
+     -e FLASH_PARTICIPATE_RPS=10000 \
+     -e PRE_VUS=2000 \
+     -e MAX_VUS=20000 \
+     -e GRPC_TIMEOUT=1s \
+     -e DURATION=10s \
+     -e ENABLE_FLASH_STOCK=0 \
+     -e ENABLE_COUPON_CALC=0 \
+     -e QUICK_10K=1 \
      scripts/k6/grpc_coupon.js
 */
 import http from 'k6/http';
@@ -81,6 +96,21 @@ const ORDER_AMOUNT = Number(__ENV.ORDER_AMOUNT) || 199.0;
 const COUPON_IDS = (__ENV.COUPON_IDS || '1').split(',').map((id) => Number(id.trim()) || 1);
 
 function buildScenarios() {
+  // 专用：10K RPS 预设，仅参与秒杀，持续 10s（或由 DURATION 指定）
+  if ((__ENV.QUICK_10K || '0') === '1') {
+    return {
+      flashsale_participate: {
+        executor: 'constant-arrival-rate',
+        exec: 'flashSaleParticipate',
+        rate: Number(__ENV.FLASH_PARTICIPATE_RPS) || 10000,
+        timeUnit: '1s',
+        duration: __ENV.DURATION || '10s',
+        preAllocatedVUs: Number(__ENV.PRE_VUS) || 2000,
+        maxVUs: Number(__ENV.MAX_VUS) || 20000,
+        startTime: '0s',
+      },
+    };
+  }
   const scenarios = {};
   const enableStock = (__ENV.ENABLE_FLASH_STOCK || '1') === '1';
   const enableParticipate = (__ENV.ENABLE_FLASH_PARTICIPATE || '1') === '1';
