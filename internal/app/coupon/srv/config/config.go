@@ -14,16 +14,16 @@ import (
 
 // Config 优惠券服务配置
 type Config struct {
-    Server    *options.ServerOptions    `yaml:"server"    mapstructure:"server"`
-    Log       *log.Options              `yaml:"log"       mapstructure:"log"`
-    Registry  *options.RegistryOptions  `yaml:"registry"  mapstructure:"registry"`
-    Telemetry *options.TelemetryOptions `yaml:"telemetry" mapstructure:"telemetry"`
-    MySQL     *options.MySQLOptions     `yaml:"mysql"     mapstructure:"mysql"`
-    Redis     *options.RedisOptions     `yaml:"redis"     mapstructure:"redis"`
-    RocketMQ  *options.RocketMQOptions  `yaml:"rocketmq"  mapstructure:"rocketmq"`
-    Ristretto *RistrettoOptions         `yaml:"ristretto" mapstructure:"ristretto"`
-    Canal     *CanalOptions             `yaml:"canal"     mapstructure:"canal"`
-    Business  *BusinessOptions          `yaml:"business"  mapstructure:"business"`
+	Server    *options.ServerOptions    `yaml:"server"    mapstructure:"server"`
+	Log       *log.Options              `yaml:"log"       mapstructure:"log"`
+	Registry  *options.RegistryOptions  `yaml:"registry"  mapstructure:"registry"`
+	Telemetry *options.TelemetryOptions `yaml:"telemetry" mapstructure:"telemetry"`
+	MySQL     *options.MySQLOptions     `yaml:"mysql"     mapstructure:"mysql"`
+	Redis     *options.RedisOptions     `yaml:"redis"     mapstructure:"redis"`
+	RocketMQ  *options.RocketMQOptions  `yaml:"rocketmq"  mapstructure:"rocketmq"`
+	Ristretto *RistrettoOptions         `yaml:"ristretto" mapstructure:"ristretto"`
+	Canal     *CanalOptions             `yaml:"canal"     mapstructure:"canal"`
+	Business  *BusinessOptions          `yaml:"business"  mapstructure:"business"`
 }
 
 // New 创建具有合理默认值的配置对象，保证YAML加载前的字段完整性
@@ -45,12 +45,12 @@ func New() *Config {
 			opt.ConsumerGroup = "coupon-consumer-group"
 			return opt
 		}(),
-        Ristretto: &RistrettoOptions{
-            NumCounters: 1_000_000,
-            MaxCost:     100 << 20,
-            BufferItems: 64,
-            Metrics:     true,
-        },
+		Ristretto: &RistrettoOptions{
+			NumCounters: 1_000_000,
+			MaxCost:     100 << 20,
+			BufferItems: 64,
+			Metrics:     true,
+		},
 		Canal: &CanalOptions{
 			ConsumerGroup: "coupon-cache-sync-consumer",
 			Topic:         "coupon-binlog-topic",
@@ -58,18 +58,15 @@ func New() *Config {
 			BatchSize:     32,
 		},
 		Business: &BusinessOptions{
-            FlashSale: &FlashSaleOptions{
-                MaxQpsPerUser: 5,
-                StockCacheTTL: 300 * time.Second,
-                UserLimitTTL:  300 * time.Second,
-                BatchSize:     100,
-                EnableAsync:   false,
-                ReconcileInterval:     30 * time.Second,
-                ReconcileThreshold:    0,
-                CompensationMaxPerRun: 100,
-                CompensationCooldown:  60 * time.Second,
-                SkipUserLimitForTest:  false,
-            },
+			FlashSale: &FlashSaleOptions{
+				BatchSize:             100,
+				EnableAsync:           false,
+				ReconcileInterval:     30 * time.Second,
+				ReconcileThreshold:    0,
+				CompensationMaxPerRun: 100,
+				CompensationCooldown:  60 * time.Second,
+				SkipUserLimitForTest:  false,
+			},
 			Coupon: &CouponOptions{
 				MaxStackCount: 5,
 				LockTTL:       900 * time.Second,
@@ -108,7 +105,7 @@ func (c *Config) Flags() (fss cliflag.NamedFlagSets) {
 	if c.RocketMQ != nil {
 		c.RocketMQ.AddFlags(fss.FlagSet("rocketmq"))
 	}
-    return fss
+	return fss
 }
 
 // Validate performs basic validation across option groups.
@@ -150,12 +147,12 @@ func (c *Config) Validate() []error {
 	} else {
 		errs = append(errs, c.RocketMQ.Validate()...)
 	}
-    if c.Canal == nil {
-        errs = append(errs, fmt.Errorf("canal configuration is required"))
-    }
-    if c.Business == nil {
-        errs = append(errs, fmt.Errorf("business configuration is required"))
-    }
+	if c.Canal == nil {
+		errs = append(errs, fmt.Errorf("canal configuration is required"))
+	}
+	if c.Business == nil {
+		errs = append(errs, fmt.Errorf("business configuration is required"))
+	}
 
 	return errs
 }
@@ -184,39 +181,36 @@ type CanalOptions struct {
 
 // BusinessOptions 业务配置
 type BusinessOptions struct {
-    FlashSale *FlashSaleOptions `yaml:"flashsale" mapstructure:"flashsale"`
-    Coupon    *CouponOptions    `yaml:"coupon"    mapstructure:"coupon"`
-    Cache     *CacheOptions     `yaml:"cache"     mapstructure:"cache"`
+	FlashSale *FlashSaleOptions `yaml:"flashsale" mapstructure:"flashsale"`
+	Coupon    *CouponOptions    `yaml:"coupon"    mapstructure:"coupon"`
+	Cache     *CacheOptions     `yaml:"cache"     mapstructure:"cache"`
 }
 
 // FlashSaleOptions 秒杀配置
 type FlashSaleOptions struct {
-    MaxQpsPerUser int           `yaml:"max_qps_per_user"        mapstructure:"max_qps_per_user"`
-    StockCacheTTL time.Duration `yaml:"stock_cache_ttl"         mapstructure:"stock_cache_ttl"`
-    UserLimitTTL  time.Duration `yaml:"user_limit_ttl"          mapstructure:"user_limit_ttl"`
-    BatchSize     int           `yaml:"batch_size"              mapstructure:"batch_size"`
-    EnableAsync   bool          `yaml:"enable_async"            mapstructure:"enable_async"`
-    ReconcileInterval     time.Duration `yaml:"reconcile_interval"     mapstructure:"reconcile_interval"`
-    ReconcileThreshold    int           `yaml:"reconcile_threshold"    mapstructure:"reconcile_threshold"`
-    CompensationMaxPerRun int           `yaml:"compensation_max_per_run" mapstructure:"compensation_max_per_run"`
-    CompensationCooldown  time.Duration `yaml:"compensation_cooldown"  mapstructure:"compensation_cooldown"`
-    SkipUserLimitForTest  bool          `yaml:"skip_user_limit_for_test" mapstructure:"skip_user_limit_for_test"`
-    AutoStartIDs          []int64       `yaml:"auto_start_ids"          mapstructure:"auto_start_ids"`
+	BatchSize             int           `yaml:"batch_size"               mapstructure:"batch_size"`
+	EnableAsync           bool          `yaml:"enable_async"             mapstructure:"enable_async"`
+	ReconcileInterval     time.Duration `yaml:"reconcile_interval"       mapstructure:"reconcile_interval"`
+	ReconcileThreshold    int           `yaml:"reconcile_threshold"      mapstructure:"reconcile_threshold"`
+	CompensationMaxPerRun int           `yaml:"compensation_max_per_run" mapstructure:"compensation_max_per_run"`
+	CompensationCooldown  time.Duration `yaml:"compensation_cooldown"    mapstructure:"compensation_cooldown"`
+	SkipUserLimitForTest  bool          `yaml:"skip_user_limit_for_test" mapstructure:"skip_user_limit_for_test"`
+	AutoStartIDs          []int64       `yaml:"auto_start_ids"           mapstructure:"auto_start_ids"`
 }
 
 // CouponOptions 优惠券配置
 type CouponOptions struct {
-    MaxStackCount int           `yaml:"max_stack_count" mapstructure:"max_stack_count"`
-    LockTTL       time.Duration `yaml:"lock_ttl"       mapstructure:"lock_ttl"`
-    CalcTimeout   time.Duration `yaml:"calc_timeout"   mapstructure:"calc_timeout"`
+	MaxStackCount int           `yaml:"max_stack_count" mapstructure:"max_stack_count"`
+	LockTTL       time.Duration `yaml:"lock_ttl"       mapstructure:"lock_ttl"`
+	CalcTimeout   time.Duration `yaml:"calc_timeout"   mapstructure:"calc_timeout"`
 }
 
 // CacheOptions 缓存配置
 type CacheOptions struct {
-    L1TTL        time.Duration `yaml:"l1_ttl"        mapstructure:"l1_ttl"`
-    L2TTL        time.Duration `yaml:"l2_ttl"        mapstructure:"l2_ttl"`
-    WarmupCount  int           `yaml:"warmup_count"  mapstructure:"warmup_count"`
-    EnableWarmup bool          `yaml:"enable_warmup" mapstructure:"enable_warmup"`
+	L1TTL        time.Duration `yaml:"l1_ttl"        mapstructure:"l1_ttl"`
+	L2TTL        time.Duration `yaml:"l2_ttl"        mapstructure:"l2_ttl"`
+	WarmupCount  int           `yaml:"warmup_count"  mapstructure:"warmup_count"`
+	EnableWarmup bool          `yaml:"enable_warmup" mapstructure:"enable_warmup"`
 }
 
 // ToCacheConfig 转换为缓存配置
