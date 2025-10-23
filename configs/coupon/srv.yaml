@@ -47,7 +47,7 @@ mysql:
 
 # Redis配置
 redis:
-  host: "127.0.0.1"
+  host: "localhost"
   port: 16379
   password: ""
   database: 0
@@ -59,14 +59,8 @@ rocketmq:
   consumer_group: "coupon-consumer-group"
   topic: "coupon-events"
   max_reconsume: 3
-  use_transaction: false   # 方案B：关闭事务消息
   async_send: true         # 提高吞吐，异步发送MQ
 
-# DTM配置
-dtm:
-  grpc_server: "localhost:36790"
-  http_server: "localhost:36789"
-  timeout: "30s"
 
 # Ristretto本地缓存配置
 ristretto:
@@ -76,15 +70,15 @@ ristretto:
   metrics: true                   # 开启监控指标
   
 # Canal缓存一致性配置  
-  canal:
-    consumer_group: "coupon-cache-sync-consumer"  # Canal消费者组
-    topic: "coupon-binlog-topic"                  # Canal消息主题
-    watch_tables:                                 # 监听的表
-      - "coupon_templates"
-      - "user_coupons" 
-      - "flash_sale_activities"
-      - "coupon_configs"
-    batch_size: 32                               # 批量处理大小
+canal:
+  consumer_group: "coupon-cache-sync-consumer"  # Canal消费者组
+  topic: "coupon-binlog-topic"                  # Canal消息主题
+  watch_tables:                                 # 监听的表
+    - "coupon_templates"
+    - "user_coupons" 
+    - "flash_sale_activities"
+    - "coupon_configs"
+  batch_size: 32                               # 批量处理大小
   
 # 业务配置
 business:

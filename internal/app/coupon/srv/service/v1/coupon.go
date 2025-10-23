@@ -14,7 +14,6 @@ import (
 	"emshop/internal/app/coupon/srv/pkg/calculator"
 	"emshop/internal/app/coupon/srv/pkg/scripts"
 	"emshop/internal/app/pkg/code"
-	"emshop/internal/app/pkg/options"
 	"emshop/pkg/errors"
 	"emshop/pkg/log"
 	v1 "emshop/pkg/common/meta/v1"
@@ -41,23 +40,22 @@ type CouponSrv interface {
 }
 
 type couponService struct {
-	data             interfaces.DataFactory
-	redisClient      *redis.Client
-	dtmOpts          *options.DtmOptions
-	keyFormatter     *scripts.RedisKeyFormatter
-	calculationEngine *calculator.CalculationEngine
-	cacheManager     interface {
-		GetCouponTemplate(ctx context.Context, couponID int64) (*cache.CouponTemplate, error)
-		GetUserCoupon(ctx context.Context, userCouponID int64) (*cache.UserCoupon, error)
-		InvalidateCache(keys ...string)
-	}
+    data             interfaces.DataFactory
+    redisClient      *redis.Client
+    keyFormatter     *scripts.RedisKeyFormatter
+    calculationEngine *calculator.CalculationEngine
+    cacheManager     interface {
+        GetCouponTemplate(ctx context.Context, couponID int64) (*cache.CouponTemplate, error)
+        GetUserCoupon(ctx context.Context, userCouponID int64) (*cache.UserCoupon, error)
+        InvalidateCache(keys ...string)
+    }
 }
 
 // NewCouponService 创建优惠券服务实例
-func NewCouponService(data interfaces.DataFactory, redisClient *redis.Client, dtmOpts *options.DtmOptions, cacheManager interface{
-	GetCouponTemplate(ctx context.Context, couponID int64) (*cache.CouponTemplate, error)
-	GetUserCoupon(ctx context.Context, userCouponID int64) (*cache.UserCoupon, error)
-	InvalidateCache(keys ...string)
+func NewCouponService(data interfaces.DataFactory, redisClient *redis.Client, cacheManager interface{
+    GetCouponTemplate(ctx context.Context, couponID int64) (*cache.CouponTemplate, error)
+    GetUserCoupon(ctx context.Context, userCouponID int64) (*cache.UserCoupon, error)
+    InvalidateCache(keys ...string)
 }) CouponSrv {
 	// 创建增强计算引擎
 	var calculationEngine *calculator.CalculationEngine
@@ -67,14 +65,13 @@ func NewCouponService(data interfaces.DataFactory, redisClient *redis.Client, dt
 		calculationEngine = calculator.NewCalculationEngine(cacheAdapter)
 	}
 
-	return &couponService{
-		data:             data,
-		redisClient:      redisClient,
-		dtmOpts:          dtmOpts,
-		keyFormatter:     scripts.NewRedisKeyFormatter(),
-		calculationEngine: calculationEngine,
-		cacheManager:     cacheManager,
-	}
+    return &couponService{
+        data:             data,
+        redisClient:      redisClient,
+        keyFormatter:     scripts.NewRedisKeyFormatter(),
+        calculationEngine: calculationEngine,
+        cacheManager:     cacheManager,
+    }
 }
 
 // cacheManagerAdapter 缓存管理器适配器

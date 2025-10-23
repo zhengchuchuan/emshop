@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	couponpb "emshop/api/coupon/v1"
@@ -24,7 +25,8 @@ func (cs *couponServer) CreateFlashSaleActivity(ctx context.Context, req *coupon
 		PerUserLimit:     req.PerUserLimit,
 	}
 
-	result, err := cs.srv.FlashSaleSrv.CreateFlashSaleActivity(ctx, dto)
+	// 统一使用异步核心服务
+	result, err := cs.srv.FlashSaleCore.CreateFlashSaleActivity(ctx, dto)
 	if err != nil {
 		return nil, cs.handleError(err)
 	}
@@ -34,7 +36,7 @@ func (cs *couponServer) CreateFlashSaleActivity(ctx context.Context, req *coupon
 
 // GetFlashSaleActivity 获取秒杀活动
 func (cs *couponServer) GetFlashSaleActivity(ctx context.Context, req *couponpb.GetFlashSaleActivityRequest) (*couponpb.FlashSaleActivityResponse, error) {
-	result, err := cs.srv.FlashSaleSrv.GetFlashSaleActivity(ctx, req.Id)
+	result, err := cs.srv.FlashSaleCore.GetFlashSaleActivity(ctx, req.Id)
 	if err != nil {
 		return nil, cs.handleError(err)
 	}
@@ -53,7 +55,7 @@ func (cs *couponServer) ListFlashSaleActivities(ctx context.Context, req *coupon
 		dto.Status = req.Status
 	}
 
-	result, err := cs.srv.FlashSaleSrv.ListFlashSaleActivities(ctx, dto)
+	result, err := cs.srv.FlashSaleCore.ListFlashSaleActivities(ctx, dto)
 	if err != nil {
 		return nil, cs.handleError(err)
 	}
@@ -72,7 +74,9 @@ func (cs *couponServer) ListFlashSaleActivities(ctx context.Context, req *coupon
 
 // GetActiveFlashSales 获取进行中的秒杀活动
 func (cs *couponServer) GetActiveFlashSales(ctx context.Context, req *emptypb.Empty) (*couponpb.ListFlashSaleActivitiesResponse, error) {
-	result, err := cs.srv.FlashSaleSrv.GetActiveFlashSales(ctx)
+	// 等价：按状态过滤
+	status := int32(2) // Active
+	result, err := cs.srv.FlashSaleCore.ListFlashSaleActivities(ctx, &dto.ListFlashSaleActivitiesDTO{Status: &status})
 	if err != nil {
 		return nil, cs.handleError(err)
 	}
@@ -91,17 +95,17 @@ func (cs *couponServer) GetActiveFlashSales(ctx context.Context, req *emptypb.Em
 
 // ParticipateFlashSale 参与秒杀
 func (cs *couponServer) ParticipateFlashSale(ctx context.Context, req *couponpb.ParticipateFlashSaleRequest) (*couponpb.ParticipateFlashSaleResponse, error) {
-    // 压测模式下抑制成功路径日志，避免IO瓶颈
-    // log.Infof("ParticipateFlashSale: userID=%d, flashSaleID=%d", req.UserId, req.FlashSaleId)
+	// 压测模式下抑制成功路径日志，避免IO瓶颈
+	// log.Infof("ParticipateFlashSale: userID=%d, flashSaleID=%d", req.UserId, req.FlashSaleId)
 
-    // 简化触发条件：按活动async_enabled+全局可用性自动分流
-    if cs.srv.ShouldUseAsync(ctx, req.FlashSaleId) && cs.srv.FlashSaleCore != nil {
-        // log.Debug("异步秒杀")
-        flashReq := &dto.FlashSaleRequestDTO{
-            ActivityID: req.FlashSaleId,
-            UserID:     req.UserId,
-        }
-        coreResult, err := cs.srv.FlashSaleCore.FlashSaleCoupon(ctx, flashReq)
+	// 简化触发条件：按活动async_enabled+全局可用性自动分流
+	if cs.srv.ShouldUseAsync(ctx, req.FlashSaleId) && cs.srv.FlashSaleCore != nil {
+		// log.Debug("异步秒杀")
+		flashReq := &dto.FlashSaleRequestDTO{
+			ActivityID: req.FlashSaleId,
+			UserID:     req.UserId,
+		}
+		coreResult, err := cs.srv.FlashSaleCore.FlashSaleCoupon(ctx, flashReq)
 		if err != nil {
 			return nil, cs.handleError(err)
 		}
@@ -117,39 +121,14 @@ func (cs *couponServer) ParticipateFlashSale(ctx context.Context, req *couponpb.
 			}
 		}
 		return resp, nil
-	} else {
-		// 同步秒杀
-		log.Infof("同步秒杀")
-		dto := &dto.ParticipateFlashSaleDTO{
-			UserID:      req.UserId,
-			FlashSaleID: req.FlashSaleId,
-		}
-		
-		result, err := cs.srv.FlashSaleSrv.ParticipateFlashSale(ctx, dto)
-		if err != nil {
-			return nil, cs.handleError(err)
-		}
-
-		resp := &couponpb.ParticipateFlashSaleResponse{
-			Status: result.Status,
-		}
-
-		if result.FailReason != nil {
-			resp.FailReason = result.FailReason
-		}
-		if result.UserCouponID != nil {
-			resp.UserCouponId = result.UserCouponID
-		}
-
-		return resp, nil
 	}
 
-
+	return nil, errors.New("当前秒杀活动参与方式不可用，请稍后重试")
 }
 
 // GetFlashSaleStock 获取秒杀库存
 func (cs *couponServer) GetFlashSaleStock(ctx context.Context, req *couponpb.GetFlashSaleStockRequest) (*couponpb.FlashSaleStockResponse, error) {
-	result, err := cs.srv.FlashSaleSrv.GetFlashSaleStock(ctx, req.FlashSaleId)
+	result, err := cs.srv.FlashSaleCore.GetFlashSaleStock(ctx, req.FlashSaleId)
 	if err != nil {
 		return nil, cs.handleError(err)
 	}
@@ -174,7 +153,7 @@ func (cs *couponServer) GetUserFlashSaleRecord(ctx context.Context, req *couponp
 		dto.FlashSaleID = req.FlashSaleId
 	}
 
-	result, err := cs.srv.FlashSaleSrv.GetUserFlashSaleRecords(ctx, dto)
+	result, err := cs.srv.FlashSaleCore.GetUserFlashSaleRecords(ctx, dto)
 	if err != nil {
 		return nil, cs.handleError(err)
 	}

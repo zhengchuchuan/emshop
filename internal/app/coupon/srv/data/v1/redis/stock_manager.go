@@ -16,6 +16,7 @@ import (
 type StockManager struct {
     redis                 *redis.Client
     flashSaleScript       *redis.Script
+    reserveScript         *redis.Script
     prewarmScript         *redis.Script
     userLimitScript       *redis.Script
     rollbackScript        *redis.Script
@@ -62,6 +63,7 @@ func NewStockManager(redisClient *redis.Client) *StockManager {
     return &StockManager{
         redis:                redisClient,
         flashSaleScript:      redis.NewScript(FlashSaleLuaScript),
+        reserveScript:        redis.NewScript(FlashSaleReserveLuaScript),
         prewarmScript:        redis.NewScript(StockPrewarmLuaScript),
         userLimitScript:      redis.NewScript(UserLimitCheckLuaScript),
         rollbackScript:       redis.NewScript(StockRollbackLuaScript),
@@ -142,6 +144,66 @@ func (sm *StockManager) FlashSale(ctx context.Context, req *FlashSaleRequest) (*
     }
 
 	return flashSaleResult, nil
+}
+
+// Reserve 预留库存（用于事务消息方案A：预留成功后，本地事务建单，失败则回滚）
+func (sm *StockManager) Reserve(ctx context.Context, req *FlashSaleRequest) (*FlashSaleResult, error) {
+    if !sm.suppressLogs {
+        log.Infof("开始预留库存: activityID=%d, userID=%d, couponID=%d", req.ActivityID, req.UserID, req.CouponID)
+    }
+
+    // 构建Redis keys（注意与脚本参数一致）
+    keys := []string{
+        fmt.Sprintf("coupon:stock:%d", req.CouponID),              // 库存key
+        fmt.Sprintf("coupon:user:%d:%d", req.ActivityID, req.UserID), // 用户参与记录key
+        fmt.Sprintf("coupon:activity:%d", req.ActivityID),         // 活动信息key
+        fmt.Sprintf("coupon:reserve:%d:%d:%s", req.ActivityID, req.UserID, req.RequestID), // 预留幂等key
+    }
+
+    currentTime := time.Now().Unix()
+    args := []interface{}{
+        req.UserID,
+        req.ActivityID,
+        req.RequestCount,
+        10, // 10秒 TTL：避免预留长时间占用，事务确认会落库；失败由回查或本地回滚处理
+        currentTime,
+        req.RequestID,
+        req.PerUserLimitOverride,
+    }
+
+    result, err := sm.reserveScript.Run(ctx, sm.redis, keys, args...).Result()
+    if err != nil {
+        log.Errorf("预留脚本执行失败: %v", err)
+        return nil, fmt.Errorf("预留执行失败: %v", err)
+    }
+
+    resultSlice, ok := result.([]interface{})
+    if !ok || len(resultSlice) < 3 {
+        return nil, fmt.Errorf("预留脚本返回格式错误")
+    }
+
+    code := resultSlice[0].(int64)
+    stock := resultSlice[1].(int64)
+    message := resultSlice[2].(string)
+
+    fs := &FlashSaleResult{
+        Code:        int(code),
+        Success:     code == 1,
+        Message:     message,
+        RemainStock: int(stock),
+        Timestamp:   currentTime,
+    }
+    if fs.Success {
+        fs.CouponSn = sm.generateCouponSn(req.ActivityID, req.UserID, currentTime, req.RequestID)
+        if !sm.suppressLogs {
+            log.Infof("预留成功: userID=%d, couponSn=%s, remainStock=%d", req.UserID, fs.CouponSn, fs.RemainStock)
+        }
+    } else {
+        if !sm.suppressLogs {
+            log.Warnf("预留失败: userID=%d, code=%d, message=%s", req.UserID, fs.Code, fs.Message)
+        }
+    }
+    return fs, nil
 }
 
 // PrewarmStock 预热库存到Redis

@@ -119,6 +119,109 @@ end
 return {1, remainStock, "秒杀成功"}
 `
 
+// FlashSaleReserveLuaScript 优惠券秒杀预留脚本（不写成功日志、不累加success_count）
+// 仅用于预留库存与用户参与占位，失败由回滚脚本归还库存
+const FlashSaleReserveLuaScript = `
+-- 优惠券秒杀预留脚本
+-- KEYS[1]: 库存key - coupon:stock:{coupon_id}
+-- KEYS[2]: 用户key - coupon:user:{activity_id}:{user_id}
+-- KEYS[3]: 活动信息key - coupon:activity:{activity_id}
+-- KEYS[4]: 预留幂等key - coupon:reserve:{activity_id}:{user_id}:{request_id}
+
+-- ARGV[1]: 用户ID
+-- ARGV[2]: 活动ID
+-- ARGV[3]: 扣减数量(通常为1)
+-- ARGV[4]: TTL秒数(用户参与计数/幂等key)
+-- ARGV[5]: 当前时间戳
+-- ARGV[6]: 请求ID
+-- ARGV[7]: 人均限购覆盖值(>0生效，<=0 表示不限制)
+
+local stockKey = KEYS[1]
+local userKey = KEYS[2]
+local activityKey = KEYS[3]
+local reserveKey = KEYS[4]
+
+local userId = ARGV[1]
+local activityId = ARGV[2]
+local decreNum = tonumber(ARGV[3])
+local ttl = tonumber(ARGV[4])
+local currentTime = tonumber(ARGV[5])
+local requestId = ARGV[6]
+local perUserLimitOverride = tonumber(ARGV[7]) or -1
+
+-- 1. 检查活动是否存在和有效
+local activityInfo = redis.call('HMGET', activityKey, 'status', 'start_time', 'end_time', 'per_user_limit')
+if not activityInfo[1] then
+    return {-3, 0, "活动不存在"}
+end
+
+local status = tonumber(activityInfo[1])
+local startTime = tonumber(activityInfo[2])
+local endTime = tonumber(activityInfo[3])
+local perUserLimit = tonumber(activityInfo[4]) or 1
+
+-- 检查活动状态
+if status ~= 2 then
+    return {-3, 0, "活动未开始或已结束"}
+end
+
+-- 检查活动时间
+if currentTime < startTime or currentTime > endTime then
+    return {-3, 0, "不在活动时间内"}
+end
+
+-- 覆盖 per_user_limit（以DB/调用侧为准），<=0 表示不限制
+if perUserLimitOverride and perUserLimitOverride > 0 then
+    perUserLimit = perUserLimitOverride
+elseif perUserLimitOverride and perUserLimitOverride <= 0 then
+    perUserLimit = 0
+end
+
+-- 2. 人均限购检查（可选）
+if perUserLimit > 0 then
+    local userParticipated = redis.call('GET', userKey)
+    if userParticipated then
+        local participatedCount = tonumber(userParticipated)
+        if participatedCount >= perUserLimit then
+            return {-2, 0, "用户已达到参与上限"}
+        end
+    end
+end
+
+-- 2.1 幂等检查：若相同请求已预留，直接返回当前库存
+if redis.call('EXISTS', reserveKey) == 1 then
+    local currentStock = tonumber(redis.call('GET', stockKey) or '0')
+    return {1, currentStock, "重复请求"}
+end
+
+-- 3. 检查库存
+local stock = redis.call('GET', stockKey)
+if not stock then
+    return {-1, 0, "库存信息不存在"}
+end
+stock = tonumber(stock)
+if stock < decreNum then
+    return {-1, stock, "库存不足"}
+end
+
+-- 4. 预留：扣库存 + 记录用户参与 + 设幂等key
+local remainStock = stock - decreNum
+redis.call('SET', stockKey, remainStock)
+if perUserLimit > 0 then
+    local current = redis.call('GET', userKey)
+    local newCnt = (tonumber(current) or 0) + decreNum
+    redis.call('SETEX', userKey, ttl, newCnt)
+end
+redis.call('SETEX', reserveKey, ttl, 1)
+
+-- 5. 若库存为0，状态置为已结束
+if remainStock <= 0 then
+    redis.call('HSET', activityKey, 'status', '3')
+end
+
+return {1, remainStock, "预留成功"}
+`
+
 // StockPrewarmLuaScript 库存预热Lua脚本
 // 批量设置多个优惠券的库存信息
 const StockPrewarmLuaScript = `
@@ -186,7 +289,8 @@ return {1, currentCount + 1, "检查通过"}
 `
 
 // StockRollbackLuaScript 库存回滚脚本
-// 用于异步处理失败时回滚库存：减少用户计数，不整表删除
+// 用于本地事务失败或事务回查失败时回滚库存：
+// 1) 增加库存；2) 减少用户计数（若存在）；3) 不依赖用户key存在也可回滚库存
 const StockRollbackLuaScript = `
 -- 库存回滚脚本
 -- KEYS[1]: 库存key
@@ -199,33 +303,28 @@ local userKey = KEYS[2]
 local rollbackNum = tonumber(ARGV[1])
 local userId = ARGV[2]
 
--- 检查用户记录是否存在
-local userRecord = redis.call('GET', userKey)
-if not userRecord then
-    return {-1, 0, "用户记录不存在，无需回滚"}
-end
-
--- 增加库存
+-- 先回滚库存（即使用户记录不存在也应归还库存）
 local currentStock = redis.call('GET', stockKey)
 if currentStock then
-    local newStock = tonumber(currentStock) + rollbackNum
-    redis.call('SET', stockKey, newStock)
+    redis.call('SET', stockKey, tonumber(currentStock) + rollbackNum)
 else
     redis.call('SET', stockKey, rollbackNum)
 end
 
--- 删除用户记录
-local cnt = tonumber(userRecord) - rollbackNum
-if cnt > 0 then
-    -- 保持原 TTL 不变（简化处理）
-    local ttl = redis.call('TTL', userKey)
-    if ttl and ttl > 0 then
-        redis.call('SETEX', userKey, ttl, cnt)
+-- 再尝试回滚用户计数（如存在）
+local userRecord = redis.call('GET', userKey)
+if userRecord then
+    local cnt = tonumber(userRecord) - rollbackNum
+    if cnt > 0 then
+        local ttl = redis.call('TTL', userKey)
+        if ttl and ttl > 0 then
+            redis.call('SETEX', userKey, ttl, cnt)
+        else
+            redis.call('SET', userKey, cnt)
+        end
     else
-        redis.call('SET', userKey, cnt)
+        redis.call('DEL', userKey)
     end
-else
-    redis.call('DEL', userKey)
 end
 
 return {1, rollbackNum, "库存回滚成功"}

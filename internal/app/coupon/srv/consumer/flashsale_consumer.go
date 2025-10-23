@@ -86,6 +86,9 @@ func (fsc *FlashSaleConsumer) Start(config *FlashSaleConsumerConfig) error {
 	if config.BatchSize > 0 {
 		options = append(options, consumer.WithConsumeMessageBatchMaxSize(config.BatchSize))
 	}
+    // 提升消费并发度，避免单线程批处理导致堆积
+    options = append(options, consumer.WithConsumeGoroutineNums(32))
+	
     pushConsumer, err := rocketmq.NewPushConsumer(options...)
     if err != nil {
         return fmt.Errorf("创建RocketMQ消费者失败: %w", err)
@@ -218,139 +221,73 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
     }
     idempotentKey := fmt.Sprintf("flashsale:processed:%s", dedupeKey)
     exists, err := fsc.redisClient.Exists(ctx, idempotentKey).Result()
-	if err != nil {
-		log.Errorf("检查幂等性失败: %v", err)
-	} else if exists > 0 {
-		log.Infof("消息已处理过，跳过: msgID=%s", msgID)
-		return nil
-	}
+		if err != nil {
+			log.Errorf("检查幂等性失败: %v", err)
+		} else if exists > 0 {
+			log.Infof("消息已处理过，跳过: msgID=%s", msgID)
+			return nil
+		}
+
+    // 1.1 加处理锁，防止并发重复扣减（高并发/重复投递窗口）
+    lockKey := fmt.Sprintf("flashsale:lock:%s", dedupeKey)
+    locked, lerr := fsc.redisClient.SetNX(ctx, lockKey, "1", 30*time.Second).Result()
+    if lerr != nil {
+        log.Warnf("获取处理锁失败，继续尝试处理: %v", lerr)
+    } else if !locked {
+        // 有并发处理中的同一request，直接跳过（由持锁者完成扣减并写processed标记）
+        log.Infof("同一请求正在处理，跳过: %s", dedupeKey)
+        return nil
+    } else {
+        defer func() { _ = fsc.redisClient.Del(ctx, lockKey).Err() }()
+    }
 
     // 2. 若为事务消息，优先信任本地事务已落库，仅做确认与幂等标记
     isTxn := (msg.GetProperty("TRAN_MSG") == "true") || (msg.GetProperty("transaction_id") != "") || (msg.GetProperty("__transactionId__") != "")
     if isTxn {
         // 快速确认是否已存在
-        var existed *do.UserCouponDO
+        // 使用事务生产者侧写入的轻量订单作为幂等锚点
+        var existed *do.FlashSaleOrderDO
         var getErr error
         if event.RequestID != "" {
-            existed, getErr = fsc.data.UserCoupons().GetByRequestID(ctx, fsc.data.DB(), event.RequestID)
-        }
-        if existed == nil && getErr == nil && event.CouponSn != "" {
-            existed, getErr = fsc.data.UserCoupons().GetByCouponCode(ctx, fsc.data.DB(), event.CouponSn)
+            existed, getErr = fsc.data.FlashSaleOrders().GetByRequestID(ctx, fsc.data.DB(), event.RequestID)
         }
         if getErr != nil {
-            log.Warnf("事务消息确认查询失败，继续后续处理: %v", getErr)
+            log.Warnf("事务消息确认(查询订单)失败，继续处理扣减: %v", getErr)
         }
         if existed != nil {
-            // 标记幂等成功后返回
+            // 本地事务已成功创建轻量订单：继续进行库存持久化扣减
+            log.Infof("事务消息确认：订单已存在，开始持久化扣减, userID=%d, requestID=%s", event.UserID, event.RequestID)
+        } else {
+            // 未查到：继续进行库存持久化扣减（补偿路径），不在消费者侧创建用户券
+            log.Warnf("事务消息未查到订单记录，进入补偿扣减: userID=%d, requestID=%s", event.UserID, event.RequestID)
+        }
+    }
+
+
+    // 3. 基于订单状态原子闸门：仅当从 CREATED -> COUNTED 成功时才进行 sold_count += 1
+    if event.RequestID != "" {
+        updated, uerr := fsc.data.FlashSaleOrders().MarkCountedByRequestID(ctx, fsc.data.DB(), event.RequestID)
+        if uerr != nil {
+            return fmt.Errorf("标记订单已计数失败: %v", uerr)
+        }
+        if !updated {
+            // 已经处理过（或不存在），直接打上幂等标记并返回，避免重复扣减
             _ = fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour).Err()
-            log.Infof("事务消息确认：记录已存在，跳过重建 user_coupon, userID=%d, requestID=%s", event.UserID, event.RequestID)
+            log.Infof("请求已计数过，跳过重复扣减: userID=%d, requestID=%s", event.UserID, event.RequestID)
             return nil
         }
-        // 未查到：极小概率补偿（可能是跨库延迟/故障），继续走创建流程
-        log.Warnf("事务消息未查到记录，进入补偿创建: userID=%d, requestID=%s", event.UserID, event.RequestID)
     }
 
-    // 3. 获取活动信息
-    activityDO, err := fsc.data.FlashSales().Get(ctx, fsc.data.DB(), event.ActivityID)
-    if err != nil {
-        return fmt.Errorf("获取活动信息失败: %v", err)
-    }
-	if activityDO == nil {
-		return fmt.Errorf("活动不存在: activityID=%d", event.ActivityID)
-	}
-
-    // 4. 获取优惠券模板信息
-    templateDO, err := fsc.data.CouponTemplates().Get(ctx, fsc.data.DB(), event.CouponID)
-	if err != nil {
-		return fmt.Errorf("获取优惠券模板失败: %v", err)
-	}
-	if templateDO == nil {
-		return fmt.Errorf("优惠券模板不存在: couponID=%d", event.CouponID)
-	}
-
-    // 5. 创建用户优惠券记录
-    userCouponDO := &do.UserCouponDO{
-        CouponTemplateID: event.CouponID,
-        UserID:           event.UserID,
-        CouponCode:       event.CouponSn,
-        RequestID:        event.RequestID,
-        Status:           do.UserCouponStatusUnused,
-        ReceivedAt:       time.Now(),
-        ExpiredAt:        fsc.calculateExpiryTime(templateDO),
+    // 4. 持久化扣减库存（原子自增）
+    if err := fsc.data.FlashSales().IncrementSoldCount(ctx, fsc.data.DB(), event.ActivityID); err != nil {
+        return fmt.Errorf("持久化扣减库存失败: %v", err)
     }
 
-    // 6. 开始数据库事务
-    tx := fsc.data.DB().Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
+    // 5. 设置幂等性标记（7天过期）
+    _ = fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour).Err()
 
-    // 7. 创建用户优惠券
-    if err := fsc.data.UserCoupons().Create(ctx, tx, userCouponDO); err != nil {
-        tx.Rollback()
-        // 如果是重复（幂等）错误，则查询已有记录并视为成功
-        if fsc.isDuplicateError(err) {
-            var existed *do.UserCouponDO
-            var getErr error
-            if event.RequestID != "" {
-                existed, getErr = fsc.data.UserCoupons().GetByRequestID(ctx, fsc.data.DB(), event.RequestID)
-            }
-            if existed == nil && getErr == nil {
-                existed, getErr = fsc.data.UserCoupons().GetByCouponCode(ctx, fsc.data.DB(), event.CouponSn)
-            }
-            if getErr != nil {
-                return fmt.Errorf("查询已存在的用户优惠券失败: %v", getErr)
-            }
-            if existed != nil {
-                log.Warnf("检测到幂等重复创建，跳过: userID=%d, requestID=%s", event.UserID, event.RequestID)
-                // 标记幂等成功
-                fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour)
-                return nil
-            }
-            // 若查询不到，则根据消息类型选择补救策略
-            if isTxn {
-                // 事务消息：不回滚库存，仅标记处理，避免与本地事务产生相反操作
-                log.Warnf("幂等冲突且未查到记录(事务消息)，标记已处理: userID=%d, requestID=%s", event.UserID, event.RequestID)
-                _ = fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour).Err()
-                return nil
-            } else {
-                // 普通消息：可能是并发/超时导致，回滚库存以尽量保证一致
-                log.Warnf("幂等冲突但查询不到记录(普通消息)，执行回滚: userID=%d, requestID=%s", event.UserID, event.RequestID)
-                fsc.rollbackStockIfNeeded(ctx, event)
-                return nil
-            }
-        }
-        return fmt.Errorf("创建用户优惠券失败: %v", err)
-    }
-
-    // 8. 更新优惠券模板使用统计
-    if err := fsc.updateCouponTemplateStats(ctx, tx, event.CouponID); err != nil {
-        tx.Rollback()
-        log.Errorf("更新优惠券模板统计失败: %v", err)
-        // 统计更新失败不影响主流程，记录日志即可
-    }
-
-    // 9. 更新活动统计
-    if err := fsc.updateFlashSaleStats(ctx, tx, event.ActivityID); err != nil {
-        tx.Rollback()
-        log.Errorf("更新活动统计失败: %v", err)
-        // 统计更新失败不影响主流程，记录日志即可
-    }
-
-    // 10. 提交事务（GORM v2：Commit().Error）
-    if err := tx.Commit().Error; err != nil {
-        _ = tx.Rollback()
-        return fmt.Errorf("提交事务失败: %v", err)
-    }
-
-    // 11. 设置幂等性标记（7天过期）
-    fsc.redisClient.SetEX(ctx, idempotentKey, "1", 7*24*time.Hour)
-
-	log.Infof("秒杀成功事件处理完成: userID=%d, userCouponID=%d, couponSn=%s", 
-		event.UserID, userCouponDO.ID, event.CouponSn)
+    log.Infof("秒杀成功事件处理完成：已持久化扣减库存，userID=%d, activityID=%d, couponSn=%s",
+        event.UserID, event.ActivityID, event.CouponSn)
 	
 	return nil
 }

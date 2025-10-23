@@ -8,29 +8,35 @@ import (
     "time"
     "sync"
 
-	"emshop/internal/app/coupon/srv/consumer"
-	"emshop/internal/app/coupon/srv/data/v1/interfaces"
-	"emshop/internal/app/coupon/srv/data/v1/redis"
-	"emshop/internal/app/coupon/srv/domain/do"
-	"emshop/internal/app/coupon/srv/domain/dto"
-	"emshop/internal/app/coupon/srv/pkg/cache"
-	"emshop/pkg/log"
-	redisClient "github.com/go-redis/redis/v8"
+    "emshop/internal/app/coupon/srv/consumer"
+    "emshop/internal/app/coupon/srv/data/v1/interfaces"
+    "emshop/internal/app/coupon/srv/data/v1/redis"
+    "emshop/internal/app/coupon/srv/domain/do"
+    "emshop/internal/app/coupon/srv/domain/dto"
+    "emshop/internal/app/coupon/srv/pkg/cache"
+    "emshop/internal/app/coupon/srv/pkg/scripts"
+    "emshop/pkg/log"
+    redisClient "github.com/go-redis/redis/v8"
+    metav1 "emshop/pkg/common/meta/v1"
 )
 
 // FlashSaleSrvCore 秒杀服务核心接口
 type FlashSaleSrvCore interface {
-	// 秒杀核心功能
-	StartFlashSaleActivity(ctx context.Context, req *dto.StartFlashSaleDTO) error
-	StopFlashSaleActivity(ctx context.Context, req *dto.StopFlashSaleDTO) error
-	FlashSaleCoupon(ctx context.Context, req *dto.FlashSaleRequestDTO) (*dto.FlashSaleResultDTO, error)
-	GetFlashSaleStatus(ctx context.Context, req *dto.FlashSaleStatusDTO) (*dto.FlashSaleStatusResultDTO, error)
-	
-	// 管理功能
-	CreateFlashSaleActivity(ctx context.Context, req *dto.CreateFlashSaleActivityDTO) (*dto.FlashSaleActivityDTO, error)
-	UpdateFlashSaleActivity(ctx context.Context, req *dto.UpdateFlashSaleActivityDTO) error
-	GetFlashSaleActivity(ctx context.Context, activityID int64) (*dto.FlashSaleActivityDTO, error)
-	ListFlashSaleActivities(ctx context.Context, req *dto.ListFlashSaleActivitiesDTO) (*dto.FlashSaleActivityListDTO, error)
+    // 秒杀核心功能
+    StartFlashSaleActivity(ctx context.Context, req *dto.StartFlashSaleDTO) error
+    StopFlashSaleActivity(ctx context.Context, req *dto.StopFlashSaleDTO) error
+    FlashSaleCoupon(ctx context.Context, req *dto.FlashSaleRequestDTO) (*dto.FlashSaleResultDTO, error)
+    GetFlashSaleStatus(ctx context.Context, req *dto.FlashSaleStatusDTO) (*dto.FlashSaleStatusResultDTO, error)
+    
+    // 管理功能
+    CreateFlashSaleActivity(ctx context.Context, req *dto.CreateFlashSaleActivityDTO) (*dto.FlashSaleActivityDTO, error)
+    UpdateFlashSaleActivity(ctx context.Context, req *dto.UpdateFlashSaleActivityDTO) error
+    GetFlashSaleActivity(ctx context.Context, activityID int64) (*dto.FlashSaleActivityDTO, error)
+    ListFlashSaleActivities(ctx context.Context, req *dto.ListFlashSaleActivitiesDTO) (*dto.FlashSaleActivityListDTO, error)
+
+    // 查询功能
+    GetFlashSaleStock(ctx context.Context, flashSaleID int64) (*dto.FlashSaleStockDTO, error)
+    GetUserFlashSaleRecords(ctx context.Context, req *dto.GetUserFlashSaleRecordsDTO) (*dto.FlashSaleRecordListDTO, error)
 }
 
 // flashSaleSrvCore 秒杀服务核心实现
@@ -40,6 +46,7 @@ type flashSaleSrvCore struct {
     cacheManager  cache.CacheManager
     stockManager  *redis.StockManager
     eventProducer consumer.FlashSaleEventProducer
+    txnProducer   consumer.FlashSaleTxnProducer
     skipUserLimit bool
     // db-config cache
     lastSkipCheck time.Time
@@ -52,13 +59,14 @@ type flashSaleSrvCore struct {
 }
 
 // NewFlashSaleSrvCore 创建秒杀服务核心
-func NewFlashSaleSrvCore(data interfaces.DataFactory, redisClient *redisClient.Client, cacheManager cache.CacheManager, eventProducer consumer.FlashSaleEventProducer, skipUserLimit bool) FlashSaleSrvCore {
+func NewFlashSaleSrvCore(data interfaces.DataFactory, redisClient *redisClient.Client, cacheManager cache.CacheManager, eventProducer consumer.FlashSaleEventProducer, txnProducer consumer.FlashSaleTxnProducer, skipUserLimit bool) FlashSaleSrvCore {
     return &flashSaleSrvCore{
         data:          data,
         redisClient:   redisClient,
         cacheManager:  cacheManager,
         stockManager:  redis.NewStockManager(redisClient),
         eventProducer: eventProducer,
+        txnProducer:   txnProducer,
         skipUserLimit: skipUserLimit,
     }
 }
@@ -164,10 +172,10 @@ func (fss *flashSaleSrvCore) StopFlashSaleActivity(ctx context.Context, req *dto
 
 // FlashSaleCoupon 执行秒杀
 func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.FlashSaleRequestDTO) (*dto.FlashSaleResultDTO, error) {
-    log.Infof("执行秒杀请求: activityID=%d, userID=%d", req.ActivityID, req.UserID)
+    log.Infof("执行秒杀请求(事务模式): activityID=%d, userID=%d", req.ActivityID, req.UserID)
 
-    if fss.eventProducer == nil {
-        return nil, fmt.Errorf("秒杀事件生产者未配置，无法执行异步落库")
+    if fss.txnProducer == nil {
+        return nil, fmt.Errorf("事务消息生产者未配置")
     }
 
     // 统一生成并注入同一个 request_id，贯穿 Redis/消息/落库
@@ -175,62 +183,16 @@ func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.Flash
     ctx = context.WithValue(ctx, "request_id", rid)
 
 	// 获取活动信息（优先从Redis获取）
-	activityInfo, err := fss.stockManager.GetActivityStatus(ctx, req.ActivityID)
-	if err != nil {
-		// 如果Redis中没有，从数据库获取
-		activityDO, dbErr := fss.data.FlashSales().Get(ctx, fss.data.DB(), req.ActivityID)
-		if dbErr != nil || activityDO == nil {
-			return &dto.FlashSaleResultDTO{
-				Success: false,
-				Message: "活动不存在",
-				Code:    -3,
-			}, nil
-		}
-		
-		// 检查活动是否可以秒杀
-		if activityDO.Status != do.FlashSaleStatusActive {
-			return &dto.FlashSaleResultDTO{
-				Success: false,
-				Message: "活动未开始或已结束",
-				Code:    -3,
-			}, nil
-		}
-
-		// 如果Redis中没有活动，可能需要重新启动
-		log.Warnf("Redis中无活动信息，尝试恢复: activityID=%d", req.ActivityID)
-		return &dto.FlashSaleResultDTO{
-			Success: false,
-			Message: "活动数据异常，请稍后重试",
-			Code:    -3,
-		}, nil
-	}
-
-    // 构建秒杀请求：读取DB per_user_limit（3s缓存，<=0 表示不限制）
-    perLimit := activityInfo.PerUserLimit
-    if fss.data != nil {
-        needRefresh := false
-        fss.perLimitMu.RLock()
-        if last, ok := fss.perLimitLast[req.ActivityID]; !ok || time.Since(last) >= 3*time.Second {
-            needRefresh = true
-        } else {
-            if v, ok2 := fss.perLimitCache[req.ActivityID]; ok2 {
-                perLimit = v
-            }
-        }
-        fss.perLimitMu.RUnlock()
-
-        if needRefresh {
-            if act, err := fss.data.FlashSales().Get(ctx, fss.data.DB(), req.ActivityID); err == nil && act != nil {
-                perLimit = act.PerUserLimit
-            }
-            fss.perLimitMu.Lock()
-            if fss.perLimitCache == nil { fss.perLimitCache = make(map[int64]int32) }
-            if fss.perLimitLast == nil { fss.perLimitLast = make(map[int64]time.Time) }
-            fss.perLimitCache[req.ActivityID] = perLimit
-            fss.perLimitLast[req.ActivityID] = time.Now()
-            fss.perLimitMu.Unlock()
-        }
+    activityInfo, err := fss.stockManager.GetActivityStatus(ctx, req.ActivityID)
+    if err != nil {
+        // 高并发路径严格依赖 Redis，不回退 DB，避免打爆数据库
+        log.Warnf("Redis未找到活动或读取失败: activityID=%d, err=%v", req.ActivityID, err)
+        return &dto.FlashSaleResultDTO{Success: false, Message: "活动数据暂不可用", Code: -3}, nil
     }
+	// log.Infof("获取秒杀活动信息: activityID=%d, status=%d, total=%d, success=%d", activityInfo.ID, activityInfo.Status, activityInfo.TotalCount, activityInfo.SuccessCount)
+
+    // 构建秒杀请求：人均限购直接取 Redis 活动信息，避免热点 DB 访问
+    perLimit := activityInfo.PerUserLimit
 
     flashSaleReq := &redis.FlashSaleRequest{
         ActivityID:   req.ActivityID,
@@ -243,16 +205,16 @@ func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.Flash
         PerUserLimitOverride: perLimit,
     }
 
-	// 执行Redis秒杀
-	result, err := fss.stockManager.FlashSale(ctx, flashSaleReq)
-	if err != nil {
-		log.Errorf("秒杀执行失败: %v", err)
-		return &dto.FlashSaleResultDTO{
-			Success: false,
-			Message: "系统繁忙，请稍后重试",
-			Code:    -4,
-		}, nil
-	}
+    // 执行Redis预留（不落日志、不增成功数）
+    result, err := fss.stockManager.Reserve(ctx, flashSaleReq)
+    if err != nil {
+        log.Errorf("秒杀执行失败: %v", err)
+        return &dto.FlashSaleResultDTO{
+            Success: false,
+            Message: "系统繁忙，请稍后重试",
+            Code:    -4,
+        }, nil
+    }
 
 	// 构建返回结果
 	flashSaleResult := &dto.FlashSaleResultDTO{
@@ -264,9 +226,8 @@ func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.Flash
 		Timestamp:    result.Timestamp,
 	}
 
-    // 如果秒杀成功，发送异步消息进行后续处理
+    // 如果预留成功，发送事务消息，本地事务内创建用户优惠券，失败则回滚预留
     if result.Success {
-        // 发送秒杀成功事件到RocketMQ
         successEvent := &consumer.FlashSaleSuccessEvent{
             ActivityID: req.ActivityID,
             CouponID:   activityInfo.CouponID,
@@ -277,49 +238,116 @@ func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.Flash
             Timestamp:  time.Now().Unix(),
             RequestID:  rid,
         }
-        
-        // 异步发送，避免影响响应时间
-        go func() {
-            if err := fss.eventProducer.SendFlashSaleSuccessEvent(successEvent); err != nil {
-                log.Errorf("发送秒杀成功事件失败: %v, userID=%d, activityID=%d", 
-                    err, req.UserID, req.ActivityID)
-                
-                // 发送失败事件
-                failureEvent := &consumer.FlashSaleFailureEvent{
-                    ActivityID: req.ActivityID,
-                    UserID:     req.UserID,
-                    Reason:     fmt.Sprintf("消息发送失败: %v", err),
-                    Code:       -5,
-                    ClientIP:   req.ClientIP,
-                    UserAgent:  req.UserAgent,
-                    Timestamp:  time.Now().Unix(),
-                }
-                fss.eventProducer.SendFlashSaleFailureEvent(failureEvent)
-            }
-        }()
-        log.Infof("秒杀成功，已发送异步消息: userID=%d, activityID=%d, couponSn=%s", req.UserID, req.ActivityID, result.CouponSn)
+        // 发送事务消息（会在本地事务内建券并决定提交/回滚）；若不可用则内联落库回退
+        if fss.txnProducer == nil {
+            // 无事务消息能力，回滚预留并失败返回
+            _ = fss.stockManager.RollbackStock(ctx, req.ActivityID, req.UserID, activityInfo.CouponID, 1)
+            log.Errorf("事务消息生产者未配置，已回滚预留")
+            return &dto.FlashSaleResultDTO{Success: false, Message: "系统繁忙，请稍后重试", Code: -4}, nil
+        }
+        if err := fss.txnProducer.SendFlashSaleSuccessTxn(ctx, successEvent); err != nil {
+            // 发送失败回滚预留
+            _ = fss.stockManager.RollbackStock(ctx, req.ActivityID, req.UserID, activityInfo.CouponID, 1)
+            log.Errorf("事务消息发送失败，已回滚预留: %v", err)
+            return &dto.FlashSaleResultDTO{Success: false, Message: "系统繁忙，请稍后重试", Code: -4}, nil
+        }
+        // log.Infof("预留成功并触发事务提交: userID=%d, activityID=%d, couponSn=%s", req.UserID, req.ActivityID, result.CouponSn)
     } else {
-		// 秒杀失败，发送失败事件用于统计和监控
-		failureEvent := &consumer.FlashSaleFailureEvent{
-			ActivityID: req.ActivityID,
-			UserID:     req.UserID,
-			Reason:     result.Message,
-			Code:       result.Code,
-			ClientIP:   req.ClientIP,
-			UserAgent:  req.UserAgent,
-			Timestamp:  time.Now().Unix(),
-		}
-		
-		// 异步发送失败事件
-		go func() {
-			if err := fss.eventProducer.SendFlashSaleFailureEvent(failureEvent); err != nil {
-				log.Errorf("发送秒杀失败事件失败: %v, userID=%d, activityID=%d", 
-					err, req.UserID, req.ActivityID)
-			}
-		}()
-	}
+        // 失败分支：不做额外处理
+    }
 
 	return flashSaleResult, nil
+}
+
+// inlineCreateOrder 在无事务消息可用或发送失败时的降级方案：
+// 直接本地事务创建“秒杀订单”并增加 sold_count。
+func (fss *flashSaleSrvCore) inlineCreateOrder(ctx context.Context, evt *consumer.FlashSaleSuccessEvent) error {
+    if fss == nil || fss.data == nil {
+        return fmt.Errorf("service not initialized")
+    }
+    tx := fss.data.DB().Begin()
+    if tx.Error != nil { return tx.Error }
+    order := &do.FlashSaleOrderDO{
+        OrderSn:     fmt.Sprintf("FSO-%d-%s", time.Now().Unix(), evt.RequestID),
+        RequestID:   evt.RequestID,
+        UserID:      evt.UserID,
+        FlashSaleID: evt.ActivityID,
+        CouponID:    evt.CouponID,
+        Status:      "CREATED",
+        Amount:      0,
+    }
+    if err := fss.data.FlashSaleOrders().Create(ctx, tx, order); err != nil {
+        tx.Rollback()
+        return err
+    }
+    if err := fss.data.FlashSales().IncrementSoldCount(ctx, tx, evt.ActivityID); err != nil {
+        tx.Rollback()
+        return err
+    }
+    return tx.Commit().Error
+}
+
+// GetFlashSaleStock 获取秒杀库存（优先Redis，回退DB）
+func (fss *flashSaleSrvCore) GetFlashSaleStock(ctx context.Context, flashSaleID int64) (*dto.FlashSaleStockDTO, error) {
+    // 先从Redis获取
+    stockKey := scripts.NewRedisKeyFormatter().FlashSaleStockKey(flashSaleID)
+    stockInt, err := fss.redisClient.Get(ctx, stockKey).Int()
+    var remainingStock int32
+    if err == redisClient.Nil {
+        // Redis中没有，从数据库获取
+        stockInfo, err := fss.data.FlashSales().CheckStock(ctx, fss.data.DB(), flashSaleID)
+        if err != nil {
+            return nil, fmt.Errorf("获取秒杀库存失败: %v", err)
+        }
+        remainingStock = stockInfo.RemainingStock
+    } else if err != nil {
+        return nil, fmt.Errorf("获取Redis库存失败: %v", err)
+    } else {
+        remainingStock = int32(stockInt)
+    }
+
+    // 获取活动信息
+    activityDO, err := fss.data.FlashSales().Get(ctx, fss.data.DB(), flashSaleID)
+    if err != nil || activityDO == nil {
+        return nil, fmt.Errorf("秒杀活动不存在")
+    }
+
+    return &dto.FlashSaleStockDTO{
+        FlashSaleID:    flashSaleID,
+        TotalStock:     activityDO.FlashSaleCount,
+        RemainingStock: remainingStock,
+        SoldCount:      activityDO.SoldCount,
+    }, nil
+}
+
+// GetUserFlashSaleRecords 获取用户秒杀记录
+func (fss *flashSaleSrvCore) GetUserFlashSaleRecords(ctx context.Context, req *dto.GetUserFlashSaleRecordsDTO) (*dto.FlashSaleRecordListDTO, error) {
+    // 使用数据层方法
+    meta := metav1.ListMeta{Page: int(req.Page), PageSize: int(req.PageSize)}
+    recordListDO, err := fss.data.FlashSaleRecords().GetUserRecords(ctx, fss.data.DB(), req.UserID, meta)
+    if err != nil {
+        return nil, fmt.Errorf("获取用户秒杀记录失败: %v", err)
+    }
+
+    // 转换为DTO
+    items := make([]*dto.FlashSaleRecordDTO, 0, len(recordListDO.Items))
+    for _, recordDO := range recordListDO.Items {
+        items = append(items, &dto.FlashSaleRecordDTO{
+            ID:             recordDO.ID,
+            FlashSaleID:    recordDO.FlashSaleID,
+            UserID:         recordDO.UserID,
+            UserCouponID:   recordDO.UserCouponID,
+            Status:         int32(recordDO.Status),
+            FailReason:     nil, // 简化：保留 nil
+            CreatedAt:      recordDO.CreatedAt,
+            OrderCreatedAt: recordDO.OrderCreatedAt,
+        })
+    }
+
+    return &dto.FlashSaleRecordListDTO{
+        TotalCount: recordListDO.TotalCount,
+        Items:      items,
+    }, nil
 }
 
 // getRequestID 安全地从context中获取request_id
@@ -567,16 +595,12 @@ func (fss *flashSaleSrvCore) GetFlashSaleActivity(ctx context.Context, activityI
 		result.DiscountValue = templateDO.DiscountValue
 	}
 
-	// 如果活动正在进行中，获取实时状态
-	if activityDO.Status == do.FlashSaleStatusActive {
-		if currentStock, err := fss.stockManager.GetCurrentStock(ctx, activityDO.CouponTemplateID); err == nil {
-			result.RemainStock = currentStock
-		}
-		
-		if redisActivityInfo, err := fss.stockManager.GetActivityStatus(ctx, activityID); err == nil {
-			result.SoldCount = redisActivityInfo.SuccessCount
-		}
-	}
+    // 如果活动正在进行中，获取实时库存（售出数以DB为准，避免事务模式下Redis success_count未维护导致不一致）
+    if activityDO.Status == do.FlashSaleStatusActive {
+        if currentStock, err := fss.stockManager.GetCurrentStock(ctx, activityDO.CouponTemplateID); err == nil {
+            result.RemainStock = currentStock
+        }
+    }
 
 	return result, nil
 }

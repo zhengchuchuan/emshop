@@ -1,13 +1,13 @@
 package app
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"os/signal"
-	"strconv"
-	"syscall"
-	"time"
+    "context"
+    "fmt"
+    "os"
+    "os/signal"
+    "strconv"
+    "syscall"
+    "time"
 
 	couponpb "emshop/api/coupon/v1"
 	"emshop/gin-micro/core/trace"
@@ -21,6 +21,7 @@ import (
     "emshop/internal/app/coupon/srv/data/v1/interfaces"
     "emshop/internal/app/coupon/srv/pkg/cache"
     servicev1 "emshop/internal/app/coupon/srv/service/v1"
+    dto "emshop/internal/app/coupon/srv/domain/dto"
 	"emshop/internal/app/coupon/srv/tasks"
 	"emshop/internal/app/pkg/options"
 	appframework "emshop/pkg/app"
@@ -30,6 +31,8 @@ import (
     "github.com/google/uuid"
     "github.com/hashicorp/consul/api"
     restserver "emshop/gin-micro/server/rest-server"
+    // 控制 RocketMQ Go 客户端日志级别，避免刷屏 INFO 日志
+    "github.com/apache/rocketmq-client-go/v2/rlog"
 )
 
 // NewApp returns a CLI application wired for the coupon service.
@@ -132,7 +135,7 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 	dataFactory := factoryManager.GetDataFactory()
 
 	// 创建服务层，注入Redis与RocketMQ依赖
-	service := servicev1.NewService(dataFactory, redisClient, cfg.DTM, cfg.RocketMQ, cfg.ToCacheConfig(), cfg.Business)
+    service := servicev1.NewService(dataFactory, redisClient, cfg.RocketMQ, cfg.ToCacheConfig(), cfg.Business)
 	cacheManager := service.CacheManager
 	if cacheManager == nil {
 		return nil, fmt.Errorf("初始化缓存管理器失败")
@@ -152,8 +155,9 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 
 	canalConsumer := consumer.NewCouponCanalConsumer(canalConfig, cacheManager)
 
-	var flashSaleConsumer *consumer.FlashSaleConsumer
-	var flashSaleCfg *consumer.FlashSaleConsumerConfig
+    var flashSaleConsumer *consumer.FlashSaleConsumer
+    var flashSaleCfg *consumer.FlashSaleConsumerConfig
+    // 无论是否使用事务消息，都启动秒杀事件消费者，用于统一异步落库（包含 sold_count 持久化等）
     if service.AsyncFlashSaleEnabled() && cfg.Business != nil && cfg.Business.FlashSale != nil {
         // 注意：RocketMQ PushConsumer 批量范围 [1,1024]
         mqBatch := int(cfg.Business.FlashSale.BatchSize)
@@ -230,7 +234,7 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 	}
 
 	// 后台任务：Redis 扣减日志落库 & 对账
-    if service.AsyncFlashSaleEnabled() {
+    if service.AsyncFlashSaleEnabled() && !service.UsingTxnFlashSale() {
         batch := 100
         if cfg.Business != nil && cfg.Business.FlashSale != nil && cfg.Business.FlashSale.BatchSize > 0 {
             batch = int(cfg.Business.FlashSale.BatchSize)
@@ -251,9 +255,7 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
         if interval > 0 {
         // 方案B下（非事务消息），使用普通事件生产者做补偿；避免传入 typed-nil 事务生产者引发 panic。
         var compProducer consumer.FlashSaleEventProducer
-        if service.TransactionProducer != nil {
-            compProducer = service.TransactionProducer
-        } else if service.EventProducer != nil {
+        if service.EventProducer != nil {
             compProducer = service.EventProducer
         }
         app.reconciler = tasks.NewReconciler(dataFactory, redisClient, interval, compProducer, threshold, maxPerRun, cooldown)
@@ -272,29 +274,32 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 
 // Run 运行应用
 func (app *CouponApp) Run(ctx context.Context) error {
-	log.Info("启动优惠券服务...")
+    log.Info("启动优惠券服务...")
 
-	if app.flashSaleConsumer != nil && app.flashSaleConfig != nil {
-		if err := app.flashSaleConsumer.Start(app.flashSaleConfig); err != nil {
-			return fmt.Errorf("启动秒杀事件消费者失败: %v", err)
-		}
-		log.Info("秒杀事件消费者启动成功，已开启异步落库")
-	}
+    if app.flashSaleConsumer != nil && app.flashSaleConfig != nil {
+        if err := app.flashSaleConsumer.Start(app.flashSaleConfig); err != nil {
+            return fmt.Errorf("启动秒杀事件消费者失败: %v", err)
+        }
+        log.Info("秒杀事件消费者启动成功，已开启异步落库")
+    }
 
-	if app.canalConsumer != nil {
-		if err := app.canalConsumer.Start(); err != nil {
-			return fmt.Errorf("启动Canal消费者失败: %v", err)
-		}
-		log.Info("Canal消费者启动成功，已开启缓存同步")
-	} else {
-		log.Warn("Canal消费者未初始化，跳过缓存同步")
-	}
+    if app.canalConsumer != nil {
+        if err := app.canalConsumer.Start(); err != nil {
+            return fmt.Errorf("启动Canal消费者失败: %v", err)
+        }
+        log.Info("Canal消费者启动成功，已开启缓存同步")
+    } else {
+        log.Warn("Canal消费者未初始化，跳过缓存同步")
+    }
 
-	// 启动后台任务
-	if app.stockLogSyncer != nil {
-		app.stockLogSyncer.Start()
-		log.Info("库存扣减日志落库任务已启动")
-	}
+    // 自动启动配置中的秒杀活动（预热Redis，避免压测时打爆数据库）
+    go app.autoStartFlashSales()
+
+    // 启动后台任务
+    if app.stockLogSyncer != nil {
+        app.stockLogSyncer.Start()
+        log.Info("库存扣减日志落库任务已启动")
+    }
 	if app.reconciler != nil {
 		app.reconciler.Start()
 		log.Info("库存对账任务已启动")
@@ -400,13 +405,20 @@ func (app *CouponApp) Stop() error {
 
 // initLogger 初始化日志
 func initLogger(logOpts *log.Options) error {
-	if logOpts == nil {
-		logOpts = log.NewOptions()
-	}
+    if logOpts == nil {
+        logOpts = log.NewOptions()
+    }
 
-	log.Init(logOpts)
-	log.Infof("日志系统初始化成功，level=%s", logOpts.Level)
-	return nil
+    log.Init(logOpts)
+    log.Infof("日志系统初始化成功，level=%s", logOpts.Level)
+
+    // 降低 RocketMQ 客户端内部日志级别，屏蔽诸如
+    // "update offset to broker success" 等 INFO 级别日志
+    // 注意：必须在创建任何 RocketMQ Producer/Consumer 之前调用
+    // 可按需调整为 "warn"/"error"，这里选用更静默的 error
+    // 参考: github.com/apache/rocketmq-client-go/v2/rlog
+    rlog.SetLogLevel("error")
+    return nil
 }
 
 func newConsulRegistrar(registryOpts *options.RegistryOptions, dev bool) (registry.Registrar, error) {
@@ -471,4 +483,60 @@ func buildServiceInstance(serverOpts *options.ServerOptions, rpcSrv *rpcserver.S
 		Endpoints: []string{endpoint.String()},
 		Metadata:  metadata,
 	}, nil
+}
+
+// autoStartFlashSales 自动启动配置或环境变量指定的活动ID
+func (app *CouponApp) autoStartFlashSales() {
+    if app == nil || app.service == nil || app.service.FlashSaleCore == nil {
+        return
+    }
+    var ids []int64
+    // 优先读取环境变量：COUPON_AUTO_START_IDS=1,2,3
+    if v := os.Getenv("COUPON_AUTO_START_IDS"); v != "" {
+        for _, part := range splitAndTrim(v, ',') {
+            if n, err := strconv.ParseInt(part, 10, 64); err == nil && n > 0 {
+                ids = append(ids, n)
+            }
+        }
+    } else if app.config != nil && app.config.Business != nil && app.config.Business.FlashSale != nil {
+        if len(app.config.Business.FlashSale.AutoStartIDs) > 0 {
+            ids = append(ids, app.config.Business.FlashSale.AutoStartIDs...)
+        }
+    }
+    if len(ids) == 0 {
+        return
+    }
+    for _, id := range ids {
+        ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+        err := app.service.FlashSaleCore.StartFlashSaleActivity(ctx, &dto.StartFlashSaleDTO{ActivityID: id})
+        cancel()
+        if err != nil {
+            log.Warnf("自动启动秒杀活动失败: id=%d err=%v", id, err)
+        } else {
+            log.Infof("自动启动秒杀活动成功: id=%d", id)
+        }
+    }
+}
+
+func splitAndTrim(s string, sep rune) []string {
+    var out []string
+    cur := make([]rune, 0, len(s))
+    for _, r := range s {
+        if r == sep {
+            str := string(cur)
+            if t := trimSpaces(str); t != "" { out = append(out, t) }
+            cur = cur[:0]
+        } else {
+            cur = append(cur, r)
+        }
+    }
+    if len(cur) > 0 { if t := trimSpaces(string(cur)); t != "" { out = append(out, t) } }
+    return out
+}
+
+func trimSpaces(s string) string {
+    i, j := 0, len(s)
+    for i < j && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n' || s[i] == '\r') { i++ }
+    for j > i && (s[j-1] == ' ' || s[j-1] == '\t' || s[j-1] == '\n' || s[j-1] == '\r') { j-- }
+    return s[i:j]
 }

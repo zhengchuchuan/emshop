@@ -113,3 +113,29 @@
 ---
 
 **当前状态**: Phase 1.5 完整业务层实现完成！服务已具备完整的优惠券管理和秒杀功能，支持gRPC调用，可进行集成测试和DTM事务验证
+
+---
+
+## 🚦 压测与连接复用（k6）
+
+为避免瞬时建连风暴导致的 `cannot assign requested address`，推荐使用固定到达速率（constant‑arrival‑rate, CAR），由执行器维持总 RPS。
+
+- 推荐：RATE 模式（精准 RPS）
+  - 脚本：`scripts/k6/run_flashsale_rate.sh`
+  - 关键参数：`RATE`（每秒请求数）、`PRE_VUS`、`MAX_VUS`、`TARGET`、`DURATION`、`TUNE=0/1`。
+  - 示例：
+    - `TARGET=127.0.0.1:28056 RATE=4000 PRE_VUS=400 MAX_VUS=4000 DURATION=20s scripts/k6/run_flashsale_rate.sh`
+
+- 可选：按 VUS×PER_VU_RPS 推导 RATE
+  - 直接使用 `k6 run` 调用 `scripts/k6/grpc_coupon_flash_sale.js`，传入 `VUS`、`PER_VU_RPS`、`CVUS_MODE=1` 即可（内部仍按固定速率调度）。
+  - 示例：
+    - `k6 run -e GRPC_COUPON_TARGET=127.0.0.1:28056 -e FLASH_SALE_ID=1 -e VUS=400 -e PER_VU_RPS=10 -e CVUS_MODE=1 -e DURATION=15s scripts/k6/grpc_coupon_flash_sale.js`
+
+系统参数建议（WSL2）
+- `ulimit -n 200000`
+- `sysctl -w net.ipv4.ip_local_port_range="1024 65535"`
+- `sysctl -w net.ipv4.tcp_tw_reuse=1`
+- `sysctl -w net.ipv4.tcp_fin_timeout=15`
+- `sysctl -w net.core.somaxconn=65535`
+
+脚本会尝试自动设置上述参数（需要 sudo），可用 `TUNE=0` 关闭。

@@ -75,9 +75,10 @@ type DataFactory interface {
     FlashSales() FlashSaleDataInterface
     FlashSaleRecords() FlashSaleRecordDataInterface
     FlashSaleStockLogs() FlashSaleStockLogDataInterface
-	
-	// 数据库操作
-	DB() *gorm.DB
-	Begin() *gorm.DB
-	Close() error
+    FlashSaleOrders() FlashSaleOrderDataInterface
+    
+    // 数据库操作
+    DB() *gorm.DB
+    Begin() *gorm.DB
+    Close() error
 }

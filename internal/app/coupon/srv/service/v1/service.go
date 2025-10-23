@@ -15,26 +15,23 @@ import (
 
 // Service 优惠券服务工厂
 type Service struct {
-	CouponSrv           CouponSrv
-	FlashSaleSrv        FlashSaleSrv
-	FlashSaleCore       FlashSaleSrvCore  // 新的秒杀核心服务
-	DTMManager          *CouponDTMManager
-	CacheManager        cache.CacheManager
-	EventProducer       consumer.FlashSaleEventProducer // RocketMQ事件生产者
-	TransactionProducer *consumer.TransactionFlashSaleEventProducer // 事务消息生产者
-	RetryManager        *consumer.RetryManager // 重试管理器
-	asyncFlashSale      bool
+    CouponSrv           CouponSrv
+    FlashSaleCore       FlashSaleSrvCore  // 新的秒杀核心服务
+    CacheManager        cache.CacheManager
+    EventProducer       consumer.FlashSaleEventProducer // RocketMQ事件生产者
+    TxnProducer         consumer.FlashSaleTxnProducer   // RocketMQ事务生产者（方案A）
+    RetryManager        *consumer.RetryManager // 重试管理器
+    asyncFlashSale      bool
     data                interfaces.DataFactory
 }
 
 // NewService 创建优惠券服务工厂
 func NewService(
-	data interfaces.DataFactory,
-	redisClient *redis.Client,
-	dtmOpts *options.DtmOptions,
-	rocketmqOpts *options.RocketMQOptions,
-	cacheConfig *cache.CacheConfig,
-	bizOpts *config.BusinessOptions,
+    data interfaces.DataFactory,
+    redisClient *redis.Client,
+    rocketmqOpts *options.RocketMQOptions,
+    cacheConfig *cache.CacheConfig,
+    bizOpts *config.BusinessOptions,
 ) *Service {
 	// 创建缓存适配器，将数据层接口适配为缓存仓库接口
 	cacheRepository := newCacheRepositoryAdapter(data)
@@ -48,7 +45,7 @@ func NewService(
 	}
 	
 	// 创建RocketMQ事件生产者
-	var eventProducer consumer.FlashSaleEventProducer
+    var eventProducer consumer.FlashSaleEventProducer
     if rocketmqOpts != nil {
         producer, err := consumer.NewFlashSaleEventProducer(
             rocketmqOpts.NameServers,
@@ -67,80 +64,69 @@ func NewService(
         }
     }
 	
-	// 创建事务消息生产者
-    var transactionProducer *consumer.TransactionFlashSaleEventProducer
-    if rocketmqOpts != nil && eventProducer != nil && rocketmqOpts.UseTransaction {
-        txnConfig := &consumer.TransactionConfig{
-            NameServers: rocketmqOpts.NameServers,
-            GroupName:   "coupon-txn-producer-group",
-            Topic:       rocketmqOpts.Topic,
-        }
-		
-		txnProducer, err := consumer.NewTransactionFlashSaleEventProducer(
-			txnConfig, data, redisClient, eventProducer,
-		)
-		if err != nil {
-			log.Errorf("初始化事务消息生产者失败: %v", err)
-		} else {
-			transactionProducer = txnProducer
-			log.Info("事务消息生产者初始化成功")
-		}
-	}
-	
 	// 创建重试管理器
-	var retryManager *consumer.RetryManager
-	if rocketmqOpts != nil {
-		retryMgr, err := consumer.NewRetryManager(
-			rocketmqOpts.NameServers,
-			"coupon-retry-group",
-			rocketmqOpts.Topic,
-			redisClient,
-			5, // 最大重试次数
-		)
-		if err != nil {
-			log.Errorf("初始化重试管理器失败: %v", err)
-		} else {
-			retryManager = retryMgr
-			log.Info("重试管理器初始化成功")
-		}
-	}
-	
-	// 优先使用事务消息生产者，fallback到普通生产者
-    finalEventProducer := eventProducer
-    if transactionProducer != nil {
-        finalEventProducer = transactionProducer
-        log.Info("使用事务消息生产者作为主要事件生产者")
-    } else {
-        log.Info("使用普通RocketMQ生产者（非事务）作为主要事件生产者")
+    var retryManager *consumer.RetryManager
+    if rocketmqOpts != nil {
+        retryMgr, err := consumer.NewRetryManager(
+            rocketmqOpts.NameServers,
+            "coupon-retry-group",
+            rocketmqOpts.Topic,
+            redisClient,
+            5, // 最大重试次数
+        )
+        if err != nil {
+            log.Errorf("初始化重试管理器失败: %v", err)
+        } else {
+            retryManager = retryMgr
+            log.Info("重试管理器初始化成功")
+        }
     }
-	
+    
+    // 同时尝试创建事务生产者（方案A）
+    var txnProducer consumer.FlashSaleTxnProducer
+    if rocketmqOpts != nil {
+        if p, err := consumer.NewFlashSaleTxnProducer(
+            data, redisClient, rocketmqOpts.NameServers, "coupon-txn-group", rocketmqOpts.Topic,
+        ); err != nil {
+            log.Errorf("初始化事务生产者失败: %v", err)
+        } else {
+            txnProducer = p
+            log.Info("事务生产者初始化成功")
+        }
+    }
+
+    // 使用普通RocketMQ生产者（非事务）
+    finalEventProducer := eventProducer
+    
     service := &Service{
-        CouponSrv:           NewCouponService(data, redisClient, dtmOpts, cacheManager),
-        FlashSaleSrv:        NewFlashSaleService(data, redisClient, cacheManager),
+        CouponSrv:           NewCouponService(data, redisClient, cacheManager),
         FlashSaleCore:       NewFlashSaleSrvCore(
-            data, redisClient, cacheManager, finalEventProducer,
+            data, redisClient, cacheManager, finalEventProducer, txnProducer,
             bizOpts != nil && bizOpts.FlashSale != nil && bizOpts.FlashSale.SkipUserLimitForTest,
         ),
         CacheManager:        cacheManager,
         EventProducer:       eventProducer,
-        TransactionProducer: transactionProducer,
+        TxnProducer:         txnProducer,
         RetryManager:        retryManager,
         data:                data,
     }
 
-	if bizOpts != nil && bizOpts.FlashSale != nil && bizOpts.FlashSale.EnableAsync && finalEventProducer != nil {
-		service.asyncFlashSale = true
-	}
+    if bizOpts != nil && bizOpts.FlashSale != nil && bizOpts.FlashSale.EnableAsync {
+        // 方案A优先（事务生产者）；否则退化为普通生产者
+        service.asyncFlashSale = (txnProducer != nil) || (finalEventProducer != nil)
+    }
 
-	// 创建DTM管理器，传入服务实例用于TCC回调
-	service.DTMManager = NewCouponDTMManager(dtmOpts, service)
-
-	return service
+    return service
 }
 
 // AsyncFlashSaleEnabled 返回是否启用异步秒杀链路
 func (s *Service) AsyncFlashSaleEnabled() bool {
     return s != nil && s.asyncFlashSale && s.FlashSaleCore != nil
+}
+
+// UsingTxnFlashSale 是否使用事务消息方案
+func (s *Service) UsingTxnFlashSale() bool {
+    return s != nil && s.TxnProducer != nil
 }
 
 // ShouldUseAsync 根据活动配置+全局可用性判断是否使用异步链路
@@ -149,16 +135,7 @@ func (s *Service) AsyncFlashSaleEnabled() bool {
 // 2) async_enabled=1 且全局 AsyncFlashSaleEnabled()=true → 异步
 // 3) 其它情况（如MQ未就绪）→ 同步（降级）
 func (s *Service) ShouldUseAsync(ctx context.Context, activityID int64) bool {
-    if s == nil || s.data == nil {
-        return false
-    }
-    act, err := s.data.FlashSales().Get(ctx, s.data.DB(), activityID)
-    if err != nil || act == nil {
-        return s.AsyncFlashSaleEnabled()
-    }
-    if !act.AsyncEnabled {
-        return false
-    }
+    // 高并发路径避免 DB 访问，依据全局可用性判定
     return s.AsyncFlashSaleEnabled()
 }
 
@@ -182,21 +159,14 @@ func (s *Service) SetManageConfig(ctx context.Context, key, value, desc string) 
 
 // Shutdown 优雅关闭服务
 func (s *Service) Shutdown() error {
-	log.Info("正在关闭优惠券服务...")
-	
-	// 关闭事务消息生产者
-	if s.TransactionProducer != nil {
-		if err := s.TransactionProducer.Shutdown(); err != nil {
-			log.Errorf("关闭事务消息生产者失败: %v", err)
-		}
-	}
-	
-	// 关闭RocketMQ事件生产者
-	if s.EventProducer != nil {
-		if err := s.EventProducer.Shutdown(); err != nil {
-			log.Errorf("关闭RocketMQ事件生产者失败: %v", err)
-		}
-	}
+    log.Info("正在关闭优惠券服务...")
+    
+    // 关闭RocketMQ事件生产者
+    if s.EventProducer != nil {
+        if err := s.EventProducer.Shutdown(); err != nil {
+            log.Errorf("关闭RocketMQ事件生产者失败: %v", err)
+        }
+    }
 	
 	// 关闭重试管理器
 	if s.RetryManager != nil {
@@ -205,8 +175,8 @@ func (s *Service) Shutdown() error {
 		}
 	}
 	
-	log.Info("优惠券服务关闭完成")
-	return nil
+    log.Info("优惠券服务关闭完成")
+    return nil
 }
 
 // cacheRepositoryAdapter 缓存仓库适配器，将数据层接口适配为缓存需要的接口

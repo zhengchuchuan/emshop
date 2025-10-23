@@ -21,7 +21,6 @@ type Config struct {
     MySQL     *options.MySQLOptions     `yaml:"mysql"     mapstructure:"mysql"`
     Redis     *options.RedisOptions     `yaml:"redis"     mapstructure:"redis"`
     RocketMQ  *options.RocketMQOptions  `yaml:"rocketmq"  mapstructure:"rocketmq"`
-    DTM       *options.DtmOptions       `yaml:"dtm"       mapstructure:"dtm"`
     Ristretto *RistrettoOptions         `yaml:"ristretto" mapstructure:"ristretto"`
     Canal     *CanalOptions             `yaml:"canal"     mapstructure:"canal"`
     Business  *BusinessOptions          `yaml:"business"  mapstructure:"business"`
@@ -46,13 +45,12 @@ func New() *Config {
 			opt.ConsumerGroup = "coupon-consumer-group"
 			return opt
 		}(),
-		DTM: options.NewDtmOptions(),
-		Ristretto: &RistrettoOptions{
-			NumCounters: 1_000_000,
-			MaxCost:     100 << 20,
-			BufferItems: 64,
-			Metrics:     true,
-		},
+        Ristretto: &RistrettoOptions{
+            NumCounters: 1_000_000,
+            MaxCost:     100 << 20,
+            BufferItems: 64,
+            Metrics:     true,
+        },
 		Canal: &CanalOptions{
 			ConsumerGroup: "coupon-cache-sync-consumer",
 			Topic:         "coupon-binlog-topic",
@@ -110,10 +108,7 @@ func (c *Config) Flags() (fss cliflag.NamedFlagSets) {
 	if c.RocketMQ != nil {
 		c.RocketMQ.AddFlags(fss.FlagSet("rocketmq"))
 	}
-	if c.DTM != nil {
-		c.DTM.AddFlags(fss.FlagSet("dtm"))
-	}
-	return fss
+    return fss
 }
 
 // Validate performs basic validation across option groups.
@@ -155,17 +150,12 @@ func (c *Config) Validate() []error {
 	} else {
 		errs = append(errs, c.RocketMQ.Validate()...)
 	}
-	if c.DTM == nil {
-		errs = append(errs, fmt.Errorf("dtm configuration is required"))
-	} else {
-		errs = append(errs, c.DTM.Validate()...)
-	}
-	if c.Canal == nil {
-		errs = append(errs, fmt.Errorf("canal configuration is required"))
-	}
-	if c.Business == nil {
-		errs = append(errs, fmt.Errorf("business configuration is required"))
-	}
+    if c.Canal == nil {
+        errs = append(errs, fmt.Errorf("canal configuration is required"))
+    }
+    if c.Business == nil {
+        errs = append(errs, fmt.Errorf("business configuration is required"))
+    }
 
 	return errs
 }
@@ -211,6 +201,7 @@ type FlashSaleOptions struct {
     CompensationMaxPerRun int           `yaml:"compensation_max_per_run" mapstructure:"compensation_max_per_run"`
     CompensationCooldown  time.Duration `yaml:"compensation_cooldown"  mapstructure:"compensation_cooldown"`
     SkipUserLimitForTest  bool          `yaml:"skip_user_limit_for_test" mapstructure:"skip_user_limit_for_test"`
+    AutoStartIDs          []int64       `yaml:"auto_start_ids"          mapstructure:"auto_start_ids"`
 }
 
 // CouponOptions 优惠券配置
