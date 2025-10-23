@@ -1,12 +1,12 @@
 package mysql
 
 import (
-	"context"
-	"time"
-	"emshop/internal/app/coupon/srv/domain/do"
-	v1 "emshop/pkg/common/meta/v1"
-	"emshop/pkg/log"
-	"gorm.io/gorm"
+    "context"
+    "time"
+    "emshop/internal/app/coupon/srv/domain/do"
+    v1 "emshop/pkg/common/meta/v1"
+    "emshop/pkg/log"
+    "gorm.io/gorm"
     "fmt"
 )
 
@@ -193,18 +193,21 @@ func (fsd *flashSaleData) GetByCouponTemplate(ctx context.Context, db *gorm.DB, 
 }
 
 // UpdateSoldCount 更新已售数量
+// UpdateSoldCount 历史命名兼容：语义调整为基于“剩余数量”进行更新
+// 传入的 increment 表示“售出数量变化”，因此应当对 remaining_count 做反向更新：remaining = remaining - increment。
+// 例如 increment=+1 表示售出+1，则 remaining_count 减1；increment=-1 表示回滚售出，则 remaining_count 加1。
 func (fsd *flashSaleData) UpdateSoldCount(ctx context.Context, db *gorm.DB, id int64, increment int32) error {
-	if db == nil {
-		db = fsd.db
-	}
-	
-	if err := db.WithContext(ctx).Model(&do.FlashSaleActivityDO{}).
-		Where("id = ?", id).
-		UpdateColumn("sold_count", gorm.Expr("sold_count + ?", increment)).Error; err != nil {
-		log.Errorf("更新秒杀活动已售数量失败: %v", err)
-		return err
-	}
-	return nil
+    if db == nil {
+        db = fsd.db
+    }
+    // 对 remaining_count 做反向更新，并进行下限保护
+    if err := db.WithContext(ctx).Model(&do.FlashSaleActivityDO{}).
+        Where("id = ?", id).
+        UpdateColumn("remaining_count", gorm.Expr("GREATEST(remaining_count - ?, 0)", increment)).Error; err != nil {
+        log.Errorf("更新秒杀活动剩余数量失败: %v", err)
+        return err
+    }
+    return nil
 }
 
 // UpdateStatus 更新秒杀活动状态
@@ -233,12 +236,13 @@ func (fsd *flashSaleData) CheckStock(ctx context.Context, db *gorm.DB, id int64)
 		return nil, err
 	}
 	
-	return &do.FlashSaleStockInfo{
-		FlashSaleID:    activity.ID,
-		TotalStock:     activity.FlashSaleCount,
-		RemainingStock: activity.FlashSaleCount - activity.SoldCount,
-		SoldCount:      activity.SoldCount,
-	}, nil
+    // 优先使用 DB 中的 remaining_count；sold_count 为兼容保留，可由 Total - Remaining 计算
+    return &do.FlashSaleStockInfo{
+        FlashSaleID:    activity.ID,
+        TotalStock:     activity.FlashSaleCount,
+        RemainingStock: activity.RemainingCount,
+        SoldCount:      activity.FlashSaleCount - activity.RemainingCount,
+    }, nil
 }
 
 // IncrementSoldCount 增加已售数量

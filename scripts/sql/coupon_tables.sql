@@ -80,7 +80,7 @@ CREATE TABLE flash_sale_activities (
     start_time DATETIME NOT NULL COMMENT '秒杀开始时间',
     end_time DATETIME NOT NULL COMMENT '秒杀结束时间',
     flash_sale_count INT NOT NULL COMMENT '秒杀数量',
-    sold_count INT NOT NULL DEFAULT 0 COMMENT '已售数量',
+    remaining_count INT NOT NULL DEFAULT 0 COMMENT '剩余数量',
     per_user_limit INT NOT NULL DEFAULT 1 COMMENT '每用户限抢数量',
     status TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 1-待开始, 2-进行中, 3-已结束, 4-已暂停',
     sort_order INT DEFAULT 0 COMMENT '排序权重',
@@ -142,9 +142,9 @@ INSERT INTO coupon_templates (name, type, discount_type, discount_value, min_ord
 ('立减10元券', 3, 1, 10.00, 50.00, 2000, 5, '2024-08-01 00:00:00', '2024-09-30 23:59:59', '无门槛立减10元');
 
 -- 插入测试秒杀活动数据
-INSERT INTO flash_sale_activities (coupon_template_id, name, start_time, end_time, flash_sale_count, per_user_limit, status) VALUES
-(1, '新用户专享券秒杀', '2024-08-26 10:00:00', '2024-08-26 12:00:00', 100, 1, 1),
-(3, '立减10元券限时抢', '2024-08-26 14:00:00', '2024-08-26 16:00:00', 500, 2, 1);
+INSERT INTO flash_sale_activities (coupon_template_id, name, start_time, end_time, flash_sale_count, remaining_count, per_user_limit, status) VALUES
+(1, '新用户专享券秒杀', '2024-08-26 10:00:00', '2024-08-26 12:00:00', 100, 100, 1, 1),
+(3, '立减10元券限时抢', '2024-08-26 14:00:00', '2024-08-26 16:00:00', 500, 500, 2, 1);
 
 -- 插入测试用户优惠券数据
 INSERT INTO user_coupons (coupon_template_id, user_id, coupon_code, expired_at) VALUES

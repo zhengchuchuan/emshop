@@ -23,8 +23,9 @@ type FlashSaleDataInterface interface {
 	GetUpcomingActivities(ctx context.Context, db *gorm.DB, currentTime time.Time, limit int) ([]*do.FlashSaleActivityDO, error)
 	GetByCouponTemplate(ctx context.Context, db *gorm.DB, templateID int64) ([]*do.FlashSaleActivityDO, error)
 	
-	// 库存和状态更新操作
-	UpdateSoldCount(ctx context.Context, db *gorm.DB, id int64, increment int32) error
+    // 库存和状态更新操作
+    // UpdateSoldCount: 兼容命名；以售出增量 increment 调整剩余数 remaining_count（remaining -= increment）
+    UpdateSoldCount(ctx context.Context, db *gorm.DB, id int64, increment int32) error
 	UpdateStatus(ctx context.Context, db *gorm.DB, id int64, status do.FlashSaleStatus) error
 	CheckStock(ctx context.Context, db *gorm.DB, id int64) (*do.FlashSaleStockInfo, error)
 	IncrementSoldCount(ctx context.Context, db *gorm.DB, id int64) error

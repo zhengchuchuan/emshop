@@ -37,7 +37,7 @@ func (d *flashSaleOrderData) GetByRequestID(ctx context.Context, db *gorm.DB, re
     return &row, nil
 }
 
-// MarkCountedByRequestID 原子将订单状态由 CREATED 更新为 COUNTED，作为对 sold_count 计数的幂等闸门
+// MarkCountedByRequestID 原子将订单状态由 CREATED 更新为 COUNTED，作为对库存持久化（remaining_count -= 1）的幂等闸门
 func (d *flashSaleOrderData) MarkCountedByRequestID(ctx context.Context, db *gorm.DB, requestID string) (bool, error) {
     if db == nil { db = d.db }
     res := db.WithContext(ctx).Model(&do.FlashSaleOrderDO{}).

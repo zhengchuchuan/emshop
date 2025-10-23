@@ -157,7 +157,7 @@ func NewCouponApp(cfg *config.Config) (*CouponApp, error) {
 
     var flashSaleConsumer *consumer.FlashSaleConsumer
     var flashSaleCfg *consumer.FlashSaleConsumerConfig
-    // 无论是否使用事务消息，都启动秒杀事件消费者，用于统一异步落库（包含 sold_count 持久化等）
+    // 无论是否使用事务消息，都启动秒杀事件消费者，用于统一异步落库（包含 remaining_count 持久化等）
     if service.AsyncFlashSaleEnabled() && cfg.Business != nil && cfg.Business.FlashSale != nil {
         // 注意：RocketMQ PushConsumer 批量范围 [1,1024]
         mqBatch := int(cfg.Business.FlashSale.BatchSize)

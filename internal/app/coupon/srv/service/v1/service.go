@@ -270,14 +270,14 @@ func (c *cacheRepositoryAdapter) GetFlashSaleActivity(ctx context.Context, activ
 		return nil, nil
 	}
 	
-	return &cache.FlashSaleActivity{
-		ID:           activityDO.ID,
-		CouponID:     activityDO.CouponTemplateID,
-		Name:         activityDO.Name,
-		TotalCount:   activityDO.FlashSaleCount,
-		SuccessCount: activityDO.SoldCount,
-		StartTime:    activityDO.StartTime,
-		EndTime:      activityDO.EndTime,
-		Status:       int32(activityDO.Status),
-	}, nil
+    return &cache.FlashSaleActivity{
+        ID:           activityDO.ID,
+        CouponID:     activityDO.CouponTemplateID,
+        Name:         activityDO.Name,
+        TotalCount:   activityDO.FlashSaleCount,
+        SuccessCount: activityDO.FlashSaleCount - activityDO.RemainingCount,
+        StartTime:    activityDO.StartTime,
+        EndTime:      activityDO.EndTime,
+        Status:       int32(activityDO.Status),
+    }, nil
 }

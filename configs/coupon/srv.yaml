@@ -58,7 +58,7 @@ rocketmq:
   producer_group: "coupon-producer-group"
   consumer_group: "coupon-consumer-group"
   topic: "coupon-events"
-  max_reconsume: 3
+  max_reconsume: 5
   async_send: true         # 提高吞吐，异步发送MQ
 
 

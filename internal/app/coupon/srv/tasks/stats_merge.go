@@ -64,7 +64,7 @@ func (s *StatsMergeSyncer) mergeOnce() {
     tPairs, err := luaPopAll.Run(ctx, s.redis, []string{"coupon:stats:template"}).Result()
     if err != nil { log.Warnf("读取模板统计失败: %v", err); return }
     s.applyTemplatePairs(ctx, tPairs)
-    // 活动 sold_count
+    // 活动 remaining_count（由 deltaSold 反向更新）
     aPairs, err := luaPopAll.Run(ctx, s.redis, []string{"coupon:stats:flashsale"}).Result()
     if err != nil { log.Warnf("读取活动统计失败: %v", err); return }
     s.applyActivityPairs(ctx, aPairs)
@@ -104,10 +104,10 @@ func (s *StatsMergeSyncer) applyActivityPairs(ctx context.Context, pairs interfa
         fmt.Sscanf(deltaStr, "%d", &d64)
         delta = int32(d64)
         if delta == 0 || id == 0 { continue }
-        if err := s.data.FlashSales().UpdateSoldCount(ctx, s.data.DB(), id, delta); err != nil {
-            log.Warnf("合并活动统计失败: activity=%d, delta=%d, err=%v", id, delta, err)
+        // 语义调整：DB按剩余数量持久化，sold 的增量需要反向更新 remaining_count
+        if err := s.data.FlashSales().UpdateSoldCount(ctx, s.data.DB(), id, -delta); err != nil {
+            log.Warnf("合并活动统计失败: activity=%d, deltaSold=%d, err=%v", id, delta, err)
             _ = s.redis.HIncrBy(ctx, "coupon:stats:flashsale", idStr, int64(delta)).Err()
         }
     }
 }
-

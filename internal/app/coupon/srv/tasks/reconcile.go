@@ -67,8 +67,8 @@ func (r *Reconciler) checkOnce() {
             log.Debugf("跳过对账，Redis缺少活动数据: act=%d err1=%v err2=%v", act.ID, err1, err2)
             continue
         }
-        // DB 已售
-        dbSold := int(act.SoldCount)
+        // DB 已售（以 Total - Remaining 计算）
+        dbSold := int(act.FlashSaleCount - act.RemainingCount)
         // 期望：总量 = 剩余 + 成功
         expectedTotal := int(act.FlashSaleCount)
         actualTotal := stock + succ

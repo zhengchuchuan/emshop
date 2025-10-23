@@ -6,19 +6,29 @@ set -euo pipefail
 
 TARGET=${TARGET:-127.0.0.1:28056}
 FLASH_SALE_ID=${FLASH_SALE_ID:-1}
-RATE=${RATE:-3000}         # 固定 RPS
+RATE=${RATE:-4000}         # 固定 RPS
 PRE_VUS=${PRE_VUS:-3000}    # 预分配 VUs
-MAX_VUS=${MAX_VUS:-4000}   # 最大 VUs（需足够大以支撑 RATE）
+MAX_VUS=${MAX_VUS:-3000}   # 最大 VUs（需足够大以支撑 RATE）
 DURATION=${DURATION:-10s}
 TIMEOUT=${TIMEOUT:-15s}
 TUNE=${TUNE:-1}
 
 if [[ "$TUNE" == "1" ]]; then
-  # 基础调优（需要 sudo）
-  # sudo sysctl -w net.ipv4.ip_local_port_range="1024 65535" || true
-  sudo sysctl -w net.ipv4.tcp_tw_reuse=1 || true
-  # sudo sysctl -w net.ipv4.tcp_fin_timeout=15 || true
-  sudo sysctl -w net.core.somaxconn=65535 || true
+  # 基础调优：若无 sudo 或已是 root，则直接 sysctl
+  run_sysctl() {
+    local k="$1"; shift; local v="$*"
+    if command -v sudo >/dev/null 2>&1; then
+      sudo sysctl -w "$k=$v" || true
+    else
+      sysctl -w "$k=$v" || true
+    fi
+  }
+  # run_sysctl net.ipv4.ip_local_port_range "40000 65535"
+  run_sysctl net.ipv4.tcp_tw_reuse 1
+  run_sysctl net.ipv4.tcp_fin_timeout 15
+  # run_sysctl net.core.somaxconn 65535
+  # run_sysctl net.core.netdev_max_backlog 262144
+  # run_sysctl net.ipv4.tcp_max_syn_backlog 262144
 fi
 
 # 提高文件描述符上限（对本进程及子进程生效）

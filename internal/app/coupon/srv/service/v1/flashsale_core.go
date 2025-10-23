@@ -64,7 +64,8 @@ func NewFlashSaleSrvCore(data interfaces.DataFactory, redisClient *redisClient.C
         data:          data,
         redisClient:   redisClient,
         cacheManager:  cacheManager,
-        stockManager:  redis.NewStockManager(redisClient),
+        // 在高并发压测与事务链路下，抑制预留/秒杀日志，避免“日志条目”与最终落库的混淆
+        stockManager:  redis.NewStockManagerWithOptions(redisClient, true),
         eventProducer: eventProducer,
         txnProducer:   txnProducer,
         skipUserLimit: skipUserLimit,
@@ -260,7 +261,7 @@ func (fss *flashSaleSrvCore) FlashSaleCoupon(ctx context.Context, req *dto.Flash
 }
 
 // inlineCreateOrder 在无事务消息可用或发送失败时的降级方案：
-// 直接本地事务创建“秒杀订单”并增加 sold_count。
+// 直接本地事务创建“秒杀订单”并减少 remaining_count（通过数据层方法实现）。
 func (fss *flashSaleSrvCore) inlineCreateOrder(ctx context.Context, evt *consumer.FlashSaleSuccessEvent) error {
     if fss == nil || fss.data == nil {
         return fmt.Errorf("service not initialized")
@@ -316,7 +317,7 @@ func (fss *flashSaleSrvCore) GetFlashSaleStock(ctx context.Context, flashSaleID 
         FlashSaleID:    flashSaleID,
         TotalStock:     activityDO.FlashSaleCount,
         RemainingStock: remainingStock,
-        SoldCount:      activityDO.SoldCount,
+        SoldCount:      activityDO.FlashSaleCount - remainingStock,
     }, nil
 }
 
@@ -409,16 +410,16 @@ func (fss *flashSaleSrvCore) GetFlashSaleStatus(ctx context.Context, req *dto.Fl
 			return nil, fmt.Errorf("活动不存在")
 		}
 
-		return &dto.FlashSaleStatusResultDTO{
-			ActivityID:   activityDO.ID,
-			CouponID:     activityDO.CouponTemplateID,
-			Status:       int32(activityDO.Status),
-			TotalCount:   activityDO.FlashSaleCount,
-			SuccessCount: activityDO.SoldCount,
-			RemainStock:  activityDO.FlashSaleCount - activityDO.SoldCount,
-			StartTime:    activityDO.StartTime,
-			EndTime:      activityDO.EndTime,
-		}, nil
+        return &dto.FlashSaleStatusResultDTO{
+            ActivityID:   activityDO.ID,
+            CouponID:     activityDO.CouponTemplateID,
+            Status:       int32(activityDO.Status),
+            TotalCount:   activityDO.FlashSaleCount,
+            SuccessCount: activityDO.FlashSaleCount - activityDO.RemainingCount,
+            RemainStock:  activityDO.RemainingCount,
+            StartTime:    activityDO.StartTime,
+            EndTime:      activityDO.EndTime,
+        }, nil
 	}
 
 	// 获取实时库存
@@ -467,16 +468,16 @@ func (fss *flashSaleSrvCore) CreateFlashSaleActivity(ctx context.Context, req *d
 	}
 
 	// 创建活动DO
-	activityDO := &do.FlashSaleActivityDO{
-		CouponTemplateID: req.CouponTemplateID,
-		Name:             req.Name,
-		FlashSaleCount:   req.FlashSaleCount,
-		PerUserLimit:     req.PerUserLimit,
-		StartTime:        req.StartTime,
-		EndTime:          req.EndTime,
-		Status:           do.FlashSaleStatusPending, // 待开始
-		SoldCount:        0,
-	}
+    activityDO := &do.FlashSaleActivityDO{
+        CouponTemplateID: req.CouponTemplateID,
+        Name:             req.Name,
+        FlashSaleCount:   req.FlashSaleCount,
+        PerUserLimit:     req.PerUserLimit,
+        StartTime:        req.StartTime,
+        EndTime:          req.EndTime,
+        Status:           do.FlashSaleStatusPending, // 待开始
+        RemainingCount:   req.FlashSaleCount,
+    }
 
 	// 保存到数据库
 	if err := fss.data.FlashSales().Create(ctx, fss.data.DB(), activityDO); err != nil {
@@ -484,20 +485,20 @@ func (fss *flashSaleSrvCore) CreateFlashSaleActivity(ctx context.Context, req *d
 	}
 
 	// 构建返回结果
-	result := &dto.FlashSaleActivityDTO{
-		ID:               activityDO.ID,
-		CouponTemplateID: activityDO.CouponTemplateID,
-		CouponID:         activityDO.CouponTemplateID, // 兼容字段
-		Name:             activityDO.Name,
-		FlashSaleCount:   activityDO.FlashSaleCount,
-		PerUserLimit:     activityDO.PerUserLimit,
-		StartTime:        activityDO.StartTime,
-		EndTime:          activityDO.EndTime,
-		Status:           int32(activityDO.Status),
-		SoldCount:        activityDO.SoldCount,
-		CreatedAt:        activityDO.CreatedAt,
-		UpdatedAt:        activityDO.UpdatedAt,
-	}
+    result := &dto.FlashSaleActivityDTO{
+        ID:               activityDO.ID,
+        CouponTemplateID: activityDO.CouponTemplateID,
+        CouponID:         activityDO.CouponTemplateID, // 兼容字段
+        Name:             activityDO.Name,
+        FlashSaleCount:   activityDO.FlashSaleCount,
+        PerUserLimit:     activityDO.PerUserLimit,
+        StartTime:        activityDO.StartTime,
+        EndTime:          activityDO.EndTime,
+        Status:           int32(activityDO.Status),
+        SoldCount:        activityDO.FlashSaleCount - activityDO.RemainingCount,
+        CreatedAt:        activityDO.CreatedAt,
+        UpdatedAt:        activityDO.UpdatedAt,
+    }
 
 	// 填充优惠券模板信息
 	result.CouponName = templateDO.Name
@@ -582,11 +583,11 @@ func (fss *flashSaleSrvCore) GetFlashSaleActivity(ctx context.Context, activityI
 		PerUserLimit:     activityDO.PerUserLimit,
 		StartTime:        activityDO.StartTime,
 		EndTime:          activityDO.EndTime,
-		Status:           int32(activityDO.Status),
-		SoldCount:        activityDO.SoldCount,
-		CreatedAt:        activityDO.CreatedAt,
-		UpdatedAt:        activityDO.UpdatedAt,
-	}
+        Status:           int32(activityDO.Status),
+        SoldCount:        activityDO.FlashSaleCount - activityDO.RemainingCount,
+        CreatedAt:        activityDO.CreatedAt,
+        UpdatedAt:        activityDO.UpdatedAt,
+    }
 
 	// 填充优惠券模板信息
 	if templateDO != nil {
@@ -599,7 +600,11 @@ func (fss *flashSaleSrvCore) GetFlashSaleActivity(ctx context.Context, activityI
     if activityDO.Status == do.FlashSaleStatusActive {
         if currentStock, err := fss.stockManager.GetCurrentStock(ctx, activityDO.CouponTemplateID); err == nil {
             result.RemainStock = currentStock
+        } else {
+            result.RemainStock = activityDO.RemainingCount
         }
+    } else {
+        result.RemainStock = activityDO.RemainingCount
     }
 
 	return result, nil
@@ -631,27 +636,31 @@ func (fss *flashSaleSrvCore) ListFlashSaleActivities(ctx context.Context, req *d
 	// 转换为DTO
 	activities := make([]*dto.FlashSaleActivityDTO, 0, len(listDO.Items))
 	for _, activityDO := range listDO.Items {
-		activityDTO := &dto.FlashSaleActivityDTO{
-			ID:               activityDO.ID,
-			CouponTemplateID: activityDO.CouponTemplateID,
-			CouponID:         activityDO.CouponTemplateID, // 兼容字段
-			Name:             activityDO.Name,
-			FlashSaleCount:   activityDO.FlashSaleCount,
-			PerUserLimit:     activityDO.PerUserLimit,
-			StartTime:        activityDO.StartTime,
-			EndTime:          activityDO.EndTime,
-			Status:           int32(activityDO.Status),
-			SoldCount:        activityDO.SoldCount,
-			CreatedAt:        activityDO.CreatedAt,
-			UpdatedAt:        activityDO.UpdatedAt,
-		}
+        activityDTO := &dto.FlashSaleActivityDTO{
+            ID:               activityDO.ID,
+            CouponTemplateID: activityDO.CouponTemplateID,
+            CouponID:         activityDO.CouponTemplateID, // 兼容字段
+            Name:             activityDO.Name,
+            FlashSaleCount:   activityDO.FlashSaleCount,
+            PerUserLimit:     activityDO.PerUserLimit,
+            StartTime:        activityDO.StartTime,
+            EndTime:          activityDO.EndTime,
+            Status:           int32(activityDO.Status),
+            SoldCount:        activityDO.FlashSaleCount - activityDO.RemainingCount,
+            CreatedAt:        activityDO.CreatedAt,
+            UpdatedAt:        activityDO.UpdatedAt,
+        }
 
 		// 如果是进行中的活动，获取实时数据
-		if activityDO.Status == do.FlashSaleStatusActive {
-			if currentStock, err := fss.stockManager.GetCurrentStock(ctx, activityDO.CouponTemplateID); err == nil {
-				activityDTO.RemainStock = currentStock
-			}
-		}
+        if activityDO.Status == do.FlashSaleStatusActive {
+            if currentStock, err := fss.stockManager.GetCurrentStock(ctx, activityDO.CouponTemplateID); err == nil {
+                activityDTO.RemainStock = currentStock
+            } else {
+                activityDTO.RemainStock = activityDO.RemainingCount
+            }
+        } else {
+            activityDTO.RemainStock = activityDO.RemainingCount
+        }
 
 		activities = append(activities, activityDTO)
 	}

@@ -32,8 +32,8 @@ type FlashSaleActivityDO struct {
 	Name             string          `json:"name" gorm:"column:name;type:varchar(100);not null;comment:秒杀活动名称"`
 	StartTime        time.Time       `json:"start_time" gorm:"column:start_time;type:datetime;not null;index:idx_flash_sale_time;comment:秒杀开始时间(秒)"`
 	EndTime          time.Time       `json:"end_time" gorm:"column:end_time;type:datetime;not null;index:idx_flash_sale_time;comment:秒杀结束时间(秒)"`
-	FlashSaleCount   int32           `json:"flash_sale_count" gorm:"column:flash_sale_count;type:int;not null;comment:秒杀数量"`
-	SoldCount        int32           `json:"sold_count" gorm:"column:sold_count;type:int;not null;default:0;comment:已售数量"`
+    FlashSaleCount   int32           `json:"flash_sale_count" gorm:"column:flash_sale_count;type:int;not null;comment:秒杀数量"`
+    RemainingCount   int32           `json:"remaining_count" gorm:"column:remaining_count;type:int;not null;default:0;comment:剩余数量"`
 	PerUserLimit     int32           `json:"per_user_limit" gorm:"column:per_user_limit;type:int;not null;default:1;comment:每用户限抢数量"`
 	Status           FlashSaleStatus `json:"status" gorm:"column:status;type:tinyint;not null;default:1;index:idx_status;comment:状态"`
 	AsyncEnabled     bool            `json:"async_enabled" gorm:"column:async_enabled;type:tinyint(1);not null;default:1;comment:是否启用异步链路(1异步,0同步)"`

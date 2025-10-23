@@ -95,7 +95,7 @@ func (f *dataFactory) initMySQL(mysqlOpts *options.MySQLOptions) error {
         return err
     }
 
-    // 一次性修复/对齐历史列名差异（remaining_count -> sold_count 初始化）
+    // 一次性修复/对齐历史列名差异（对 remaining_count 进行初始化/回填）
     if err := f.ensureSchema(db); err != nil {
         log.Errorf("Schema 修复失败: %v", err)
         return err
@@ -184,18 +184,31 @@ func (f *dataFactory) ensureSchema(db *gorm.DB) error {
     ctx := context.Background()
     mig := db.Migrator()
 
-    // 对 flash_sale_activities 增补 sold_count 并基于 remaining_count 做初始化（如果存在）
+    // 对 flash_sale_activities 增补 remaining_count 并做一次性对齐
     hasSold := mig.HasColumn(&do.FlashSaleActivityDO{}, "sold_count")
-    if !hasSold {
-        if err := mig.AddColumn(&do.FlashSaleActivityDO{}, "SoldCount"); err != nil {
+    hasRemaining := mig.HasColumn(&do.FlashSaleActivityDO{}, "remaining_count")
+    if !hasRemaining {
+        if err := mig.AddColumn(&do.FlashSaleActivityDO{}, "RemainingCount"); err != nil {
             return err
         }
     }
-    // 回填已售数量（幂等：仅当 sold_count=0 时更新）
-    if err := db.WithContext(ctx).Exec(
-        "UPDATE flash_sale_activities SET sold_count = GREATEST(0, flash_sale_count - COALESCE(remaining_count, 0)) WHERE sold_count = 0",
-    ).Error; err != nil {
-        return err
+
+    // 回填剩余数量：
+    // 1) 若历史还存在 sold_count，则用 flash_sale_count - sold_count 对齐 remaining_count（仅当 remaining_count 为空或0）
+    if hasSold {
+        if err := db.WithContext(ctx).Exec(
+            "UPDATE flash_sale_activities SET remaining_count = GREATEST(0, flash_sale_count - COALESCE(sold_count, 0)) WHERE remaining_count IS NULL OR remaining_count = 0",
+        ).Error; err != nil {
+            return err
+        }
+    }
+    // 2) 若不存在 sold_count，则将 remaining_count 置为 flash_sale_count（仅当 remaining_count 为空或0）
+    if !hasSold {
+        if err := db.WithContext(ctx).Exec(
+            "UPDATE flash_sale_activities SET remaining_count = flash_sale_count WHERE remaining_count IS NULL OR remaining_count = 0",
+        ).Error; err != nil {
+            return err
+        }
     }
 
     return nil

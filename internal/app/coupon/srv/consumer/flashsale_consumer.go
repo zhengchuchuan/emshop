@@ -6,17 +6,18 @@ import (
     "fmt"
     "time"
 
-	"emshop/internal/app/coupon/srv/data/v1/interfaces"
-	"emshop/internal/app/coupon/srv/data/v1/redis"
-	"emshop/internal/app/coupon/srv/domain/do"
-	"emshop/pkg/log"
+    	"emshop/internal/app/coupon/srv/data/v1/interfaces"
+    	"emshop/internal/app/coupon/srv/data/v1/redis"
+    	"emshop/internal/app/coupon/srv/domain/do"
+    	"emshop/pkg/log"
 
-	"github.com/apache/rocketmq-client-go/v2/consumer"
-	"github.com/apache/rocketmq-client-go/v2/primitive"
-	"github.com/apache/rocketmq-client-go/v2/producer"
+    	"github.com/apache/rocketmq-client-go/v2/consumer"
+    	"github.com/apache/rocketmq-client-go/v2/primitive"
+    	"github.com/apache/rocketmq-client-go/v2/producer"
     rocketmq "github.com/apache/rocketmq-client-go/v2"
     redisClient "github.com/go-redis/redis/v8"
     "gorm.io/gorm"
+    "strings"
 )
 
 // safeShutdown 保护性关闭，避免上游库在未完全初始化时 panic
@@ -242,8 +243,8 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
     }
 
     // 2. 若为事务消息，优先信任本地事务已落库，仅做确认与幂等标记
-    isTxn := (msg.GetProperty("TRAN_MSG") == "true") || (msg.GetProperty("transaction_id") != "") || (msg.GetProperty("__transactionId__") != "")
-    if isTxn {
+    isTxnFinal := (msg.GetProperty("TRAN_MSG") == "true") || (msg.GetProperty("transaction_id") != "") || (msg.GetProperty("__transactionId__") != "")
+    if isTxnFinal {
         // 快速确认是否已存在
         // 使用事务生产者侧写入的轻量订单作为幂等锚点
         var existed *do.FlashSaleOrderDO
@@ -264,7 +265,7 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
     }
 
 
-    // 3. 基于订单状态原子闸门：仅当从 CREATED -> COUNTED 成功时才进行 sold_count += 1
+    // 3. 基于订单状态原子闸门：仅当从 CREATED -> COUNTED 成功时才进行 remaining_count -= 1
     if event.RequestID != "" {
         updated, uerr := fsc.data.FlashSaleOrders().MarkCountedByRequestID(ctx, fsc.data.DB(), event.RequestID)
         if uerr != nil {
@@ -281,6 +282,26 @@ func (fsc *FlashSaleConsumer) handleFlashSaleSuccess(ctx context.Context, event 
     // 4. 持久化扣减库存（原子自增）
     if err := fsc.data.FlashSales().IncrementSoldCount(ctx, fsc.data.DB(), event.ActivityID); err != nil {
         return fmt.Errorf("持久化扣减库存失败: %v", err)
+    }
+
+    // 4.1 仅在事务链路下：提交后记录最终成功日志与统计（避免与预留阶段混淆）
+    isTxn := (msg.GetProperty("TRAN_MSG") == "true") || (msg.GetProperty("transaction_id") != "") || (msg.GetProperty("__transactionId__") != "")
+    if isTxn {
+        // Redis 日志：仅记录“最终成交”
+        logKey := fmt.Sprintf("coupon:log:%d", event.ActivityID)
+        ts := event.Timestamp
+        if ts <= 0 { ts = time.Now().Unix() }
+        reqID := event.RequestID
+        if strings.TrimSpace(reqID) == "" { reqID = fmt.Sprintf("r_%d_%d_%d", event.UserID, event.ActivityID, ts) }
+        raw := fmt.Sprintf("%d:%d:%d:%d:%s", event.UserID, event.ActivityID, 1, ts, reqID)
+        if err := fsc.redisClient.LPush(ctx, logKey, raw).Err(); err != nil {
+            log.Warnf("写入成交日志失败: %v", err)
+        }
+        // 活动统计：success_count 仅在最终成交后累加
+        actKey := fmt.Sprintf("coupon:activity:%d", event.ActivityID)
+        if err := fsc.redisClient.HIncrBy(ctx, actKey, "success_count", 1).Err(); err != nil {
+            log.Warnf("累加活动成功数失败: %v", err)
+        }
     }
 
     // 5. 设置幂等性标记（7天过期）
